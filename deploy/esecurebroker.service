@@ -1,0 +1,18 @@
+[Unit]
+Description=ESecureBroker piloto UI (uvicorn)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=adminnode
+Group=adminnode
+WorkingDirectory=/opt/corredores
+Environment=PYTHONPATH=/opt/corredores
+EnvironmentFile=-/opt/corredores/.env
+ExecStart=/opt/corredores/.venv/bin/python -m corredores.cli serve --host 127.0.0.1 --port 8091
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
