@@ -38,7 +38,23 @@ NAV = [
     ("cotizador", "Cotizador", "/cotizador"),
     ("renovaciones", "Renovaciones", "/renovaciones"),
     ("reclamos", "Reclamos", "/reclamos"),
+    ("ayuda", "Ayuda", "/ayuda"),
 ]
+
+BAND_LABELS = {
+    "AUTOMATIC": "Rutinario (automático)",
+    "INTERVENTION": "Requiere intervención",
+    "PROMISE": "Promesa de pago",
+    "BROKEN_PROMISE": "Promesa incumplida",
+    "EXCEPTION": "Excepción",
+}
+BAND_HELP = {
+    "AUTOMATIC": "el sistema lo lleva",
+    "INTERVENTION": "tú actúas",
+    "PROMISE": "compromiso activo",
+    "BROKEN_PROMISE": "no cumplió",
+    "EXCEPTION": "caso especial",
+}
 
 
 def _ctx(request: Request, active: str, **extra):
@@ -58,6 +74,11 @@ def _ctx(request: Request, active: str, **extra):
 @router.get("/", response_class=HTMLResponse)
 def home():
     return RedirectResponse("/hoy", status_code=303)
+
+
+@router.get("/ayuda", response_class=HTMLResponse)
+def ayuda(request: Request):
+    return templates.TemplateResponse(request, "ayuda.html", _ctx(request, "ayuda"))
 
 
 @router.get("/hoy", response_class=HTMLResponse)
@@ -121,7 +142,15 @@ def cobranza(request: Request, session: Session = Depends(get_session)):
     org = resolve_org(session)
     board = build_cobranza_board(session, org.id)
     order = ["INTERVENTION", "PROMISE", "BROKEN_PROMISE", "EXCEPTION", "AUTOMATIC"]
-    return templates.TemplateResponse(request, "cobranza.html", _ctx(request, "cobranza", org_name=org.name, board=board, band_order=order),
+    return templates.TemplateResponse(request, "cobranza.html", _ctx(
+            request,
+            "cobranza",
+            org_name=org.name,
+            board=board,
+            band_order=order,
+            band_labels=BAND_LABELS,
+            band_help=BAND_HELP,
+        ),
     )
 
 

@@ -3,15 +3,18 @@
 {% block content %}
 <section class="hero-ops">
   <h1>Cobranza</h1>
-  <p class="lede">Cinco bandas desde Domain Truth · {{ org_name }} · {{ board.as_of }}</p>
+  <p class="lede">Cinco bandas de gestión — no un Excel de colores. Aging / “vence hoy” son detalle dentro de la banda. · {{ org_name }} · {{ board.as_of }}</p>
+  <p class="hint"><a href="/ayuda">Ver glosario de bandas</a></p>
 </section>
 {% for key in band_order %}
+{% set label = band_labels.get(key, key) %}
+{% set help = band_help.get(key, '') %}
 <section class="band band-{{ key|lower }}">
-  <h2>{{ key }} <span class="money-inline">${{ board.totals[key]|money }}</span>
-    <span class="meta">{{ board.bands[key]|length }}</span></h2>
+  <h2>{{ label }} <span class="money-inline">${{ board.totals[key]|money }}</span>
+    <span class="meta">{{ board.bands[key]|length }} · {{ help }}</span></h2>
   {% if board.bands[key] %}
   <table class="grid">
-    <thead><tr><th>Cliente</th><th>Póliza</th><th>#</th><th>Vence</th><th>Saldo</th><th>Estado</th><th></th></tr></thead>
+    <thead><tr><th>Cliente</th><th>Póliza</th><th>#</th><th>Vence</th><th>Saldo</th><th>Estado cuota</th><th></th></tr></thead>
     <tbody>
     {% for r in board.bands[key] %}
       <tr>
@@ -27,7 +30,7 @@
     </tbody>
   </table>
   {% else %}
-  <p class="empty">Sin filas.</p>
+  <p class="empty">Sin filas en esta banda.</p>
   {% endif %}
 </section>
 {% endfor %}

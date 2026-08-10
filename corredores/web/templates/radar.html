@@ -3,7 +3,7 @@
 {% block content %}
 <section class="hero-ops">
   <h1>Radar</h1>
-  <p class="lede">Visión de dinero — no duplica la cola de Hoy. {{ org_name }} · {{ snap.as_of }}</p>
+  <p class="lede"><strong>Vista de dinero</strong> — cobrar / renovar / vender / en riesgo. No es la lista de tareas de Hoy. {{ org_name }} · {{ snap.as_of }} · <a href="/ayuda">glosario</a></p>
 </section>
 <div class="radar-grid">
   {% for b in [snap.por_cobrar, snap.por_renovar, snap.por_vender, snap.en_riesgo] %}

@@ -3,33 +3,45 @@
 {% block content %}
 <section class="hero-ops">
   <h1>Cotizador</h1>
-  <p class="lede">API · archivo · manual → un comparador. La IA no inventa primas. {{ org_name }}</p>
+  <p class="lede">Capturas el riesgo <strong>una vez</strong>. El sistema pide a las compañías. Tú comparas y decides. La IA explica — no inventa primas. · {{ org_name }}</p>
+  <p class="hint"><a href="/ayuda">¿Qué es captura / vista / comparador?</a></p>
 </section>
 
+<ol class="steps wizard">
+  <li class="{% if not selected_id %}on{% endif %}"><span>1</span> Captura<br><small>datos del riesgo</small></li>
+  <li><span>2</span> Aseguradoras<br><small>a quiénes pedir</small></li>
+  <li><span>3</span> Orquestador<br><small>API · archivo · manual</small></li>
+  <li><span>4</span> Normalizar<br><small>mismo formato</small></li>
+  <li class="{% if selected_id %}on{% endif %}"><span>5</span> Comparador<br><small>tú eliges</small></li>
+</ol>
+
 <section>
-  <h2>Quote requests</h2>
+  <h2>1–4 · Pedidos de cotización (captura + orquestación)</h2>
+  <p class="meta">Cada fila = un pedido. “Comparar” abre la <strong>vista</strong> del paso 5 (tabla única).</p>
   <table class="grid">
-    <thead><tr><th>ID</th><th>Línea</th><th>Creado</th><th></th></tr></thead>
+    <thead><tr><th>Pedido</th><th>Línea</th><th>Creado</th><th>Vista</th></tr></thead>
     <tbody>
     {% for q in quotes %}
       <tr>
         <td class="mono">{{ q.id[:8] }}…</td>
         <td>{{ q.insurance_line_id[:8] }}…</td>
         <td>{{ q.created_at }}</td>
-        <td><a href="/cotizador?quote_request_id={{ q.id }}">Comparar</a></td>
+        <td><a href="/cotizador?quote_request_id={{ q.id }}">Abrir comparador</a></td>
       </tr>
     {% else %}
-      <tr><td colspan="4">Sin cotizaciones aún — crear vía dominio/CLI.</td></tr>
+      <tr><td colspan="4">Aún no hay capturas. En P0 se crean desde dominio/demo; el formulario completo de captura llega con el diseño definitivo.</td></tr>
     {% endfor %}
     </tbody>
   </table>
 </section>
 
-{% if comparator is not none %}
+{% if selected_id %}
 <section>
-  <h2>Comparador {% if selected_id %}<span class="mono">{{ selected_id[:8] }}…</span>{% endif %}</h2>
+  <h2>5 · Comparador <span class="mono">{{ selected_id[:8] }}…</span></h2>
+  <p class="meta">Misma tabla para API, archivo o carga manual. La IA solo puede explicar diferencias — nunca inventar la columna Prima.</p>
+  {% if comparator is not none %}
   <table class="grid">
-    <thead><tr><th>Compañía</th><th>Fuente</th><th>Estado</th><th>Prima</th></tr></thead>
+    <thead><tr><th>Compañía</th><th>Fuente</th><th>Estado</th><th>Prima (dominio)</th></tr></thead>
     <tbody>
     {% for row in comparator %}
       <tr>
@@ -39,10 +51,13 @@
         <td>{% if row.premium is not none %}${{ row.premium|money }} {{ row.currency }}{% else %}—{% endif %}</td>
       </tr>
     {% else %}
-      <tr><td colspan="4">Sin filas normalizadas.</td></tr>
+      <tr><td colspan="4">Este pedido aún no tiene respuestas normalizadas.</td></tr>
     {% endfor %}
     </tbody>
   </table>
+  {% else %}
+  <p class="empty">No se pudo armar el comparador para este pedido.</p>
+  {% endif %}
 </section>
 {% endif %}
 {% endblock %}

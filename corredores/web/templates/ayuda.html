@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Ayuda · ESecureBroker{% endblock %}
+{% block content %}
+<section class="hero-ops">
+  <h1>Cómo se lee ESecureBroker</h1>
+  <p class="lede">Sin jerga: qué es captura, qué es una vista, y qué hace cada pantalla.</p>
+</section>
+
+<section class="glossary">
+  <h2>Términos que más confunden</h2>
+  <dl class="defs">
+    <dt>Captura</dt>
+    <dd>Escribir <strong>una vez</strong> los datos del riesgo (auto, cliente, uso…). No es “sacar foto”: es el formulario del Cotizador.</dd>
+    <dt>Vista</dt>
+    <dd>Cómo se <strong>muestra</strong> la información en una pantalla (Hoy, Radar, tabla de cobranza, 360°…). La vista no inventa datos.</dd>
+    <dt>Orquestador de cotización</dt>
+    <dd>El sistema <strong>pide precio</strong> a varias compañías: por API, por archivo, o tú cargas la respuesta a mano.</dd>
+    <dt>Comparador</dt>
+    <dd><strong>Una sola tabla</strong> con todas las respuestas ya en el mismo formato. Ahí eliges tú; la IA solo explica.</dd>
+    <dt>Dominio</dt>
+    <dd>La verdad en base de datos (póliza, cuota, pago, vigencia). La UI solo la enseña.</dd>
+    <dt>NBA / IA</dt>
+    <dd>Sugerencia con porqué. Tú aceptas, descartas o pospones. No cambia saldos ni primas.</dd>
+  </dl>
+</section>
+
+<section>
+  <h2>Cotizador en 5 pasos</h2>
+  <ol class="steps">
+    <li><strong>Captura</strong> — ¿qué se cotiza?</li>
+    <li><strong>Aseguradoras</strong> — ¿a quiénes les pido?</li>
+    <li><strong>Orquestador</strong> — el sistema sale a pedir</li>
+    <li><strong>Normalizar</strong> — mismo formato</li>
+    <li><strong>Comparar</strong> — tabla → IA explica → tú decides</li>
+  </ol>
+  <p class="hint"><a href="/cotizador">Ir al Cotizador</a></p>
+</section>
+
+<section>
+  <h2>Cada pantalla = una pregunta</h2>
+  <table class="grid">
+    <thead><tr><th>Pantalla</th><th>Pregunta</th><th>No confundir con</th></tr></thead>
+    <tbody>
+      <tr><td><a href="/hoy">Hoy</a></td><td>¿Qué hago <em>ahora</em>?</td><td>No es el resumen de plata</td></tr>
+      <tr><td><a href="/radar">Radar</a></td><td>¿Cuánta plata está en juego?</td><td>No es la lista de tareas</td></tr>
+      <tr><td><a href="/clientes">Cliente 360°</a></td><td>¿Cómo está <em>esta</em> persona?</td><td>No es ficha CRM muerta</td></tr>
+      <tr><td><a href="/cobranza">Cobranza</a></td><td>¿En qué banda está cada cuota?</td><td>No es Excel de colores</td></tr>
+      <tr><td><a href="/cotizador">Cotizador</a></td><td>¿Qué ofrecen y qué elijo?</td><td>La IA no inventa primas</td></tr>
+      <tr><td><a href="/renovaciones">Renovaciones</a></td><td>¿Dónde va cada renovación?</td><td>No es el cotizador</td></tr>
+      <tr><td><a href="/reclamos">Reclamos</a></td><td>¿Qué siniestros hay / están trabados?</td><td>No es portal completo aún</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>Cobranza — 5 bandas (nombres humanos)</h2>
+  <ul class="worklist compact">
+    <li><span class="chip">Rutinario</span> el sistema lo lleva solo</li>
+    <li><span class="chip">Intervenir</span> necesitas llamar o actuar</li>
+    <li><span class="chip">Promesa</span> el cliente prometió pagar</li>
+    <li><span class="chip">Promesa rota</span> no cumplió la promesa</li>
+    <li><span class="chip">Excepción</span> caso especial</li>
+  </ul>
+  <p class="meta">“Vence hoy / atrasados / aging” son filtros o columnas — no sustituyen estas bandas.</p>
+</section>
+{% endblock %}

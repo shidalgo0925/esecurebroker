@@ -29,11 +29,16 @@ def test_piloto_surfaces_ok():
         "/cotizador",
         "/renovaciones",
         "/reclamos",
+        "/ayuda",
     ):
         r = client.get(path)
         assert r.status_code == 200, path
         assert "ESecureBroker" in r.text
 
+    ayuda = client.get("/ayuda")
+    assert "Captura" in ayuda.text
+    assert "Comparador" in ayuda.text
+    assert "Rutinario" in ayuda.text or "intervención" in ayuda.text.lower()
     parties = client.get("/clientes")
     assert parties.status_code == 200
     # follow first 360 link if present
