@@ -1,50 +1,92 @@
 {% extends "base.html" %}
 {% block title %}Hoy · ESecureBroker{% endblock %}
 {% block content %}
-<section class="hero-ops">
-  <h1>Hoy</h1>
-  <p class="lede">Cola de <strong>trabajo de hoy</strong> (intervención vs rutinario). No es el Radar de plata. Org: {{ org_name }} · <a href="/ayuda">¿qué es esta vista?</a></p>
-  <div class="kpis">
-    <div><strong>{{ counts.total }}</strong><span>ítems</span></div>
-    <div><strong>{{ counts.intervention }}</strong><span>intervención</span></div>
-    <div><strong>{{ counts.automatic }}</strong><span>automático</span></div>
+<section class="hoy-head">
+  <div>
+    <p class="eyebrow">HOY</p>
+    <h1>{{ home.date_label }}</h1>
   </div>
 </section>
 
-<div class="split">
-  <section>
-    <h2>Requiere intervención</h2>
-    {% if intervention %}
-    <ul class="worklist">
-      {% for i in intervention %}
-      <li class="work urgency-{{ i.urgency|lower }}">
-        <div class="chips"><span>{{ i.type }}</span><span>{{ i.urgency }}</span><span>{{ i.chip }}</span></div>
-        <strong>{{ i.title }}</strong>
-        <p>{{ i.why }}</p>
-        <div class="actions">
-          {% if i.subject_party_id %}<a href="/clientes/{{ i.subject_party_id }}">Cliente 360°</a>{% endif %}
-          <a href="/cobranza">Cobranza</a>
-        </div>
-      </li>
-      {% endfor %}
-    </ul>
-    {% else %}
-    <p class="empty">Sin intervención pendiente.</p>
-    {% endif %}
-  </section>
-  <section class="muted-col">
-    <h2>Gestionado / cola</h2>
-    {% if automatic %}
-    <ul class="worklist compact">
-      {% for i in automatic %}
-      <li>
-        <span class="chip">{{ i.chip }}</span> {{ i.title }}
-      </li>
-      {% endfor %}
-    </ul>
-    {% else %}
-    <p class="empty">Vacío.</p>
-    {% endif %}
-  </section>
+<p class="greet">{{ home.greeting }}{% if actor_name %}, {{ actor_name.split()[0] }}{% endif %}.</p>
+{% if home.attention_count %}
+<p class="lede strong">Tienes <strong>{{ home.attention_count }}</strong> asunto{{ 's' if home.attention_count != 1 else '' }} que necesitan tu atención.</p>
+{% else %}
+<p class="lede strong">No tienes asuntos urgentes.</p>
+<p class="empty-useful">
+  {% if home.auto_cuotas_managed or home.reminders_sent_today or home.auto_activity %}
+  La cobranza automática está gestionando <strong>{{ home.auto_cuotas_managed }}</strong> cuota{{ 's' if home.auto_cuotas_managed != 1 else '' }}{% if home.reminders_sent_today %} y hoy se enviaron <strong>{{ home.reminders_sent_today }}</strong> recordatorios{% endif %}.
+  {% else %}
+  El sistema no detectó cobros vencidos, promesas rotas ni renovaciones críticas para hoy. Cuando haya actividad, aparecerá aquí.
+  {% endif %}
+</p>
+{% endif %}
+
+<div class="money-row">
+  {% for m in home.money %}
+  <a class="money-tile" href="{{ m.href }}">
+    <div class="money-amt">{{ m.amount_label }}</div>
+    <div class="money-title">{{ m.title }}</div>
+    <div class="money-sub">{{ m.subtitle }}</div>
+  </a>
+  {% endfor %}
 </div>
+
+<section class="hoy-block">
+  <div class="block-head">
+    <h2>Requiere tu atención</h2>
+    {% if home.attention %}<a class="see-all" href="/cobranza">Ver cobranza →</a>{% endif %}
+  </div>
+
+  {% if home.attention %}
+  <ul class="attention-list">
+    {% for a in home.attention %}
+    <li class="att att-{{ a.urgency }} kind-{{ a.kind|lower }}">
+      <div class="att-kind">{{ a.title }}</div>
+      <div class="att-subject">{{ a.subject }}</div>
+      {% for line in a.lines %}<p class="att-line">{{ line }}</p>{% endfor %}
+      <div class="actions">
+        {% for label, href in a.actions %}
+        <a href="{{ href }}">{{ label }}</a>
+        {% endfor %}
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="empty-useful muted">Nada pendiente de tu decisión en este momento.</p>
+  {% endif %}
+</section>
+
+<section class="hoy-block auto-block">
+  <div class="block-head">
+    <h2>El sistema trabajó por ti hoy</h2>
+    <a class="see-all" href="/radar">Ver radar →</a>
+  </div>
+  {% if home.auto_activity %}
+  <ul class="auto-list">
+    {% for line in home.auto_activity %}
+    <li>✓ {{ line.text }}{% if line.amount_label %} <strong>{{ line.amount_label }}</strong>{% endif %}</li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="empty-useful muted">Aún no hay actividad automática registrada para hoy (pagos, recordatorios, gestiones).</p>
+  {% endif %}
+</section>
+
+<section class="hoy-block opp-block">
+  <div class="block-head">
+    <h2>Oportunidades detectadas</h2>
+    <a class="see-all" href="/radar">Ver oportunidades →</a>
+  </div>
+  {% if home.opportunities %}
+  <ul class="opp-list">
+    {% for o in home.opportunities %}
+    <li>💡 {{ o.text }} <a href="{{ o.href }}">Abrir</a></li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="empty-useful muted">Sin oportunidades nuevas detectadas desde el dominio (gaps / renovaciones / radar).</p>
+  {% endif %}
+</section>
 {% endblock %}

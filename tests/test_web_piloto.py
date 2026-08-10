@@ -38,7 +38,15 @@ def test_piloto_surfaces_ok():
     ayuda = client.get("/ayuda")
     assert "Captura" in ayuda.text
     assert "Comparador" in ayuda.text
-    assert "Rutinario" in ayuda.text or "intervención" in ayuda.text.lower()
+
+    hoy = client.get("/hoy")
+    assert hoy.status_code == 200
+    assert "Requiere tu atención" in hoy.text
+    assert "El sistema trabajó por ti" in hoy.text
+    assert "POR COBRAR" in hoy.text
+    assert "EN1 stub" not in hoy.text
+    assert "ADR-006" not in hoy.text
+    assert "IA recomienda" not in hoy.text
     parties = client.get("/clientes")
     assert parties.status_code == 200
     # follow first 360 link if present

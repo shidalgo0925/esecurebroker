@@ -18,7 +18,6 @@ from corredores.services.cobranza_board import build_cobranza_board
 from corredores.services.quote_orchestrator import build_comparator
 from corredores.services.radar import build_radar
 from corredores.services.recommendations import decide_recommendation
-from corredores.services.today import build_today_queue
 from corredores.web.deps import (
     current_actor,
     entitlements,
@@ -65,7 +64,6 @@ def _ctx(request: Request, active: str, **extra):
         "active": active,
         "actor_name": actor.display_name,
         "today": date.today().isoformat(),
-        "principle": "IA recomienda · Dominio decide · Auditoría registra",
     }
     base.update(extra)
     return base
@@ -85,22 +83,15 @@ def ayuda(request: Request):
 def hoy(request: Request, session: Session = Depends(get_session)):
     if not entitlements().has("any", "corredores.p0.auto"):
         raise HTTPException(403, "entitlement denied")
+    from corredores.services.today_home import build_today_home
+
     org = resolve_org(session)
-    items = build_today_queue(session, org.id)
-    intervention = [i for i in items if i.urgency in {"CRITICAL", "HIGH"} or i.band == "INTERVENTION"]
-    automatic = [i for i in items if i not in intervention]
-    return templates.TemplateResponse(request, "hoy.html", _ctx(
-            request,
-            "hoy",
-            org_name=org.name,
-            intervention=intervention,
-            automatic=automatic,
-            counts={
-                "total": len(items),
-                "intervention": len(intervention),
-                "automatic": len(automatic),
-            },
-        ),
+    actor = current_actor(request)
+    home = build_today_home(session, org.id, actor_name=actor.display_name or "Broker")
+    return templates.TemplateResponse(
+        request,
+        "hoy.html",
+        _ctx(request, "hoy", org_name=org.name, home=home),
     )
 
 
