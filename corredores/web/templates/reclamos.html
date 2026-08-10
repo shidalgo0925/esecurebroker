@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Reclamos · Corredores{% endblock %}
+{% block content %}
+<section class="hero-ops">
+  <h1>Reclamos</h1>
+  <p class="lede">Bandeja + hooks portal (UI completa fuera de alcance). {{ org_name }}</p>
+</section>
+<table class="grid">
+  <thead><tr><th>Número</th><th>Estado</th><th>Póliza</th><th>Pérdida</th><th>Fuente</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td>{{ r.claim_number or r.id[:8] }}</td>
+      <td>{{ r.status }}</td>
+      <td class="mono">{{ r.policy_id[:8] }}…</td>
+      <td>{{ r.loss_date or '—' }}</td>
+      <td>{{ r.source }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5">Sin reclamos.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

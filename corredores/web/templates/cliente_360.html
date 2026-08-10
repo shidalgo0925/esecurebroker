@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{{ snap.display_name }} · 360°{% endblock %}
+{% block content %}
+<section class="hero-ops">
+  <h1>{{ snap.display_name }}</h1>
+  <p class="lede">360° · saldo abierto ${{ snap.balance_open|money }} · promesas {{ snap.promises_active }}/rotas {{ snap.promises_broken }}</p>
+  <p class="meta">Roles: {{ snap.roles|join(', ') or '—' }}</p>
+</section>
+
+<section>
+  <h2>Gaps / cobertura</h2>
+  <ul class="worklist">
+    {% for g in snap.gaps %}
+    <li><span class="chip">{{ g.state }}</span> {{ g.label }} <span class="meta">({{ g.risk_kind }})</span></li>
+    {% else %}
+    <li class="empty">Sin gaps listados.</li>
+    {% endfor %}
+  </ul>
+</section>
+
+<div class="split">
+  <section>
+    <h2>Pólizas</h2>
+    <ul class="worklist compact">
+      {% for p in snap.policies %}
+      <li>{{ p.number or p.id[:8] }} · {{ p.status }} · {{ p.premium }}</li>
+      {% else %}<li class="empty">Ninguna</li>{% endfor %}
+    </ul>
+  </section>
+  <section>
+    <h2>Vehículos / claims / renovaciones</h2>
+    <ul class="worklist compact">
+      {% for v in snap.vehicles %}<li>{{ v.make }} {{ v.model }} {{ v.plate }}</li>{% endfor %}
+      {% for c in snap.claims %}<li>Claim {{ c.status }} {{ c.number or c.id[:8] }}</li>{% endfor %}
+      {% for r in snap.renewals %}<li>Renov {{ r.status }} {{ r.target }}</li>{% endfor %}
+    </ul>
+  </section>
+</div>
+<p class="hint"><a href="/clientes">← Clientes</a> · <a href="/cobranza">Cobranza</a> · <a href="/cotizador">Cotizar</a></p>
+{% endblock %}

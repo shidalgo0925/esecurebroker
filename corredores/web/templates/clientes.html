@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Clientes · Corredores{% endblock %}
+{% block content %}
+<section class="hero-ops">
+  <h1>Cliente 360°</h1>
+  <p class="lede">Centro relacional — elegir sujeto. {{ org_name }}</p>
+</section>
+<table class="grid">
+  <thead><tr><th>Nombre</th><th>ID</th><th></th></tr></thead>
+  <tbody>
+  {% for p in parties %}
+    <tr>
+      <td>{{ p.first_name or '' }} {{ p.last_name or '' }}{{ p.legal_name or '' }}</td>
+      <td class="mono">{{ p.national_id or '—' }}</td>
+      <td><a href="/clientes/{{ p.id }}">Abrir 360°</a></td>
+    </tr>
+  {% else %}
+    <tr><td colspan="3">Sin parties — corre <code>cli run-e2e</code> o import.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

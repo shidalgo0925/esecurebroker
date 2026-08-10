@@ -205,6 +205,29 @@ def import_excel(argv: list[str]) -> int:
     return 0
 
 
+def serve(argv: list[str] | None = None) -> int:
+    """Piloto UI — binds 127.0.0.1:8091 by default (avoids EN1 ports)."""
+    import uvicorn
+
+    host = "127.0.0.1"
+    port = 8091
+    args = list(argv or [])
+    i = 0
+    while i < len(args):
+        if args[i] == "--host" and i + 1 < len(args):
+            host = args[i + 1]
+            i += 2
+            continue
+        if args[i] == "--port" and i + 1 < len(args):
+            port = int(args[i + 1])
+            i += 2
+            continue
+        i += 1
+    print(f"Corredores piloto UI http://{host}:{port}/hoy")
+    uvicorn.run("corredores.web:app", host=host, port=port, reload=False)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = list(argv or sys.argv[1:])
     if not argv or argv[0] in {"doctor", "help"}:
@@ -223,9 +246,11 @@ def main(argv: list[str] | None = None) -> int:
         return seed()
     if argv[0] == "import-excel":
         return import_excel(argv[1:])
+    if argv[0] == "serve":
+        return serve(argv[1:])
     print(
         "Usage: python -m corredores.cli "
-        "[doctor|init-db|run-e2e|today|radar|client360|seed|import-excel]"
+        "[doctor|init-db|run-e2e|today|radar|client360|seed|import-excel|serve]"
     )
     return 1
 

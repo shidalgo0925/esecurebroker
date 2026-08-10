@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Cotizador · Corredores{% endblock %}
+{% block content %}
+<section class="hero-ops">
+  <h1>Cotizador</h1>
+  <p class="lede">API · archivo · manual → un comparador. La IA no inventa primas. {{ org_name }}</p>
+</section>
+
+<section>
+  <h2>Quote requests</h2>
+  <table class="grid">
+    <thead><tr><th>ID</th><th>Línea</th><th>Creado</th><th></th></tr></thead>
+    <tbody>
+    {% for q in quotes %}
+      <tr>
+        <td class="mono">{{ q.id[:8] }}…</td>
+        <td>{{ q.insurance_line_id[:8] }}…</td>
+        <td>{{ q.created_at }}</td>
+        <td><a href="/cotizador?quote_request_id={{ q.id }}">Comparar</a></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="4">Sin cotizaciones aún — crear vía dominio/CLI.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+{% if comparator is not none %}
+<section>
+  <h2>Comparador {% if selected_id %}<span class="mono">{{ selected_id[:8] }}…</span>{% endif %}</h2>
+  <table class="grid">
+    <thead><tr><th>Compañía</th><th>Fuente</th><th>Estado</th><th>Prima</th></tr></thead>
+    <tbody>
+    {% for row in comparator %}
+      <tr>
+        <td>{{ row.carrier_name }} ({{ row.carrier_code }})</td>
+        <td>{{ row.source }}</td>
+        <td>{{ row.status }}</td>
+        <td>{% if row.premium is not none %}${{ row.premium|money }} {{ row.currency }}{% else %}—{% endif %}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="4">Sin filas normalizadas.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+{% endblock %}

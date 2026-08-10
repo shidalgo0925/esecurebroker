@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Hoy · Corredores{% endblock %}
+{% block content %}
+<section class="hero-ops">
+  <h1>Hoy</h1>
+  <p class="lede">Qué hacer ahora — no es Radar. Org: {{ org_name }}</p>
+  <div class="kpis">
+    <div><strong>{{ counts.total }}</strong><span>ítems</span></div>
+    <div><strong>{{ counts.intervention }}</strong><span>intervención</span></div>
+    <div><strong>{{ counts.automatic }}</strong><span>automático</span></div>
+  </div>
+</section>
+
+<div class="split">
+  <section>
+    <h2>Requiere intervención</h2>
+    {% if intervention %}
+    <ul class="worklist">
+      {% for i in intervention %}
+      <li class="work urgency-{{ i.urgency|lower }}">
+        <div class="chips"><span>{{ i.type }}</span><span>{{ i.urgency }}</span><span>{{ i.chip }}</span></div>
+        <strong>{{ i.title }}</strong>
+        <p>{{ i.why }}</p>
+        <div class="actions">
+          {% if i.subject_party_id %}<a href="/clientes/{{ i.subject_party_id }}">Cliente 360°</a>{% endif %}
+          <a href="/cobranza">Cobranza</a>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="empty">Sin intervención pendiente.</p>
+    {% endif %}
+  </section>
+  <section class="muted-col">
+    <h2>Gestionado / cola</h2>
+    {% if automatic %}
+    <ul class="worklist compact">
+      {% for i in automatic %}
+      <li>
+        <span class="chip">{{ i.chip }}</span> {{ i.title }}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="empty">Vacío.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Corredores{% endblock %}</title>
+  <link rel="stylesheet" href="/static/piloto.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <a href="/hoy">Corredores</a>
+      <span class="tag">piloto P0</span>
+    </div>
+    <nav class="nav">
+      {% for key, label, href in nav %}
+        <a href="{{ href }}" class="{% if active == key %}on{% endif %}">{{ label }}</a>
+      {% endfor %}
+    </nav>
+    <div class="actor">{{ actor_name }} · {{ today }}</div>
+  </header>
+  <p class="principle">{{ principle }}</p>
+  <main class="main">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="foot">Dominio manda · UI no inventa primas ni saldos · EN1 stub (ADR-006)</footer>
+</body>
+</html>

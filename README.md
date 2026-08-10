@@ -39,11 +39,12 @@ python -m corredores.cli client360 # requiere party_id (tras run-e2e)
 python -m corredores.cli seed       # líneas + carriers + CommissionRule piloto
 # import asistido (PII restringido — no loguea celdas):
 # python -m corredores.cli import-excel --asegurados PATH --emisiones PATH
+python -m corredores.cli serve       # UI piloto http://127.0.0.1:8091/hoy
 pytest -q
 python scripts/p0_certify.py       # E2E + 360 + Radar + Hoy + Claim + NBA
 ```
 
-CLI: `doctor | init-db | run-e2e | today | radar | client360 | seed | import-excel`
+CLI: `doctor | init-db | run-e2e | today | radar | client360 | seed | import-excel | serve`
 
 ## Flujo certificado por `run-e2e`
 

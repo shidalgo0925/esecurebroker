@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Renovaciones · Corredores{% endblock %}
+{% block content %}
+<section class="hero-ops">
+  <h1>Renovaciones</h1>
+  <p class="lede">Pipeline — misma cia o recotizar multi (dominio). {{ org_name }}</p>
+</section>
+<table class="grid">
+  <thead><tr><th>Estado</th><th>Target</th><th>Póliza previa</th><th>Nueva</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td>{{ r.status }}</td>
+      <td>{{ r.target_date or '—' }}</td>
+      <td class="mono">{{ r.previous_policy_id[:8] }}…</td>
+      <td class="mono">{% if r.new_policy_id %}{{ r.new_policy_id[:8] }}…{% else %}—{% endif %}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="4">Sin oportunidades — corre E2E.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

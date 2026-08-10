@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Radar · Corredores{% endblock %}
+{% block content %}
+<section class="hero-ops">
+  <h1>Radar</h1>
+  <p class="lede">Visión de dinero — no duplica la cola de Hoy. {{ org_name }} · {{ snap.as_of }}</p>
+</section>
+<div class="radar-grid">
+  {% for b in [snap.por_cobrar, snap.por_renovar, snap.por_vender, snap.en_riesgo] %}
+  <article class="radar-card">
+    <h2>{{ b.label }}</h2>
+    <p class="money">${{ b.amount|money }}</p>
+    <p class="meta">{{ b.count }} ítems · {{ b.key }}</p>
+  </article>
+  {% endfor %}
+</div>
+<p class="hint"><a href="/hoy">Ir a Hoy</a> para ejecutar · <a href="/cobranza">Cobranza</a> para bandas.</p>
+{% endblock %}
