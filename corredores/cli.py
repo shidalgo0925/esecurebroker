@@ -156,6 +156,55 @@ def client360() -> int:
     return 0
 
 
+def seed() -> int:
+    import json
+
+    from corredores.db import SessionLocal
+    from corredores.services.seed_pilot import seed_pilot
+
+    with SessionLocal() as session:
+        report = seed_pilot(session)
+        session.commit()
+    print(json.dumps({"ok": True, **report}, indent=2))
+    return 0
+
+
+def import_excel(argv: list[str]) -> int:
+    """Usage: import-excel [--asegurados PATH] [--emisiones PATH]"""
+    import json
+    from pathlib import Path
+
+    from corredores.db import SessionLocal
+    from corredores.services.excel_import import run_assisted_import
+    from corredores.services.excel_xlsx import load_workbook_bundle
+
+    asegurados = None
+    emisiones = None
+    i = 0
+    while i < len(argv):
+        if argv[i] == "--asegurados" and i + 1 < len(argv):
+            asegurados = Path(argv[i + 1])
+            i += 2
+            continue
+        if argv[i] == "--emisiones" and i + 1 < len(argv):
+            emisiones = Path(argv[i + 1])
+            i += 2
+            continue
+        print("Usage: import-excel [--asegurados PATH] [--emisiones PATH]")
+        return 1
+    if not asegurados and not emisiones:
+        print("Usage: import-excel [--asegurados PATH] [--emisiones PATH]")
+        return 1
+
+    parties, emissions = load_workbook_bundle(asegurados=asegurados, emisiones=emisiones)
+    with SessionLocal() as session:
+        report = run_assisted_import(session, parties=parties, emissions=emissions)
+        session.commit()
+    # Report is aggregate counts only — no PII.
+    print(json.dumps({"ok": True, **report.as_dict()}, indent=2, ensure_ascii=False))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = list(argv or sys.argv[1:])
     if not argv or argv[0] in {"doctor", "help"}:
@@ -170,7 +219,14 @@ def main(argv: list[str] | None = None) -> int:
         return radar()
     if argv[0] == "client360":
         return client360()
-    print("Usage: python -m corredores.cli [doctor|init-db|run-e2e|today|radar|client360]")
+    if argv[0] == "seed":
+        return seed()
+    if argv[0] == "import-excel":
+        return import_excel(argv[1:])
+    print(
+        "Usage: python -m corredores.cli "
+        "[doctor|init-db|run-e2e|today|radar|client360|seed|import-excel]"
+    )
     return 1
 
 

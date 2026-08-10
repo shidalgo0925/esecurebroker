@@ -35,11 +35,14 @@ python -m corredores.cli run-e2e   # columna vertebral AUTO
 python -m corredores.cli today
 python -m corredores.cli radar
 python -m corredores.cli client360 # requiere party_id (tras run-e2e)
+python -m corredores.cli seed       # líneas + carriers + CommissionRule piloto
+# import asistido (PII restringido — no loguea celdas):
+# python -m corredores.cli import-excel --asegurados PATH --emisiones PATH
 pytest -q
 python scripts/p0_certify.py       # E2E + 360 + Radar + Hoy + Claim + NBA
 ```
 
-CLI: `doctor | init-db | run-e2e | today | radar | client360`
+CLI: `doctor | init-db | run-e2e | today | radar | client360 | seed | import-excel`
 
 ## Flujo certificado por `run-e2e`
 
