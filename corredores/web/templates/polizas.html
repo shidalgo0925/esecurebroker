@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Pólizas · ESecureBroker{% endblock %}
+{% block topbar %}Cartera · Pólizas{% endblock %}
+{% block content %}
+<section class="hero-ops row-between">
+  <div>
+    <h1>Pólizas</h1>
+    <p class="lede">Aquí registras y encuentras la cartera emitida. {{ org_name }}</p>
+  </div>
+  <a class="btn-primary" href="/polizas/nueva">+ Nueva póliza</a>
+</section>
+
+<table class="grid">
+  <thead>
+    <tr><th>Número</th><th>Cliente</th><th>Compañía</th><th>Ramo</th><th>Estado</th><th>Prima</th><th></th></tr>
+  </thead>
+  <tbody>
+  {% for p in policies %}
+    <tr>
+      <td class="mono">{{ p.number or p.id[:8] }}</td>
+      <td><a href="/clientes/{{ p.party_id }}">{{ p.client }}</a></td>
+      <td>{{ p.carrier }}</td>
+      <td>{{ p.line }}</td>
+      <td>{{ p.status }}</td>
+      <td>{% if p.premium %}${{ p.premium|money }}{% else %}—{% endif %}</td>
+      <td><a href="/clientes/{{ p.party_id }}">360°</a></td>
+    </tr>
+  {% else %}
+    <tr><td colspan="7">Aún no hay pólizas. Empieza con <a href="/polizas/nueva">+ Nueva póliza</a>.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

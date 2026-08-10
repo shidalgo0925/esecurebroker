@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Aseguradoras · ESecureBroker{% endblock %}
+{% block topbar %}Gestión · Aseguradoras{% endblock %}
+{% block content %}
+<section class="hero-ops">
+  <h1>Aseguradoras</h1>
+  <p class="lede">Catálogo de compañías de la organización. {{ org_name }}</p>
+</section>
+<table class="grid">
+  <thead><tr><th>Código</th><th>Nombre</th><th>Activa</th></tr></thead>
+  <tbody>
+  {% for c in carriers %}
+    <tr><td class="mono">{{ c.code }}</td><td>{{ c.name }}</td><td>{{ 'Sí' if c.active else 'No' }}</td></tr>
+  {% else %}
+    <tr><td colspan="3">Sin aseguradoras — corre <code>cli seed</code>.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

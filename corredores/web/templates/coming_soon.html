@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }} · ESecureBroker{% endblock %}
+{% block topbar %}{{ page_title }}{% endblock %}
+{% block content %}
+<section class="hero-ops">
+  <h1>{{ page_title }}</h1>
+  <p class="lede">{{ blurb }}</p>
+  <p class="hint">La navegación ya reserva este módulo. El detalle operativo se profundiza después de cerrar Hoy y Cliente 360°.</p>
+  <p><a class="btn-secondary" href="/hoy">Volver a Hoy</a></p>
+</section>
+{% endblock %}

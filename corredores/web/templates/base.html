@@ -6,22 +6,67 @@
   <title>{% block title %}ESecureBroker{% endblock %}</title>
   <link rel="stylesheet" href="/static/piloto.css" />
 </head>
-<body>
-  <header class="top">
-    <div class="brand">
+<body class="app {% if sidebar_collapsed %}sidebar-collapsed{% endif %}">
+  <aside class="sidebar" id="sidebar">
+    <div class="side-brand">
       <a href="/hoy">ESecureBroker</a>
-      <span class="tag">piloto</span>
+      <button type="button" class="collapse-btn" id="collapseBtn" title="Colapsar menú">«</button>
     </div>
-    <nav class="nav">
-      {% for key, label, href in nav %}
-        <a href="{{ href }}" class="{% if active == key %}on{% endif %}">{{ label }}</a>
+
+    <details class="nueva-gestion" open>
+      <summary>+ Nueva gestión</summary>
+      <ul>
+        {% for label, href in nueva_gestion %}
+        <li><a href="{{ href }}">{{ label }}</a></li>
+        {% endfor %}
+      </ul>
+    </details>
+
+    {% for group in nav_groups %}
+    <div class="nav-group">
+      <div class="nav-group-title">{{ group.title }}</div>
+      {% for key, label, href in group.links %}
+      <a href="{{ href }}" class="nav-link {% if active == key %}on{% endif %}" title="{{ label }}">
+        <span class="nav-ico">{{ label[0] }}</span>
+        <span class="nav-txt">{{ label }}</span>
+      </a>
       {% endfor %}
-    </nav>
-    <div class="actor">{{ actor_name }} · {{ today }}</div>
-  </header>
-  <main class="main">
-    {% block content %}{% endblock %}
-  </main>
-  <footer class="foot"><a href="/ayuda">Ayuda</a></footer>
+    </div>
+    {% endfor %}
+
+    <div class="nav-group nav-bottom">
+      {% for key, label, href in nav_footer %}
+      <a href="{{ href }}" class="nav-link {% if active == key %}on{% endif %}" title="{{ label }}">
+        <span class="nav-ico">{{ label[0] }}</span>
+        <span class="nav-txt">{{ label }}</span>
+      </a>
+      {% endfor %}
+    </div>
+
+    <div class="side-actor">{{ actor_name }}</div>
+  </aside>
+
+  <div class="workspace">
+    <header class="topbar">
+      <div class="topbar-title">{% block topbar %}{% endblock %}</div>
+      <div class="topbar-meta">{{ today }}</div>
+    </header>
+    <main class="main">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+  <script>
+    (function () {
+      var btn = document.getElementById("collapseBtn");
+      if (!btn) return;
+      btn.addEventListener("click", function () {
+        document.body.classList.toggle("sidebar-collapsed");
+        var collapsed = document.body.classList.contains("sidebar-collapsed");
+        document.cookie = "sidebar=" + (collapsed ? "collapsed" : "open") + ";path=/;max-age=31536000";
+        btn.textContent = collapsed ? "»" : "«";
+      });
+      if (document.body.classList.contains("sidebar-collapsed")) btn.textContent = "»";
+    })();
+  </script>
 </body>
 </html>

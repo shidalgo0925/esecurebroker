@@ -1,11 +1,19 @@
 {% extends "base.html" %}
 {% block title %}{{ snap.display_name }} · 360°{% endblock %}
 {% block content %}
-<section class="hero-ops">
-  <h1>{{ snap.display_name }}</h1>
-  <p class="lede">360° · saldo abierto ${{ snap.balance_open|money }} · promesas {{ snap.promises_active }}/rotas {{ snap.promises_broken }}</p>
-  <p class="meta">Roles: {{ snap.roles|join(', ') or '—' }}</p>
+<section class="hero-ops row-between">
+  <div>
+    <h1>{{ snap.display_name }}</h1>
+    <p class="lede">Cliente 360° · saldo abierto ${{ snap.balance_open|money }} · promesas {{ snap.promises_active }}/rotas {{ snap.promises_broken }}</p>
+    <p class="meta">Roles: {{ snap.roles|join(', ') or '—' }}</p>
+  </div>
+  <div class="stack-actions">
+    <a class="btn-primary" href="/polizas/nueva">+ Nueva póliza</a>
+    <button type="button" class="btn-secondary" disabled title="Advisory — no inventa cobertura">Generar estudio 360°</button>
+  </div>
 </section>
+
+<p class="meta">El <strong>estudio 360°</strong> se genera aquí (no es ítem del menú lateral). La IA recomienda; el dominio decide.</p>
 
 <section>
   <h2>Gaps / cobertura</h2>

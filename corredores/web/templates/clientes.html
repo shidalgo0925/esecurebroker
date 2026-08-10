@@ -1,9 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Clientes · ESecureBroker{% endblock %}
 {% block content %}
-<section class="hero-ops">
-  <h1>Cliente 360°</h1>
-  <p class="lede">Centro relacional — elegir sujeto. {{ org_name }}</p>
+<section class="hero-ops row-between">
+  <div>
+    <h1>Clientes</h1>
+    <p class="lede">Centro relacional — elegir sujeto. {{ org_name }}</p>
+  </div>
+  <a class="btn-primary" href="/clientes/nuevo">+ Nuevo cliente</a>
 </section>
 <table class="grid">
   <thead><tr><th>Nombre</th><th>ID</th><th></th></tr></thead>
