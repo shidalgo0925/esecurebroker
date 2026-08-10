@@ -29,61 +29,61 @@ router = APIRouter()
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 templates.env.filters["money"] = lambda v: f"{Decimal(str(v)):.2f}"
 
-# Sidebar groups — language for the broker (not motor names).
+# Sidebar groups — (key, label, href, icon)
 NAV_GROUPS = [
     {
         "title": "Operación",
         "links": [
-            ("hoy", "Hoy", "/hoy"),
-            ("radar", "Radar", "/radar"),
+            ("hoy", "Hoy", "/hoy", "sun"),
+            ("radar", "Radar", "/radar", "radar"),
         ],
     },
     {
         "title": "Cartera",
         "links": [
-            ("clientes", "Clientes", "/clientes"),
-            ("polizas", "Pólizas", "/polizas"),
-            ("cobranza", "Cobranza", "/cobranza"),
-            ("renovaciones", "Renovaciones", "/renovaciones"),
-            ("reclamos", "Reclamos", "/reclamos"),
+            ("clientes", "Clientes", "/clientes", "users"),
+            ("polizas", "Pólizas", "/polizas", "folder"),
+            ("cobranza", "Cobranza", "/cobranza", "coins"),
+            ("renovaciones", "Renovaciones", "/renovaciones", "refresh"),
+            ("reclamos", "Reclamos", "/reclamos", "shield"),
         ],
     },
     {
         "title": "Ventas",
         "links": [
-            ("oportunidades", "Oportunidades / CRM", "/oportunidades"),
-            ("cotizador", "Cotizador", "/cotizador"),
-            ("referidos", "Referidos", "/referidos"),
+            ("oportunidades", "Oportunidades / CRM", "/oportunidades", "target"),
+            ("cotizador", "Cotizador", "/cotizador", "scale"),
+            ("referidos", "Referidos", "/referidos", "share"),
         ],
     },
     {
         "title": "Gestión",
         "links": [
-            ("aseguradoras", "Aseguradoras", "/aseguradoras"),
-            ("comisiones", "Comisiones", "/comisiones"),
-            ("documentos", "Documentos", "/documentos"),
+            ("aseguradoras", "Aseguradoras", "/aseguradoras", "building"),
+            ("comisiones", "Comisiones", "/comisiones", "percent"),
+            ("documentos", "Documentos", "/documentos", "file"),
         ],
     },
     {
         "title": "Inteligencia",
         "links": [
-            ("oportunidades_ia", "Oportunidades IA", "/oportunidades-ia"),
+            ("oportunidades_ia", "Oportunidades IA", "/oportunidades-ia", "spark"),
         ],
     },
 ]
 
 NAV_FOOTER = [
-    ("reportes", "Reportes", "/reportes"),
-    ("configuracion", "Configuración", "/configuracion"),
-    ("ayuda", "Ayuda", "/ayuda"),
+    ("reportes", "Reportes", "/reportes", "chart"),
+    ("configuracion", "Configuración", "/configuracion", "gear"),
+    ("ayuda", "Ayuda", "/ayuda", "help"),
 ]
 
 NUEVA_GESTION = [
-    ("Nueva póliza", "/polizas/nueva"),
-    ("Nuevo cliente", "/clientes/nuevo"),
-    ("Nueva cotización", "/cotizador"),
-    ("Registrar pago", "/cobranza"),
-    ("Nuevo reclamo", "/reclamos/nuevo"),
+    ("Nueva póliza", "/polizas/nueva", "folder-plus"),
+    ("Nuevo cliente", "/clientes/nuevo", "user-plus"),
+    ("Nueva cotización", "/cotizador", "scale"),
+    ("Registrar pago", "/cobranza", "coins"),
+    ("Nuevo reclamo", "/reclamos/nuevo", "shield"),
 ]
 
 BAND_LABELS = {

@@ -44,6 +44,15 @@ from corredores.services.installment_status import (
 from corredores.services.radar import build_radar
 
 
+def _stamp(*, kind: str, urgency: str, title: str = "") -> str:
+    t = title.upper()
+    if "VENCID" in t:
+        return "VENCIDA"
+    if kind == "PROMESA" or urgency == "urgent" or "VENCE HOY" in t or "URGENTE" in t:
+        return "URGENTE"
+    return "EN CURSO"
+
+
 MONTHS_ES = (
     "",
     "enero",
@@ -98,6 +107,7 @@ class AttentionCard:
     title: str
     subject: str
     lines: list[str]
+    stamp: str = "EN CURSO"  # URGENTE|VENCIDA|EN CURSO
     party_id: str | None = None
     policy_id: str | None = None
     claim_id: str | None = None
@@ -227,6 +237,7 @@ def build_today_home(
                 lines=[
                     f"Prometió pagar ${pr.promised_amount:,.2f} el {pr.promised_date.day} de {MONTHS_ES[pr.promised_date.month]}",
                 ],
+                stamp=_stamp(kind="PROMESA", urgency="urgent", title="PROMESA INCUMPLIDA"),
                 party_id=party.id if party else None,
                 policy_id=pr.policy_id,
                 actions=[
@@ -288,7 +299,7 @@ def build_today_home(
             days = (today - inst.due_date).days
             if status == DerivedInstallmentStatus.OVERDUE:
                 urgency = "urgent"
-                title = "COBRO · URGENTE"
+                title = "COBRO · VENCIDO"
                 detail = f"${bal:,.2f} vencidos · {days} días"
             elif status == DerivedInstallmentStatus.DUE:
                 urgency = "urgent"
@@ -309,6 +320,7 @@ def build_today_home(
                     title=title,
                     subject=_party_name(party),
                     lines=[detail, f"Cuota {inst.installment_number} · póliza {policy.policy_number or (policy.id[:8] if policy else '—')}"],
+                    stamp=_stamp(kind="COBRO", urgency=urgency, title=title),
                     party_id=party.id if party else None,
                     policy_id=policy.id if policy else None,
                     actions=[
@@ -372,6 +384,7 @@ def build_today_home(
                 title="RENOVACIÓN",
                 subject=f"{_party_name(party)}{veh}",
                 lines=[line2],
+                stamp=_stamp(kind="RENOVACION", urgency=urgency, title="RENOVACIÓN"),
                 party_id=party.id if party else None,
                 policy_id=pol.id if pol else None,
                 renewal_id=ren.id,
@@ -400,6 +413,11 @@ def build_today_home(
                 lines=[
                     f"{age} días sin movimiento" if age is not None else f"Estado {c.status}",
                 ],
+                stamp=_stamp(
+                    kind="RECLAMO",
+                    urgency="watch" if (age or 0) < 14 else "urgent",
+                    title="RECLAMO",
+                ),
                 party_id=party.id if party else None,
                 policy_id=c.policy_id,
                 claim_id=c.id,

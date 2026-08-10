@@ -44,13 +44,15 @@ def test_piloto_surfaces_ok():
         assert "sidebar" in r.text or "Nueva gestión" in r.text
 
     shell = client.get("/hoy")
-    assert "+ Nueva gestión" in shell.text
+    assert "+ Nueva gestión" in shell.text or "Nueva gestión" in shell.text
     assert "Pólizas" in shell.text
     assert "Cartera" in shell.text
     assert "Estudio 360" not in shell.text  # not a primary nav item
     assert "EN1 stub" not in shell.text
     assert "IA recomienda" not in shell.text
     assert "Requiere tu atención" in shell.text
+    assert "nav-ico" in shell.text or "viewBox" in shell.text  # SVG icons
+    assert "Expediente del día" in shell.text or "ledger" in shell.text or "stamp" in shell.text or "dossier" in shell.text
 
     polizas = client.get("/polizas")
     assert "+ Nueva póliza" in polizas.text

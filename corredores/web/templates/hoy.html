@@ -1,21 +1,20 @@
 {% extends "base.html" %}
 {% block title %}Hoy · ESecureBroker{% endblock %}
+{% block topbar %}Operación · Hoy{% endblock %}
 {% block content %}
 <section class="hoy-head">
-  <div>
-    <p class="eyebrow">HOY</p>
-    <h1>{{ home.date_label }}</h1>
-  </div>
+  <p class="eyebrow">Expediente del día</p>
+  <h1 class="display">{{ home.date_label }}</h1>
 </section>
 
-<p class="greet">{{ home.greeting }}{% if actor_name %}, {{ actor_name.split()[0] }}{% endif %}.</p>
+<p class="greet">{{ home.greeting }}{% if actor_name %}, <span class="display-inline">{{ actor_name.split()[0] }}</span>{% endif %}.</p>
 {% if home.attention_count %}
-<p class="lede strong">Tienes <strong>{{ home.attention_count }}</strong> asunto{{ 's' if home.attention_count != 1 else '' }} que necesitan tu atención.</p>
+<p class="lede strong">Tienes <strong class="mono">{{ home.attention_count }}</strong> asunto{{ 's' if home.attention_count != 1 else '' }} que necesitan tu atención.</p>
 {% else %}
 <p class="lede strong">No tienes asuntos urgentes.</p>
 <p class="empty-useful">
   {% if home.auto_cuotas_managed or home.reminders_sent_today or home.auto_activity %}
-  La cobranza automática está gestionando <strong>{{ home.auto_cuotas_managed }}</strong> cuota{{ 's' if home.auto_cuotas_managed != 1 else '' }}{% if home.reminders_sent_today %} y hoy se enviaron <strong>{{ home.reminders_sent_today }}</strong> recordatorios{% endif %}.
+  La cobranza automática está gestionando <strong class="mono">{{ home.auto_cuotas_managed }}</strong> cuota{{ 's' if home.auto_cuotas_managed != 1 else '' }}{% if home.reminders_sent_today %} y hoy se enviaron <strong class="mono">{{ home.reminders_sent_today }}</strong> recordatorios{% endif %}.
   {% else %}
   El sistema no detectó cobros vencidos, promesas rotas ni renovaciones críticas para hoy. Cuando haya actividad, aparecerá aquí.
   {% endif %}
@@ -24,8 +23,9 @@
 
 <div class="money-row">
   {% for m in home.money %}
-  <a class="money-tile" href="{{ m.href }}">
-    <div class="money-amt">{{ m.amount_label }}</div>
+  <a class="money-tile ledger-card" href="{{ m.href }}">
+    <div class="ledger-perf"></div>
+    <div class="money-amt mono">{{ m.amount_label }}</div>
     <div class="money-title">{{ m.title }}</div>
     <div class="money-sub">{{ m.subtitle }}</div>
   </a>
@@ -41,14 +41,20 @@
   {% if home.attention %}
   <ul class="attention-list">
     {% for a in home.attention %}
-    <li class="att att-{{ a.urgency }} kind-{{ a.kind|lower }}">
-      <div class="att-kind">{{ a.title }}</div>
-      <div class="att-subject">{{ a.subject }}</div>
-      {% for line in a.lines %}<p class="att-line">{{ line }}</p>{% endfor %}
-      <div class="actions">
-        {% for label, href in a.actions %}
-        <a href="{{ href }}">{{ label }}</a>
-        {% endfor %}
+    <li class="dossier att-{{ a.urgency }} kind-{{ a.kind|lower }}">
+      <div class="dossier-tab" aria-hidden="true"></div>
+      <div class="dossier-body">
+        <div class="dossier-top">
+          <div class="att-kind">{{ a.title }}</div>
+          <span class="stamp stamp-{{ a.stamp|lower|replace(' ', '-') }}">{{ a.stamp }}</span>
+        </div>
+        <div class="att-subject display">{{ a.subject }}</div>
+        {% for line in a.lines %}<p class="att-line {% if '$' in line %}mono{% endif %}">{{ line }}</p>{% endfor %}
+        <div class="actions">
+          {% for label, href in a.actions %}
+          <a href="{{ href }}">{{ label }}</a>
+          {% endfor %}
+        </div>
       </div>
     </li>
     {% endfor %}
@@ -64,9 +70,10 @@
     <a class="see-all" href="/radar">Ver radar →</a>
   </div>
   {% if home.auto_activity %}
-  <ul class="auto-list">
+  <ul class="auto-list ledger-card">
+    <li class="ledger-perf" aria-hidden="true"></li>
     {% for line in home.auto_activity %}
-    <li>✓ {{ line.text }}{% if line.amount_label %} <strong>{{ line.amount_label }}</strong>{% endif %}</li>
+    <li>✓ {{ line.text }}{% if line.amount_label %} <strong class="mono">{{ line.amount_label }}</strong>{% endif %}</li>
     {% endfor %}
   </ul>
   {% else %}
