@@ -6,7 +6,8 @@ Producto asociado a EN1, **aplicación independiente** (ADR-005).
 |-----------|--------|
 | **Path** | `/opt/corredores` |
 | **Fase** | P0 — Dominio AUTO end-to-end |
-| **DB** | Propia (`DATABASE_URL`; default SQLite local de desarrollo) |
+| **DB** | Propia — Postgres `corredores` (ver OPS wiki); SQLite solo fallback local |
+| **Tests DB** | `corredores_test` (aislado; `drop_all` nunca toca app DB) |
 | **EN1** | Solo abstracciones (`Actor`, `OrganizationContext`, `EntitlementChecker`) hasta ADR-006 |
 
 ## Flujo a certificar

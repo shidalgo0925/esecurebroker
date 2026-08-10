@@ -1,7 +1,8 @@
 from datetime import date
 from decimal import Decimal
 
-from corredores.db import Base, SessionLocal, engine
+import corredores.db as db
+from corredores.db import Base
 from corredores.domain import models as _models  # noqa: F401
 from corredores.services.auto_e2e import (
     collection_snapshot,
@@ -13,8 +14,8 @@ from corredores.domain.enums import TermSource
 
 
 def setup_module():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
+    Base.metadata.drop_all(bind=db.engine)
+    Base.metadata.create_all(bind=db.engine)
 
 
 def test_suggest_term_default_one_year():
@@ -41,7 +42,7 @@ def test_proposed_installments_sum():
 
 
 def test_auto_e2e_backbone():
-    with SessionLocal() as session:
+    with db.SessionLocal() as session:
         result = run_auto_e2e_demo(session, today=date(2026, 8, 10))
         snap = collection_snapshot(session, result.policy_id, today=date(2026, 8, 10))
     assert result.policy_id

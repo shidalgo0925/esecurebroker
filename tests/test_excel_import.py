@@ -6,7 +6,8 @@ from pathlib import Path
 
 from openpyxl import Workbook
 
-from corredores.db import Base, SessionLocal, engine
+import corredores.db as db
+from corredores.db import Base
 from corredores.domain import models as _models  # noqa: F401
 from corredores.domain.enums import DataSource
 from corredores.domain.models import CommissionRule, Installment, Policy
@@ -21,12 +22,12 @@ from corredores.services.seed_pilot import seed_pilot
 
 
 def setup_module():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
+    Base.metadata.drop_all(bind=db.engine)
+    Base.metadata.create_all(bind=db.engine)
 
 
 def test_seed_pilot_commission_rates():
-    with SessionLocal() as session:
+    with db.SessionLocal() as session:
         report = seed_pilot(session)
         session.commit()
         rules = session.query(CommissionRule).all()
@@ -91,7 +92,7 @@ def test_import_auto_emitido_and_coexistence():
             national_id="8-999-1",
         ),
     ]
-    with SessionLocal() as session:
+    with db.SessionLocal() as session:
         r1 = run_assisted_import(session, parties=parties, emissions=emissions)
         session.commit()
         # Coexistence: re-import same policy number must skip.
@@ -130,7 +131,7 @@ def test_red_hint_does_not_create_overdue_status():
             effective_date=date(2026, 9, 1),  # future → PENDING
         )
     ]
-    with SessionLocal() as session:
+    with db.SessionLocal() as session:
         run_assisted_import(session, emissions=emissions)
         session.commit()
         pol = session.query(Policy).filter_by(policy_number="POL-RED-1").one()

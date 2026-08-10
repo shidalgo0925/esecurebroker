@@ -1,6 +1,7 @@
 from datetime import date
 
-from corredores.db import Base, SessionLocal, engine
+import corredores.db as db
+from corredores.db import Base
 from corredores.domain import models as _models  # noqa: F401
 from corredores.domain.enums import ClaimStatus, CoverageKnowledgeState
 from corredores.services.auto_e2e import run_auto_e2e_demo
@@ -9,13 +10,13 @@ from corredores.services.client_360 import build_client_360
 
 
 def setup_module():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
+    Base.metadata.drop_all(bind=db.engine)
+    Base.metadata.create_all(bind=db.engine)
 
 
 def test_client_360_and_claim():
     today = date(2026, 8, 10)
-    with SessionLocal() as session:
+    with db.SessionLocal() as session:
         result = run_auto_e2e_demo(session, today=today)
         snap = build_client_360(session, result.organization_id, result.client_party_id, today=today)
         assert snap.party_id == result.client_party_id

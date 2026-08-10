@@ -1,7 +1,8 @@
 from datetime import date, timedelta
 from decimal import Decimal
 
-from corredores.db import Base, SessionLocal, engine
+import corredores.db as db
+from corredores.db import Base
 from corredores.domain import models as _models  # noqa: F401
 from corredores.domain.enums import PaymentPromiseStatus
 from corredores.services.auto_e2e import run_auto_e2e_demo
@@ -10,13 +11,13 @@ from corredores.services.today import build_today_queue
 
 
 def setup_module():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
+    Base.metadata.drop_all(bind=db.engine)
+    Base.metadata.create_all(bind=db.engine)
 
 
 def test_promise_fulfill_and_today_queue():
     today = date(2026, 8, 10)
-    with SessionLocal() as session:
+    with db.SessionLocal() as session:
         result = run_auto_e2e_demo(session, today=today)
         # second installment still pending — create promise
         inst2 = result.installment_ids[1]
@@ -42,7 +43,7 @@ def test_promise_fulfill_and_today_queue():
 
 def test_break_promise():
     today = date(2026, 8, 10)
-    with SessionLocal() as session:
+    with db.SessionLocal() as session:
         result = run_auto_e2e_demo(session, today=today)
         promise = create_promise(
             session,

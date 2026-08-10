@@ -1,7 +1,8 @@
 from datetime import date
 from decimal import Decimal
 
-from corredores.db import Base, SessionLocal, engine
+import corredores.db as db
+from corredores.db import Base
 from corredores.domain import models as _models  # noqa: F401
 from corredores.domain.models import Carrier
 from corredores.services.auto_e2e import ensure_auto_line, run_auto_e2e_demo
@@ -19,13 +20,13 @@ from corredores.services.renewals import start_multi_carrier_recote, start_same_
 
 
 def setup_module():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
+    Base.metadata.drop_all(bind=db.engine)
+    Base.metadata.create_all(bind=db.engine)
 
 
 def test_comparator_three_sources():
     today = date(2026, 8, 10)
-    with SessionLocal() as session:
+    with db.SessionLocal() as session:
         result = run_auto_e2e_demo(session, today=today)
         auto = ensure_auto_line(session)
         c1 = session.query(Carrier).filter_by(organization_id=result.organization_id, code="DEMO").one()
@@ -67,7 +68,7 @@ def test_comparator_three_sources():
 
 def test_renewal_paths():
     today = date(2026, 8, 10)
-    with SessionLocal() as session:
+    with db.SessionLocal() as session:
         result = run_auto_e2e_demo(session, today=today)
         from corredores.domain.models import RenewalOpportunity
 
