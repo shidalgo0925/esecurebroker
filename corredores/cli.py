@@ -11,7 +11,7 @@ from corredores.domain import models as _models  # noqa: F401
 
 
 def doctor() -> int:
-    print("corredores P0 doctor")
+    print("ESecureBroker doctor")
     print(f"  version:     {__import__('corredores').__version__}")
     print(f"  app_env:     {settings.app_env}")
     print(f"  database:    {settings.database_url}")
@@ -223,7 +223,7 @@ def serve(argv: list[str] | None = None) -> int:
             i += 2
             continue
         i += 1
-    print(f"Corredores piloto UI http://{host}:{port}/hoy")
+    print(f"ESecureBroker UI http://{host}:{port}/hoy")
     uvicorn.run("corredores.web:app", host=host, port=port, reload=False)
     return 0
 

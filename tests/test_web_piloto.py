@@ -32,7 +32,7 @@ def test_piloto_surfaces_ok():
     ):
         r = client.get(path)
         assert r.status_code == 200, path
-        assert "Corredores" in r.text
+        assert "ESecureBroker" in r.text
 
     parties = client.get("/clientes")
     assert parties.status_code == 200

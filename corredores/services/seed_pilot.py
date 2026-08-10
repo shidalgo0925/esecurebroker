@@ -55,12 +55,17 @@ CARRIERS = [
 ]
 
 
-def seed_pilot(session: Session, *, org_name: str = "Piloto Corredores") -> dict:
+def seed_pilot(session: Session, *, org_name: str = "ESecureBroker") -> dict:
     org = session.query(Organization).filter_by(name=org_name).one_or_none()
     if org is None:
-        org = Organization(name=org_name)
-        session.add(org)
-        session.flush()
+        legacy = session.query(Organization).filter_by(name="Piloto Corredores").one_or_none()
+        if legacy is not None:
+            legacy.name = org_name
+            org = legacy
+        else:
+            org = Organization(name=org_name)
+            session.add(org)
+            session.flush()
 
     ensure_auto_line(session)
     lines_n = 0

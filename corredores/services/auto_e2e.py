@@ -140,7 +140,7 @@ def run_auto_e2e_demo(
     session: Session,
     *,
     actor_id: str = "p0-system",
-    org_name: str = "Piloto Corredores",
+    org_name: str = "ESecureBroker",
     today: date | None = None,
 ) -> AutoE2EResult:
     """Deterministic happy-path for certification of the P0 backbone."""
@@ -148,9 +148,14 @@ def run_auto_e2e_demo(
 
     org = session.query(Organization).filter_by(name=org_name).one_or_none()
     if org is None:
-        org = Organization(name=org_name)
-        session.add(org)
-        session.flush()
+        legacy = session.query(Organization).filter_by(name="Piloto Corredores").one_or_none()
+        if legacy is not None:
+            legacy.name = org_name
+            org = legacy
+        else:
+            org = Organization(name=org_name)
+            session.add(org)
+            session.flush()
 
     auto = ensure_auto_line(session)
 

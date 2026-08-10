@@ -14,7 +14,7 @@ STATIC = Path(__file__).parent / "static"
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="Corredores Piloto", version="0.1.0")
+    app = FastAPI(title="ESecureBroker", version="0.1.0")
     app.mount("/static", StaticFiles(directory=str(STATIC)), name="static")
     app.include_router(router)
     return app

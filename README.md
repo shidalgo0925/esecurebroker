@@ -1,9 +1,10 @@
-# Corredores — P0 AUTO E2E
+# ESecureBroker — P0 AUTO E2E
 
-Producto asociado a EN1, **aplicación independiente** (ADR-005).
+Producto comercial **ESecureBroker** (corredores de seguros), asociado a EN1, **aplicación independiente** (ADR-005).
 
 | Dimensión | Valor |
 |-----------|--------|
+| **Nombre** | **ESecureBroker** |
 | **Path** | `/opt/corredores` |
 | **Fase** | P0 — Dominio AUTO end-to-end |
 | **DB** | Propia — Postgres `corredores` (ver OPS wiki); SQLite solo fallback local |

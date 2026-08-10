@@ -527,16 +527,21 @@ def import_emissions(
 def run_assisted_import(
     session: Session,
     *,
-    org_name: str = "Piloto Corredores",
+    org_name: str = "ESecureBroker",
     parties: Iterable[PartyImportRow] = (),
     emissions: Iterable[EmissionImportRow] = (),
     actor_id: str = "excel-import",
 ) -> ImportReport:
     org = session.query(Organization).filter_by(name=org_name).one_or_none()
     if org is None:
-        org = Organization(name=org_name)
-        session.add(org)
-        session.flush()
+        legacy = session.query(Organization).filter_by(name="Piloto Corredores").one_or_none()
+        if legacy is not None:
+            legacy.name = org_name
+            org = legacy
+        else:
+            org = Organization(name=org_name)
+            session.add(org)
+            session.flush()
 
     report = ImportReport()
     import_parties(session, organization_id=org.id, rows=list(parties), report=report)
