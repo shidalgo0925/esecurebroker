@@ -1,22 +1,44 @@
 {% extends "base.html" %}
 {% block title %}{{ snap.display_name }} · 360°{% endblock %}
+{% block topbar %}Cartera · Cliente 360°{% endblock %}
 {% block content %}
-<section class="hero-ops row-between">
+<section class="page-head row-between">
   <div>
-    <h1>{{ snap.display_name }}</h1>
-    <p class="lede">Cliente 360° · saldo abierto ${{ snap.balance_open|money }} · promesas {{ snap.promises_active }}/rotas {{ snap.promises_broken }}</p>
+    <h1 class="page-title">{{ snap.display_name }}</h1>
+    <p class="page-sub">
+      Cliente 360° · saldo abierto <b>${{ snap.balance_open|money }}</b>
+      · promesas {{ snap.promises_active }}/rotas {{ snap.promises_broken }}
+    </p>
     <p class="meta">Roles: {{ snap.roles|join(', ') or '—' }}</p>
   </div>
   <div class="stack-actions">
-    <a class="btn-primary" href="/polizas/nueva">+ Nueva póliza</a>
-    <button type="button" class="btn-secondary" disabled title="Advisory — no inventa cobertura">Generar estudio 360°</button>
+    <a class="btn-secondary" href="/clientes/{{ snap.party_id }}/editar">Editar</a>
+    <a class="btn-secondary" href="/clientes/{{ snap.party_id }}/estado-cuenta">Estado de cuenta</a>
+    <a class="btn-secondary" href="/polizas/nueva?party_id={{ snap.party_id }}">+ Póliza</a>
+    <a class="btn-primary" href="/cobranza/pagos/nuevo">Registrar pago</a>
   </div>
 </section>
 
-<p class="meta">El <strong>estudio 360°</strong> se genera aquí (no es ítem del menú lateral). La IA recomienda; el dominio decide.</p>
+<section id="morosidad" style="margin-bottom:1rem">
+  <div class="report-tiles cartera-kpis">
+    <div class="report-tile">
+      <div class="money-amt">${{ snap.balance_open|money }}</div>
+      <div class="money-title">SALDO ABIERTO</div>
+    </div>
+    <a class="report-tile" href="/clientes/{{ snap.party_id }}/estado-cuenta">
+      <div class="money-amt">{{ snap.promises_active }}</div>
+      <div class="money-title">PROMESAS ACTIVAS</div>
+      <div class="meta">rotas {{ snap.promises_broken }}</div>
+    </a>
+    <a class="report-tile tone-risk" href="/clientes/{{ snap.party_id }}/estado-cuenta">
+      <div class="money-title" style="margin-top:0">PAGOS / MOROSIDAD</div>
+      <div class="meta" style="margin-top:0.45rem">Ver cuotas, movimientos y cobrar →</div>
+    </a>
+  </div>
+</section>
 
 <section>
-  <h2>Gaps / cobertura</h2>
+  <h2 class="section-title">Gaps / cobertura</h2>
   <ul class="worklist">
     {% for g in snap.gaps %}
     <li><span class="chip">{{ g.state }}</span> {{ g.label }} <span class="meta">({{ g.risk_kind }})</span></li>
@@ -28,15 +50,18 @@
 
 <div class="split">
   <section>
-    <h2>Pólizas</h2>
+    <h2 class="section-title">Pólizas</h2>
     <ul class="worklist compact">
       {% for p in snap.policies %}
-      <li>{{ p.number or p.id[:8] }} · {{ p.status }} · {{ p.premium }}</li>
-      {% else %}<li class="empty">Ninguna</li>{% endfor %}
+      <li>
+        <a href="/polizas/{{ p.id }}">{{ p.number or p.id[:8] }}</a>
+        · {{ p.status }} · {{ p.premium }}
+      </li>
+      {% else %}<li class="empty">Ninguna — <a href="/polizas/nueva?party_id={{ snap.party_id }}">crear póliza</a></li>{% endfor %}
     </ul>
   </section>
   <section>
-    <h2>Vehículos / claims / renovaciones</h2>
+    <h2 class="section-title">Vehículos / claims / renovaciones</h2>
     <ul class="worklist compact">
       {% for v in snap.vehicles %}<li>{{ v.make }} {{ v.model }} {{ v.plate }}</li>{% endfor %}
       {% for c in snap.claims %}<li>Claim {{ c.status }} {{ c.number or c.id[:8] }}</li>{% endfor %}
@@ -44,5 +69,59 @@
     </ul>
   </section>
 </div>
-<p class="hint"><a href="/clientes">← Clientes</a> · <a href="/cobranza">Cobranza</a> · <a href="/cotizador">Cotizar</a></p>
+
+<section id="documentos" class="docs-section">
+  <h2 class="section-title">Documentos PDF</h2>
+  <p class="page-sub">Adjuntá cédula, póliza, comprobantes y demás del expediente.</p>
+
+  <form class="capture-form docs-upload" method="post" action="/clientes/{{ snap.party_id }}/documentos" enctype="multipart/form-data">
+    <div class="capture-grid">
+      <label>Archivo PDF o foto
+        <input type="file" name="file" accept="application/pdf,.pdf,image/jpeg,image/png,image/webp,.jpg,.jpeg,.png" required />
+      </label>
+      <label>Tipo
+        <select name="doc_kind">
+          {% for k in doc_kinds %}
+          <option value="{{ k }}" {% if k == 'OTRO' %}selected{% endif %}>{{ k }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="span-2">Título (opcional)
+        <input name="title" placeholder="Ej. Cédula frente" />
+      </label>
+    </div>
+    {% if doc_error %}<p class="form-error">{{ doc_error }}</p>{% endif %}
+    <div class="wizard-actions">
+      <button class="btn-primary" type="submit">Adjuntar PDF</button>
+    </div>
+  </form>
+
+  <div class="table-card" style="margin-top:1rem">
+    <table class="data-table">
+      <thead>
+        <tr><th>Título</th><th>Tipo</th><th>Archivo</th><th>Tamaño</th><th></th></tr>
+      </thead>
+      <tbody>
+      {% for d in documents %}
+        <tr>
+          <td class="cli-name">{{ d.title }}</td>
+          <td><span class="kind-pill">{{ d.doc_kind }}</span></td>
+          <td class="cli-id">{{ d.original_filename }}</td>
+          <td class="mono">{{ (d.size_bytes / 1024)|round(1) }} KB</td>
+          <td class="cli-action">
+            <a class="open-link" href="/documentos/{{ d.id }}/archivo" target="_blank" rel="noopener">Ver PDF →</a>
+            <form method="post" action="/documentos/{{ d.id }}/eliminar" class="inline-form" onsubmit="return confirm('¿Eliminar este PDF?');">
+              <button type="submit" class="link-danger">Eliminar</button>
+            </form>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5" class="empty-row">Sin documentos aún.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<p class="hint"><a href="/clientes">← Clientes</a> · <a href="/documentos">Todos los documentos</a> · <a href="/cobranza">Cobranza</a></p>
 {% endblock %}

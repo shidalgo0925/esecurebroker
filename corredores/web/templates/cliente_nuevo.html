@@ -2,16 +2,33 @@
 {% block title %}Nuevo cliente · ESecureBroker{% endblock %}
 {% block topbar %}Cartera · Nuevo cliente{% endblock %}
 {% block content %}
-<section class="hero-ops">
-  <h1>Nuevo cliente</h1>
-  <p class="lede">Alta rápida de persona. Luego puedes emitir póliza o cotizar.</p>
+<section class="page-head row-between">
+  <div>
+    <h1 class="page-title">Nuevo cliente</h1>
+    <p class="page-sub">Alta rápida · luego emite póliza o cotiza</p>
+  </div>
+  <a class="btn-secondary" href="/clientes">Cancelar</a>
 </section>
-<form method="post" action="/clientes/nuevo" class="wizard-form">
-  <label>Nombre <input name="first_name" required /></label>
-  <label>Apellido <input name="last_name" required /></label>
-  <label>Cédula / RUC <input name="national_id" /></label>
-  <label>Teléfono <input name="phone" /></label>
-  <div class="wizard-actions">
+
+<form method="post" action="/clientes/nuevo" class="capture-form capture-dense">
+  <fieldset>
+    <legend>Datos del cliente</legend>
+    <div class="capture-grid">
+      <label>Nombre
+        <input name="first_name" required autocomplete="given-name" />
+      </label>
+      <label>Apellido
+        <input name="last_name" required autocomplete="family-name" />
+      </label>
+      <label>Cédula / RUC
+        <input name="national_id" autocomplete="off" />
+      </label>
+      <label>Teléfono
+        <input name="phone" autocomplete="tel" />
+      </label>
+    </div>
+  </fieldset>
+  <div class="wizard-actions capture-sticky-actions">
     <a class="btn-secondary" href="/clientes">Cancelar</a>
     <button class="btn-primary" type="submit">Guardar cliente</button>
   </div>

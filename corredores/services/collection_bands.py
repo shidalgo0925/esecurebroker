@@ -25,10 +25,16 @@ def classify_collection_band(
     today = today or date.today()
     if has_exception:
         return CollectionBand.EXCEPTION
-    if broken_promise and broken_promise.status == PaymentPromiseStatus.BROKEN:
-        return CollectionBand.BROKEN_PROMISE
+    # Promesa activa vigente gana sobre una incumplida vieja (re-promesa).
     if active_promise and active_promise.status == PaymentPromiseStatus.ACTIVE:
+        if promise_is_broken(active_promise, today=today):
+            return CollectionBand.BROKEN_PROMISE
         return CollectionBand.PROMISE
+    if broken_promise and (
+        broken_promise.status == PaymentPromiseStatus.BROKEN
+        or promise_is_broken(broken_promise, today=today)
+    ):
+        return CollectionBand.BROKEN_PROMISE
 
     status = derive_installment_status(installment, today)
     balance = outstanding_balance(installment)

@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Revisar captura · ESecureBroker{% endblock %}
+{% block topbar %}Cartera · Revisar captura IA{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1 class="page-title">Revisar y confirmar</h1>
+  <p class="page-sub">
+    Propuesta {{ draft.source }} · confianza {{ '%.0f'|format(draft.confidence * 100) }}% ·
+    <b>nada se graba hasta confirmar</b>
+  </p>
+</section>
+
+{% if draft.warnings %}
+<ul class="worklist" style="margin-bottom:1rem">
+  {% for w in draft.warnings %}
+  <li><span class="chip">aviso</span> {{ w }}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{% if preview_url %}
+<p class="meta" style="margin-bottom:0.75rem"><a href="{{ preview_url }}" target="_blank" rel="noopener">Ver archivo subido →</a></p>
+{% endif %}
+
+<form class="capture-form" method="post" action="/captura/poliza-foto/confirmar" style="max-width:860px">
+  <input type="hidden" name="upload_token" value="{{ upload_token }}" />
+
+  <fieldset>
+    <legend>Cliente</legend>
+    <div class="capture-grid">
+      <label>Nombre <input name="first_name" value="{{ draft.first_name }}" required /></label>
+      <label>Apellido <input name="last_name" value="{{ draft.last_name }}" /></label>
+      <label>Cédula / RUC <input name="national_id" class="mono" value="{{ draft.national_id }}" /></label>
+      <label>Teléfono <input name="phone" value="{{ draft.phone }}" /></label>
+      <label>Email <input name="email" value="{{ draft.email }}" /></label>
+      <label>Distrito <input name="district" value="{{ draft.district }}" /></label>
+      <label class="span-2">Dirección <input name="address" value="{{ draft.address }}" /></label>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Póliza</legend>
+    <div class="capture-grid">
+      <label>Compañía
+        <select name="carrier_id" required>
+          <option value="">— seleccionar —</option>
+          {% for c in carriers %}
+          <option value="{{ c.id }}" {% if c.name|upper == draft.carrier_name|upper or draft.carrier_name|upper in c.name|upper %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Ramo
+        <select name="line_id">
+          {% for l in lines %}
+          <option value="{{ l.id }}" {% if l.code == draft.line_code %}selected{% endif %}>{{ l.code }} — {{ l.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Nº póliza <input name="policy_number" class="mono" value="{{ draft.policy_number }}" required /></label>
+      <label>Factura <input name="invoice_number" class="mono" value="{{ draft.invoice_number }}" /></label>
+      <label>Vigencia inicio <input type="date" name="effective_date" value="{{ draft.effective_date }}" /></label>
+      <label>Vigencia fin <input type="date" name="expiration_date" value="{{ draft.expiration_date }}" /></label>
+      <label>Prima / total <input name="annual_premium" class="mono" value="{{ draft.annual_premium }}" /></label>
+      <label>Nº cuotas <input name="num_payments" class="mono" value="{{ draft.num_payments or '1' }}" /></label>
+      <label>Forma pago <input name="payment_form" value="{{ draft.payment_form }}" /></label>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Vehículo (AUTO)</legend>
+    <div class="capture-grid">
+      <label>Marca <input name="make" value="{{ draft.make }}" /></label>
+      <label>Modelo <input name="model" value="{{ draft.model }}" /></label>
+      <label>Año <input name="year" value="{{ draft.year }}" /></label>
+      <label>Placa <input name="plate" class="mono" value="{{ draft.plate }}" /></label>
+      <label>Uso <input name="usage" value="{{ draft.usage }}" /></label>
+      <label>Tipo <input name="vehicle_type" value="{{ draft.vehicle_type }}" /></label>
+      <label>Color <input name="color" value="{{ draft.color }}" /></label>
+      <label>Motor <input name="motor" class="mono" value="{{ draft.motor }}" /></label>
+      <label class="span-2">Chasis <input name="chassis" class="mono" value="{{ draft.chassis }}" /></label>
+    </div>
+  </fieldset>
+
+  <label class="check-row">
+    <input type="checkbox" name="attach_file" value="1" checked />
+    Adjuntar la foto/PDF al expediente del cliente
+  </label>
+
+  {% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+
+  <div class="wizard-actions">
+    <a class="btn-secondary" href="/captura/poliza-foto">← Otra foto</a>
+    <button class="btn-primary" type="submit">Confirmar y crear póliza</button>
+  </div>
+</form>
+{% endblock %}

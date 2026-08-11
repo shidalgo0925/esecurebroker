@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Suscripción activa · ESecureBroker</title>
+  <link rel="icon" href="/static/brand/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/auth.css?v=20260811b" />
+</head>
+<body class="auth-body">
+  <div class="auth-stage">
+    <div class="auth-login-wrap auth-register-wrap">
+      <div class="auth-login-brand">
+        <img src="/static/brand/crest.svg" width="44" height="44" alt="" />
+        <span class="auth-wordmark">ESecure<span>Broker</span></span>
+      </div>
+      <h1 class="auth-title">Listo. Tu plan está activo.</h1>
+      <p class="auth-lead">Ya puedes entrar al expediente del día.</p>
+      <a class="auth-cta" href="/hoy">Abrir expediente</a>
+      <p class="auth-note" style="margin-top:1.25rem">Plan {{ plan_name }} · {{ org_name }}</p>
+    </div>
+  </div>
+</body>
+</html>

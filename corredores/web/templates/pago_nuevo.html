@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}{% if modo == 'promesa' %}Promesa{% else %}Cobrar{% endif %} · ESecureBroker{% endblock %}
+{% block topbar %}Cartera · {% if modo == 'promesa' %}Promesa de pago{% else %}Registrar pago{% endif %}{% endblock %}
+{% block content %}
+<section class="page-head row-between">
+  <div>
+    <h1 class="page-title">{% if modo == 'promesa' %}Promesa de pago{% else %}Registrar pago{% endif %}</h1>
+    <p class="page-sub">
+      {% if modo == 'promesa' %}
+      El cliente se compromete a pagar en una fecha · <b>{{ org_name }}</b>
+      {% else %}
+      Cobro real — cierra la cuota y cualquier promesa abierta · <b>{{ org_name }}</b>
+      {% endif %}
+    </p>
+  </div>
+  <div class="stack-actions modo-tabs">
+    <a class="btn-{% if modo != 'promesa' %}primary{% else %}secondary{% endif %}"
+       href="/cobranza/pagos/nuevo{% if prefill %}?installment_id={{ prefill.installment_id }}{% endif %}">Cobrar</a>
+    <a class="btn-{% if modo == 'promesa' %}primary{% else %}secondary{% endif %}"
+       href="/cobranza/pagos/nuevo?modo=promesa{% if prefill %}&installment_id={{ prefill.installment_id }}{% endif %}">Prometer</a>
+  </div>
+</section>
+
+{% if prefill %}
+<div class="capture-summary">
+  <div><span class="meta">Cliente</span><strong class="cli-name">{{ prefill.party_name }}</strong></div>
+  <div><span class="meta">Póliza</span><strong class="mono">{{ prefill.policy_number or prefill.policy_id[:8] }}</strong></div>
+  <div><span class="meta">Cuota</span><strong>#{{ prefill.installment_number }} · vence {{ prefill.due_date }}</strong></div>
+  <div><span class="meta">Saldo</span><strong class="mono">${{ prefill.balance|money }}</strong></div>
+  {% if prefill.promise_date %}
+  <div><span class="meta">Promesa previa</span><strong class="mono">${{ prefill.promise_amount|money }} · {{ prefill.promise_date }}</strong></div>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if modo == 'promesa' %}
+<form method="post" action="/cobranza/promesas/nueva" class="capture-form">
+  <div class="capture-grid">
+    <label class="span-2">Cuota
+      <select name="installment_id" required>
+        <option value="">— seleccionar —</option>
+        {% for opt in options %}
+        <option value="{{ opt.installment_id }}"
+          {% if prefill and prefill.installment_id == opt.installment_id %}selected{% endif %}>
+          {{ opt.party_name }} · {{ opt.policy_number or opt.policy_id[:8] }} · cuota {{ opt.installment_number }} · ${{ opt.balance|money }}
+        </option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Monto prometido
+      <input name="promised_amount" class="mono" required value="{{ prefill.balance if prefill else '' }}" />
+    </label>
+    <label>Fecha prometida
+      <input type="date" name="promised_date" required value="{{ promise_default }}" />
+    </label>
+    <label class="span-2">Nota (opcional)
+      <input name="comment" placeholder="WhatsApp / llamada / visita…" />
+    </label>
+  </div>
+  <div class="wizard-actions">
+    <a class="btn-secondary" href="/cobranza">Cancelar</a>
+    <button class="btn-primary" type="submit">Guardar promesa</button>
+  </div>
+</form>
+{% else %}
+<form method="post" action="/cobranza/pagos/nuevo" class="capture-form">
+  <div class="capture-grid">
+    <label class="span-2">Cuota a pagar
+      <select name="installment_id" required>
+        <option value="">— seleccionar —</option>
+        {% for opt in options %}
+        <option value="{{ opt.installment_id }}"
+          {% if prefill and prefill.installment_id == opt.installment_id %}selected{% endif %}>
+          {{ opt.party_name }} · {{ opt.policy_number or opt.policy_id[:8] }} · cuota {{ opt.installment_number }} · saldo ${{ opt.balance|money }}
+        </option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Monto
+      <input name="amount" class="mono" required placeholder="0.00"
+        value="{{ prefill.balance if prefill else '' }}" />
+    </label>
+    <label>Fecha de pago
+      <input type="date" name="payment_date" required value="{{ today }}" />
+    </label>
+    <label>Método
+      <select name="method">
+        <option value="TRANSFER">Transferencia</option>
+        <option value="CASH">Efectivo</option>
+        <option value="CARD">Tarjeta</option>
+        <option value="CHECK">Cheque</option>
+        <option value="OTHER">Otro</option>
+      </select>
+    </label>
+    <label>Referencia
+      <input name="reference" placeholder="Nº voucher / banco" />
+    </label>
+  </div>
+  {% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+  <div class="wizard-actions">
+    <a class="btn-secondary" href="/cobranza">Cancelar</a>
+    <button class="btn-primary" type="submit">Registrar pago</button>
+  </div>
+</form>
+{% endif %}
+{% endblock %}

@@ -134,13 +134,23 @@ def load_emisiones_xlsx(path: Path | str) -> list[EmissionImportRow]:
                 risk_label=str(_cell(raw, _idx(h, "Riesgo")) or "").strip() or None,
                 coverage_type=str(_cell(raw, _idx(h, "Tipo Cobertura")) or "").strip() or None,
                 contractor_name=str(
-                    _cell(raw, _idx(h, "Compañía/Contratante", "Compania/Contratante")) or ""
+                    _cell(
+                        raw,
+                        _idx(
+                            h,
+                            "Compañía / Contratante",
+                            "Compañía/Contratante",
+                            "Compania/Contratante",
+                            "Compania / Contratante",
+                        ),
+                    )
+                    or ""
                 ).strip()
                 or None,
                 first_name=str(_cell(raw, _idx(h, "Nombre")) or "").strip() or None,
                 last_name=str(_cell(raw, _idx(h, "Apellido")) or "").strip() or None,
                 national_id=str(
-                    _cell(raw, _idx(h, "Cédula/RUC", "Cédula / RUC", "Cedula/RUC")) or ""
+                    _cell(raw, _idx(h, "Cédula/RUC", "Cédula / RUC", "Cedula/RUC", "Cédula / Ruc")) or ""
                 ).strip()
                 or None,
                 policy_number=str(_cell(raw, _idx(h, "No Póliza", "No Poliza")) or "").strip() or None,
@@ -160,6 +170,105 @@ def load_emisiones_xlsx(path: Path | str) -> list[EmissionImportRow]:
                 effective_date=_as_date(_cell(raw, _idx(h, "Vig. Inicial", "Vig Inicial"))),
                 expiration_date=_as_date(_cell(raw, _idx(h, "Vig. Final", "Vig Final"))),
                 registro_date=_as_date(_cell(raw, _idx(h, "Registro", "Fecha"))),
+                referrer_name=str(_cell(raw, _idx(h, "Referido")) or "").strip() or None,
+                executive_name=str(_cell(raw, _idx(h, "Ejecutivo")) or "").strip() or None,
+            )
+        )
+    return out
+
+
+def load_tablas_xlsx(path: Path | str) -> dict[str, list[str]]:
+    """Parse Tablas.xlsx interleaved catalog columns."""
+    from openpyxl import load_workbook
+
+    wb = load_workbook(path, data_only=True)
+    ws = wb["Tabla"] if "Tabla" in wb.sheetnames else wb[wb.sheetnames[0]]
+    rows = list(ws.iter_rows(values_only=True))
+    if not rows:
+        return {}
+    header = rows[0]
+    # Map known labels → key
+    label_map = {
+        "aseguradoras": "aseguradoras",
+        "estatus": "estatus",
+        "marca": "marcas",
+        "pagos": "pagos",
+        "forma de pago": "formas_pago",
+        "pagado": "pagado",
+        "riesgo": "riesgos",
+        "cobertura": "coberturas",
+        "auto": "uso_auto",
+        "distrito": "distritos",
+        "tipo": "tipos_rol",
+        "referido": "referidos",
+        "ejecutivo": "ejecutivos",
+        "vehiculo": "vehiculos",
+    }
+    col_keys: dict[int, str] = {}
+    for i, cell in enumerate(header):
+        if cell is None:
+            continue
+        key = label_map.get(str(cell).strip().casefold())
+        if key:
+            col_keys[i] = key
+    out: dict[str, list[str]] = {k: [] for k in col_keys.values()}
+    seen: dict[str, set[str]] = {k: set() for k in out}
+    for raw in rows[1:]:
+        for i, key in col_keys.items():
+            if i >= len(raw):
+                continue
+            val = raw[i]
+            if val is None or str(val).strip() == "":
+                continue
+            text = str(val).strip()
+            if text.casefold() in seen[key]:
+                continue
+            seen[key].add(text.casefold())
+            out[key].append(text)
+    return out
+
+
+def load_pagos_xlsx(path: Path | str) -> list:
+    """Generic payments sheet — flexible headers."""
+    from openpyxl import load_workbook
+
+    from corredores.services.excel_import import PaymentImportRow
+
+    wb = load_workbook(path, data_only=True)
+    ws = wb[wb.sheetnames[0]]
+    rows_iter = ws.iter_rows(values_only=True)
+    headers = [str(c or "").strip() for c in next(rows_iter)]
+    h = _header_index(headers)
+    out: list[PaymentImportRow] = []
+    for n, raw in enumerate(rows_iter, start=2):
+        if not any(raw):
+            continue
+        amount = _dec(
+            _cell(
+                raw,
+                _idx(h, "Monto", "Amount", "Pago", "Importe", "Prima"),
+            )
+        )
+        if amount is None:
+            continue
+        out.append(
+            PaymentImportRow(
+                row_number=n,
+                policy_number=str(
+                    _cell(raw, _idx(h, "No Póliza", "No Poliza", "Póliza", "Poliza", "Policy")) or ""
+                ).strip()
+                or None,
+                amount=amount,
+                payment_date=_as_date(
+                    _cell(raw, _idx(h, "Fecha", "Fecha pago", "Payment Date", "Fecha Pago"))
+                ),
+                method=str(_cell(raw, _idx(h, "Método", "Metodo", "Forma Pago", "Method")) or "").strip()
+                or None,
+                reference=str(_cell(raw, _idx(h, "Referencia", "Reference", "Ref")) or "").strip() or None,
+                national_id=str(
+                    _cell(raw, _idx(h, "Cédula", "Cedula", "Cédula / RUC", "Cédula/RUC")) or ""
+                ).strip()
+                or None,
             )
         )
     return out

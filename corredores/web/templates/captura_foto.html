@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Captura desde foto · ESecureBroker{% endblock %}
+{% block topbar %}Cartera · Captura IA{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1 class="page-title">Captura desde foto</h1>
+  <p class="page-sub">
+    El solicitante no quiere perder el día digitando: <b>una foto → la cartera</b>.
+    La IA propone · si está segura, un solo clic cierra · si duda, revisás.
+  </p>
+</section>
+
+<div class="capture-summary">
+  <div><span class="meta">Principio</span><strong>IA recomienda · Dominio decide</strong></div>
+  <div><span class="meta">Un clic</span><strong>confianza ≥ 85% + datos clave</strong></div>
+  <div><span class="meta">Visión</span><strong>{% if vision_ready %}OpenAI activa{% else %}Configurá OPENAI_API_KEY{% endif %}</strong></div>
+</div>
+
+<form class="capture-form" method="post" action="/captura/poliza-foto" enctype="multipart/form-data" id="captureForm">
+  <div class="capture-grid">
+    <label class="span-2">Foto o PDF de la póliza
+      <input type="file" name="file" id="captureFile"
+        accept="image/jpeg,image/png,image/webp,application/pdf,.pdf,.jpg,.jpeg,.png"
+        capture="environment"
+        required />
+    </label>
+  </div>
+
+  <label class="check-row">
+    <input type="checkbox" name="one_click" value="1" id="oneClick" checked />
+    <span><b>Un solo clic</b> — si la IA trae cédula, nº, compañía, vigencia y prima con alta confianza, crea la póliza sin pantalla intermedia</span>
+  </label>
+
+  {% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+  <div class="wizard-actions">
+    <a class="btn-secondary" href="/polizas">Cancelar</a>
+    <button class="btn-primary" type="submit" id="captureSubmit">Escanear y cargar →</button>
+  </div>
+</form>
+
+<p class="hint" style="margin-top:1.25rem;max-width:42rem">
+  Cubierto del pedido: cliente, póliza, vehículo, cuota/contado, adjunto al expediente.
+  Coberturas línea por línea (A/B/C…) se pueden sumar después; hoy el total a pagar alimenta el plan.
+</p>
+<script>
+(function(){
+  var file = document.getElementById('captureFile');
+  var form = document.getElementById('captureForm');
+  var one = document.getElementById('oneClick');
+  var btn = document.getElementById('captureSubmit');
+  if (!file || !form) return;
+  file.addEventListener('change', function(){
+    if (!file.files || !file.files.length) return;
+    if (one && one.checked) {
+      btn.textContent = 'Procesando un clic…';
+      form.submit();
+    }
+  });
+})();
+</script>
+{% endblock %}

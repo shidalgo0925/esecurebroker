@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+{% block title %}Cartera · ESecureBroker{% endblock %}
+{% block topbar %}Cartera · Dashboard{% endblock %}
+{% block content %}
+<section class="page-head row-between">
+  <div>
+    <h1 class="page-title">Dashboard de cartera</h1>
+    <p class="page-sub">
+      Inventario y cobranza · <b>{{ dash.organization_name }}</b> · {{ dash.as_of }}
+    </p>
+  </div>
+  <div class="stack-actions">
+    <a class="btn-secondary" href="/reportes/cartera.csv">CSV</a>
+    <a class="btn-secondary" href="/cobranza">Cobranza</a>
+    <a class="btn-primary" href="/polizas">Pólizas</a>
+  </div>
+</section>
+
+<div class="report-tiles cartera-kpis">
+  <a class="report-tile" href="/polizas?status=ACTIVE">
+    <div class="money-amt">{{ dash.policies_active }}</div>
+    <div class="money-title">PÓLIZAS ACTIVAS</div>
+    <div class="meta">{{ dash.clients }} clientes</div>
+  </a>
+  <div class="report-tile">
+    <div class="money-amt">${{ dash.premium_annual|money }}</div>
+    <div class="money-title">PRIMA ANUAL</div>
+  </div>
+  <a class="report-tile tone-risk" href="/morosidad">
+    <div class="money-amt">${{ dash.overdue_balance|money }}</div>
+    <div class="money-title">VENCIDO</div>
+    <div class="meta">{{ dash.overdue_installments }} cuotas</div>
+  </a>
+  <a class="report-tile" href="/cobranza">
+    <div class="money-amt">${{ dash.open_balance|money }}</div>
+    <div class="money-title">SALDO ABIERTO</div>
+    <div class="meta">{{ dash.open_installments }} cuotas</div>
+  </a>
+  <a class="report-tile" href="/renovaciones">
+    <div class="money-amt">{{ dash.renewals_open }}</div>
+    <div class="money-title">RENOV. 90D</div>
+    <div class="meta">${{ dash.renewals_premium|money }}</div>
+  </a>
+  <a class="report-tile" href="/reportes">
+    <div class="money-amt">${{ dash.payments_mtd|money }}</div>
+    <div class="money-title">RECAUDADO MES</div>
+    <div class="meta">{{ dash.payments_mtd_n }} pagos</div>
+  </a>
+</div>
+
+<section class="dash-block">
+  <div class="block-head">
+    <h2 class="section-title" style="margin:0">Aging de cobranza</h2>
+    <a class="see-all" href="/cobranza">Ver cobranza →</a>
+  </div>
+  <div class="aging-grid">
+    {% for a in dash.aging %}
+    <a class="aging-card {% if a.amount > 0 %}has-debt{% endif %}" href="{{ a.href or ('/morosidad?aging=' ~ a.key) }}">
+      <div class="aging-label">{{ a.label }}</div>
+      <div class="money-amt">${{ a.amount|money }}</div>
+      <div class="meta">{{ a.count }} cuota{{ 's' if a.count != 1 else '' }}</div>
+    </a>
+    {% else %}
+    <div class="aging-card"><div class="aging-label">Sin vencidos</div><div class="money-amt">$0.00</div></div>
+    {% endfor %}
+  </div>
+</section>
+
+{# Barras HTML siempre visibles (no dependen de JS) #}
+{% set money_due = dash.overdue_balance %}
+{% set money_pending = dash.open_balance - dash.overdue_balance %}
+{% set money_paid = dash.payments_mtd %}
+{% set money_max = [money_due, money_pending, money_paid, 1]|max %}
+{% set aging_amounts = dash.aging|map(attribute='amount')|list %}
+{% set aging_max = (aging_amounts + [1])|max %}
+{% set carrier_premiums = dash.by_carrier|map(attribute='premium')|list %}
+{% set cmax = (carrier_premiums + [1])|max %}
+{% set line_premiums = dash.by_line|map(attribute='premium')|list %}
+{% set lmax = (line_premiums + [1])|max %}
+{% set trend_amounts = dash.payments_trend|map(attribute='amount')|list %}
+{% set tmax = (trend_amounts + [1])|max %}
+{% set smax = [dash.commissions_broker, dash.commissions_executive, dash.commissions_office, dash.commissions_referral, 1]|max %}
+
+<div class="chart-grid">
+  <section class="chart-card">
+    <h2 class="chart-title">Aging (monto)</h2>
+    <div class="hbar-list">
+      {% for a in dash.aging %}
+      <div class="hbar-row">
+        <span class="hbar-label">{{ a.label }}</span>
+        <div class="hbar-track"><span class="hbar-fill tone-{{ loop.index0 }}" style="width:{{ ((a.amount / aging_max) * 100)|round(1) }}%"></span></div>
+        <span class="hbar-val mono">${{ a.amount|money }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="chart-card">
+    <h2 class="chart-title">Dinero en juego</h2>
+    <div class="hbar-list">
+      <div class="hbar-row">
+        <span class="hbar-label">Vencido</span>
+        <div class="hbar-track"><span class="hbar-fill tone-risk" style="width:{{ ((money_due / money_max) * 100)|round(1) if money_due > 0 else 0 }}%"></span></div>
+        <span class="hbar-val mono warn">${{ money_due|money }}</span>
+      </div>
+      <div class="hbar-row">
+        <span class="hbar-label">Por vencer</span>
+        <div class="hbar-track"><span class="hbar-fill tone-money" style="width:{{ ((money_pending / money_max) * 100)|round(1) if money_pending > 0 else 0 }}%"></span></div>
+        <span class="hbar-val mono">${{ money_pending|money }}</span>
+      </div>
+      <div class="hbar-row">
+        <span class="hbar-label">Recaudado mes</span>
+        <div class="hbar-track"><span class="hbar-fill tone-0" style="width:{{ ((money_paid / money_max) * 100)|round(1) if money_paid > 0 else 0 }}%"></span></div>
+        <span class="hbar-val mono">${{ money_paid|money }}</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="chart-card">
+    <h2 class="chart-title">Prima por aseguradora</h2>
+    <div class="hbar-list">
+      {% for r in dash.by_carrier %}
+      <div class="hbar-row">
+        <span class="hbar-label">{{ r.label }}</span>
+        <div class="hbar-track"><span class="hbar-fill tone-{{ loop.index0 % 4 }}" style="width:{{ ((r.premium / cmax) * 100)|round(1) }}%"></span></div>
+        <span class="hbar-val mono">${{ r.premium|money }}</span>
+      </div>
+      {% else %}
+      <p class="meta">Sin primas registradas.</p>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="chart-card">
+    <h2 class="chart-title">Prima por ramo</h2>
+    <div class="hbar-list">
+      {% for r in dash.by_line %}
+      <div class="hbar-row">
+        <span class="hbar-label">{{ r.key }}</span>
+        <div class="hbar-track"><span class="hbar-fill tone-brass" style="width:{{ ((r.premium / lmax) * 100)|round(1) }}%"></span></div>
+        <span class="hbar-val mono">${{ r.premium|money }}</span>
+      </div>
+      {% else %}
+      <p class="meta">Sin ramos.</p>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="chart-card">
+    <h2 class="chart-title">Recaudación (6 meses)</h2>
+    <div class="vbar-chart" aria-label="Tendencia de recaudación">
+      {% for p in dash.payments_trend %}
+      <div class="vbar-col" title="{{ p.label }}">
+        <div class="vbar-track">
+          <span class="vbar-fill" style="height:{{ ((p.amount / tmax) * 100)|round(1) if p.amount > 0 else 0 }}%"></span>
+        </div>
+        <span class="vbar-label">{{ p.label[-2:] }}</span>
+      </div>
+      {% else %}
+      <p class="meta">Sin pagos en el período.</p>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="chart-card">
+    <h2 class="chart-title">Split de comisiones</h2>
+    <div class="hbar-list">
+      <div class="hbar-row">
+        <span class="hbar-label">Agente</span>
+        <div class="hbar-track"><span class="hbar-fill tone-0" style="width:{{ ((dash.commissions_broker / smax) * 100)|round(1) if dash.commissions_broker > 0 else 0 }}%"></span></div>
+        <span class="hbar-val mono">${{ dash.commissions_broker|money }}</span>
+      </div>
+      <div class="hbar-row">
+        <span class="hbar-label">Ejecutivo</span>
+        <div class="hbar-track"><span class="hbar-fill tone-1" style="width:{{ ((dash.commissions_executive / smax) * 100)|round(1) if dash.commissions_executive > 0 else 0 }}%"></span></div>
+        <span class="hbar-val mono">${{ dash.commissions_executive|money }}</span>
+      </div>
+      <div class="hbar-row">
+        <span class="hbar-label">Oficina</span>
+        <div class="hbar-track"><span class="hbar-fill tone-2" style="width:{{ ((dash.commissions_office / smax) * 100)|round(1) if dash.commissions_office > 0 else 0 }}%"></span></div>
+        <span class="hbar-val mono">${{ dash.commissions_office|money }}</span>
+      </div>
+      <div class="hbar-row">
+        <span class="hbar-label">Referido</span>
+        <div class="hbar-track"><span class="hbar-fill tone-3" style="width:{{ ((dash.commissions_referral / smax) * 100)|round(1) if dash.commissions_referral > 0 else 0 }}%"></span></div>
+        <span class="hbar-val mono">${{ dash.commissions_referral|money }}</span>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="dash-split">
+  <section>
+    <h2 class="section-title">Por aseguradora</h2>
+    <div class="table-card">
+      <table class="data-table">
+        <thead>
+          <tr><th>Compañía</th><th>Pólizas</th><th>Prima</th><th>Vencido</th></tr>
+        </thead>
+        <tbody>
+        {% for r in dash.by_carrier %}
+          <tr>
+            <td class="cli-name">{{ r.label }}</td>
+            <td class="mono">{{ r.policies }}</td>
+            <td class="mono">${{ r.premium|money }}</td>
+            <td class="mono {% if r.overdue_balance > 0 %}warn{% endif %}">${{ r.overdue_balance|money }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4" class="empty-row">Sin datos.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <section>
+    <div class="block-head">
+      <h2 class="section-title" style="margin:0">Top vencidos</h2>
+      <a class="see-all" href="/cobranza?vencimiento=vencido">Cobranza →</a>
+    </div>
+    <div class="table-card">
+      <table class="data-table">
+        <thead>
+          <tr><th>Días</th><th>Póliza</th><th>Cliente</th><th>Saldo</th><th></th></tr>
+        </thead>
+        <tbody>
+        {% for r in dash.top_overdue[:8] %}
+          <tr>
+            <td class="mono"><b>{{ r.days_overdue }}</b></td>
+            <td class="cli-id"><a href="/polizas/{{ r.policy_id }}">{{ r.policy_number }}</a></td>
+            <td class="cli-name">{{ r.client_name }}</td>
+            <td class="mono">${{ r.balance|money }}</td>
+            <td class="cli-action"><a class="open-link" href="/cobranza/pagos/nuevo?installment_id={{ r.installment_id }}">Cobrar</a></td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5" class="empty-row">Sin vencidos.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

@@ -31,9 +31,13 @@ def test_seed_pilot_commission_rates():
         report = seed_pilot(session)
         session.commit()
         rules = session.query(CommissionRule).all()
-    assert report["commission_rules_created"] >= 1
+    assert report["commission_rules_created"] >= 1 or any(
+        r.agreement_reference == "PLAN_COMISIONES_V1" for r in rules
+    )
     assert any(r.rate == Decimal("0.20") for r in rules)
-    assert any(r.agreement_reference == "PILOTO_EXCEL_FORMULA_V1" for r in rules)
+    assert any(
+        r.agreement_reference in {"PLAN_COMISIONES_V1", "PILOTO_EXCEL_FORMULA_V1"} for r in rules
+    )
 
 
 def test_import_auto_emitido_and_coexistence():
@@ -93,6 +97,7 @@ def test_import_auto_emitido_and_coexistence():
         ),
     ]
     with db.SessionLocal() as session:
+        seed_pilot(session)
         r1 = run_assisted_import(session, parties=parties, emissions=emissions)
         session.commit()
         # Coexistence: re-import same policy number must skip.
@@ -107,6 +112,9 @@ def test_import_auto_emitido_and_coexistence():
     assert r1.policies_created == 2
     assert r1.payments_from_hint == 1
     assert r1.tasks_created == 1
+    assert r1.interactions_logged >= 1
+    assert r1.materialize.get("renewals_created", 0) >= 2
+    assert r1.materialize.get("commissions_created", 0) >= 1
     assert r2.policies_skipped_existing == 1
     assert st.value == "PAID"
 

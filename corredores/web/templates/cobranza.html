@@ -1,37 +1,160 @@
 {% extends "base.html" %}
 {% block title %}Cobranza · ESecureBroker{% endblock %}
+{% block topbar %}Cartera · Cobranza{% endblock %}
 {% block content %}
-<section class="hero-ops">
-  <h1>Cobranza</h1>
-  <p class="lede">Cinco bandas de gestión — no un Excel de colores. Aging / “vence hoy” son detalle dentro de la banda. · {{ org_name }} · {{ board.as_of }}</p>
-  <p class="hint"><a href="/ayuda">Ver glosario de bandas</a></p>
+<section class="page-head row-between">
+  <div>
+    <h1 class="page-title">Cobranza</h1>
+    <p class="page-sub">
+      Cobrar o prometer · <b>{{ org_name }}</b> · {{ board.as_of }}
+      {% if q or banda or estado or vencimiento %} · {{ result_count }} fila{% if result_count != 1 %}s{% endif %}{% endif %}
+    </p>
+  </div>
+  <div class="stack-actions">
+    <a class="btn-secondary" href="/importaciones/cobranza">Importar pagos</a>
+    <a class="btn-primary" href="/cobranza/pagos/nuevo">+ Cobrar</a>
+    <a class="btn-secondary" href="/cobranza/pagos/nuevo?modo=promesa">+ Promesa</a>
+  </div>
 </section>
+
+{% if flash == 'pago' %}
+<p class="flash-ok">Pago registrado. Si había promesa, quedó cumplida.</p>
+{% elif flash == 'promesa' %}
+<p class="flash-ok">Promesa guardada. Aparece en «Promesa activa».</p>
+{% endif %}
+
+<div class="report-tiles cobranza-kpis">
+  <a class="report-tile tone-risk" href="/cobranza?banda=BROKEN_PROMISE">
+    <div class="money-amt">{{ broken_n }}</div>
+    <div class="money-title">INCUMPLIDAS</div>
+    <div class="meta">${{ board.totals.get('BROKEN_PROMISE', 0)|money }}</div>
+  </a>
+  <a class="report-tile" href="/cobranza?banda=INTERVENTION">
+    <div class="money-amt">{{ intervention_n }}</div>
+    <div class="money-title">HAY QUE COBRAR</div>
+    <div class="meta">${{ board.totals.get('INTERVENTION', 0)|money }}</div>
+  </a>
+  <a class="report-tile" href="/cobranza?banda=PROMISE">
+    <div class="money-amt">{{ promise_n }}</div>
+    <div class="money-title">PROMESAS ACTIVAS</div>
+    <div class="meta">${{ board.totals.get('PROMISE', 0)|money }}</div>
+  </a>
+  <div class="report-tile">
+    <div class="money-amt">${{ action_total|money }}</div>
+    <div class="money-title">EN GESTIÓN</div>
+  </div>
+</div>
+
+<form class="filter-bar" method="get" action="/cobranza">
+  <input type="search" name="q" value="{{ q }}" placeholder="Buscar cliente o póliza…" />
+  <select name="banda">
+    <option value="">Prioridad (sin rutinario)</option>
+    {% for key in band_order %}
+    <option value="{{ key }}" {% if banda == key %}selected{% endif %}>{{ band_labels.get(key, key) }}</option>
+    {% endfor %}
+  </select>
+  <select name="vencimiento">
+    <option value="">Todo vencimiento</option>
+    <option value="hoy" {% if vencimiento == 'hoy' %}selected{% endif %}>Vence hoy</option>
+    <option value="vencido" {% if vencimiento == 'vencido' %}selected{% endif %}>Vencido</option>
+    <option value="por_vencer" {% if vencimiento == 'por_vencer' %}selected{% endif %}>Por vencer</option>
+  </select>
+  <select name="aging">
+    <option value="">Aging</option>
+    <option value="1-30" {% if aging == '1-30' %}selected{% endif %}>1–30 días</option>
+    <option value="31-60" {% if aging == '31-60' %}selected{% endif %}>31–60 días</option>
+    <option value="61-90" {% if aging == '61-90' %}selected{% endif %}>61–90 días</option>
+    <option value="90+" {% if aging == '90+' %}selected{% endif %}>Más de 90</option>
+  </select>
+  <button type="submit" class="btn-secondary">Filtrar</button>
+  {% if q or banda or estado or vencimiento or aging %}<a class="filter-clear" href="/cobranza">Limpiar</a>{% endif %}
+  <a class="filter-clear" href="/morosidad">Análisis morosidad →</a>
+</form>
+
 {% for key in band_order %}
 {% set label = band_labels.get(key, key) %}
 {% set help = band_help.get(key, '') %}
-<section class="band band-{{ key|lower }}">
-  <h2>{{ label }} <span class="money-inline">${{ board.totals[key]|money }}</span>
-    <span class="meta">{{ board.bands[key]|length }} · {{ help }}</span></h2>
-  {% if board.bands[key] %}
-  <table class="grid">
-    <thead><tr><th>Cliente</th><th>Póliza</th><th>#</th><th>Vence</th><th>Saldo</th><th>Estado cuota</th><th></th></tr></thead>
+{% set rows = board.bands.get(key, []) %}
+{% if key == 'AUTOMATIC' and not banda %}
+<details class="band-collapse band band-{{ key|lower }}">
+  <summary>
+    {{ label }}
+    <span class="money-inline">${{ board.totals.get(key, 0)|money }}</span>
+    <span class="meta">{{ rows|length }} · {{ help }}</span>
+  </summary>
+  {% if rows %}
+  <div class="table-card" style="margin-top:0.5rem">
+  <table class="data-table">
+    <thead><tr><th>Cliente</th><th>Póliza</th><th>#</th><th>Vence</th><th>Saldo</th><th></th></tr></thead>
     <tbody>
-    {% for r in board.bands[key] %}
+    {% for r in rows %}
       <tr>
-        <td><a href="/clientes/{{ r.party_id }}">{{ r.party_name }}</a></td>
-        <td class="mono">{{ r.policy_number or r.policy_id[:8] }}</td>
-        <td>{{ r.installment_number }}</td>
-        <td>{{ r.due_date }}</td>
-        <td>${{ r.balance|money }}</td>
-        <td>{{ r.status }}</td>
-        <td><a href="/hoy">Hoy</a></td>
+        <td class="cli-name"><a href="/clientes/{{ r.party_id }}">{{ r.party_name }}</a></td>
+        <td class="cli-id"><a href="/polizas/{{ r.policy_id }}">{{ r.policy_number or r.policy_id[:8] }}</a></td>
+        <td class="mono">{{ r.installment_number }}</td>
+        <td class="mono">{{ r.due_date }}</td>
+        <td class="mono">${{ r.balance|money }}</td>
+        <td class="cli-action cob-actions">
+          <a class="open-link" href="/cobranza/pagos/nuevo?installment_id={{ r.installment_id }}">Cobrar</a>
+        </td>
       </tr>
     {% endfor %}
     </tbody>
   </table>
+  </div>
   {% else %}
-  <p class="empty">Sin filas en esta banda.</p>
+  <p class="empty">Sin filas.</p>
+  {% endif %}
+</details>
+{% elif not banda or banda == key %}
+<section class="band band-{{ key|lower }} {% if key == 'BROKEN_PROMISE' and rows %}band-urgent{% endif %}">
+  <h2>{{ label }} <span class="money-inline">${{ board.totals.get(key, 0)|money }}</span>
+    <span class="meta">{{ rows|length }} · {{ help }}</span></h2>
+  {% if rows %}
+  <div class="table-card">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Cliente</th>
+        <th>Póliza</th>
+        <th>#</th>
+        <th>Vence</th>
+        <th>Saldo</th>
+        {% if key in ['BROKEN_PROMISE','PROMISE'] %}<th>Promesa</th>{% endif %}
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td class="cli-name"><a href="/clientes/{{ r.party_id }}">{{ r.party_name }}</a></td>
+        <td class="cli-id"><a href="/polizas/{{ r.policy_id }}">{{ r.policy_number or r.policy_id[:8] }}</a></td>
+        <td class="mono">{{ r.installment_number }}</td>
+        <td class="mono">
+          {{ r.due_date }}
+          {% if r.days_overdue %}<span class="meta warn"> · {{ r.days_overdue }}d</span>{% endif %}
+        </td>
+        <td class="mono {% if key == 'BROKEN_PROMISE' or r.days_overdue %}warn{% endif %}">${{ r.balance|money }}</td>
+        {% if key in ['BROKEN_PROMISE','PROMISE'] %}
+        <td class="meta">
+          {% if r.promise_date %}
+            ${{ r.promise_amount|money }} · {{ r.promise_date }}
+          {% else %}—{% endif %}
+        </td>
+        {% endif %}
+        <td class="cli-action cob-actions">
+          <a class="open-link {% if key == 'BROKEN_PROMISE' %}open-link-strong{% endif %}" href="/cobranza/pagos/nuevo?installment_id={{ r.installment_id }}">Cobrar</a>
+          <a class="open-link" href="/cobranza/pagos/nuevo?installment_id={{ r.installment_id }}&modo=promesa">{% if key == 'BROKEN_PROMISE' %}Re-prometer{% else %}Prometer{% endif %}</a>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p class="empty">{% if key == 'BROKEN_PROMISE' %}Ninguna promesa incumplida. Bien.{% else %}Sin filas en esta banda.{% endif %}</p>
   {% endif %}
 </section>
+{% endif %}
 {% endfor %}
 {% endblock %}

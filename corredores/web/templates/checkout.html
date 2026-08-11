@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Activar suscripción · ESecureBroker</title>
+  <link rel="icon" href="/static/brand/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/auth.css?v=20260811b" />
+</head>
+<body class="auth-body">
+  <div class="auth-stage">
+    <div class="auth-login-wrap auth-register-wrap">
+      <div class="auth-login-brand">
+        <a class="auth-brand-link" href="/">
+          <img src="/static/brand/crest.svg" width="44" height="44" alt="" />
+          <span class="auth-wordmark">ESecure<span>Broker</span></span>
+        </a>
+      </div>
+
+      <h1 class="auth-title">Activa tu suscripción</h1>
+      <p class="auth-lead">Un paso más y abres el expediente de {{ org_name }}.</p>
+
+      {% if canceled %}
+      <p class="auth-error" role="alert">El pago se canceló. Puedes intentarlo de nuevo.</p>
+      {% endif %}
+      {% if error %}
+      <p class="auth-error" role="alert">{{ error }}</p>
+      {% endif %}
+
+      <div class="auth-checkout-box">
+        <strong>{{ plan.name }}</strong>
+        <p class="auth-checkout-tag">{{ plan.tagline }}</p>
+        <p class="auth-checkout-price">${{ plan.price_monthly_usd }}<span> / mes</span></p>
+      </div>
+
+      <form class="auth-form" method="post" action="/checkout">
+        <input type="hidden" name="plan" value="{{ plan.code }}" />
+        {% if stripe_ready %}
+        <button type="submit">Pagar con tarjeta</button>
+        <p class="auth-note">Serás redirigido a Stripe Checkout. Suscripción mensual en USD.</p>
+        {% else %}
+        <button type="submit">Confirmar y activar plan</button>
+        <p class="auth-note">
+          Modo piloto: sin Stripe en este servidor. Al confirmar se activa la suscripción.
+          Para cobro real, configura <code>STRIPE_SECRET_KEY</code> o
+          <code>SAAS_ONBOARDING_URL</code> (EN1).
+        </p>
+        {% endif %}
+      </form>
+
+      <a class="auth-back" href="/#precios">Cambiar de plan</a>
+    </div>
+    <footer class="auth-foot">Suscripción ESecureBroker</footer>
+  </div>
+</body>
+</html>

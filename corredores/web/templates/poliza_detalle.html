@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}Póliza {{ policy.policy_number or policy.id[:8] }} · ESecureBroker{% endblock %}
+{% block topbar %}Cartera · Registro de póliza{% endblock %}
+{% block content %}
+<section class="poliza-shell">
+  <header class="poliza-head">
+    <div class="poliza-head-main">
+      <h1 class="page-title">{{ policy.policy_number or 'Sin número' }}</h1>
+      <p class="page-sub">
+        <a href="/clientes/{{ policy.client_party_id }}">{{ client_name }}</a>
+        {% if client_id_doc %} · {{ client_id_doc }}{% endif %}
+        · <span class="kind-pill">{{ policy.status }}</span>
+      </p>
+    </div>
+    <div class="stack-actions">
+      <a class="btn-secondary" href="/clientes/{{ policy.client_party_id }}">360°</a>
+      <a class="btn-secondary" href="/polizas">Lista</a>
+      <a class="btn-primary" href="/cobranza/pagos/nuevo?policy_id={{ policy.id }}">Registrar pago</a>
+    </div>
+  </header>
+
+  <div class="poliza-kpis">
+    <div class="poliza-kpi">
+      <span class="pk-label">Aseguradora</span>
+      <span class="pk-value">{{ carrier_name }}</span>
+      <span class="pk-sub">{{ carrier_code }}</span>
+    </div>
+    <div class="poliza-kpi">
+      <span class="pk-label">Ramo</span>
+      <span class="pk-value">{{ line_code }}</span>
+      <span class="pk-sub">{{ line_name }}</span>
+    </div>
+    <div class="poliza-kpi">
+      <span class="pk-label">Vigencia</span>
+      <span class="pk-value mono">{% if term %}{{ term.effective_date }}{% else %}—{% endif %}</span>
+      <span class="pk-sub mono">{% if term %}→ {{ term.expiration_date }}{% endif %}</span>
+    </div>
+    <div class="poliza-kpi">
+      <span class="pk-label">Prima anual</span>
+      <span class="pk-value mono">{% if premium_annual %}${{ premium_annual|money }}{% else %}—{% endif %}</span>
+      <span class="pk-sub mono">neta {% if premium_net %}${{ premium_net|money }}{% else %}—{% endif %}</span>
+    </div>
+    <div class="poliza-kpi {% if open_balance > 0 %}pk-warn{% endif %}">
+      <span class="pk-label">Saldo abierto</span>
+      <span class="pk-value mono">${{ open_balance|money }}</span>
+      <span class="pk-sub">{{ installments|length }} cuota{% if installments|length != 1 %}s{% endif %}</span>
+    </div>
+    <div class="poliza-kpi">
+      <span class="pk-label">Origen</span>
+      <span class="pk-value">{{ policy.data_source or '—' }}</span>
+      <span class="pk-sub">{% if plan %}{% if plan.confirmed %}Plan confirmado{% else %}Plan propuesto{% endif %}{% else %}Sin plan{% endif %}</span>
+    </div>
+  </div>
+
+  <div class="poliza-split">
+    <section class="poliza-panel">
+      <h2 class="poliza-panel-title">Registro</h2>
+      <table class="poliza-facts">
+        <tr><th>Número</th><td class="mono"><b>{{ policy.policy_number or '—' }}</b></td></tr>
+        <tr><th>Estado</th><td>{{ policy.status }}</td></tr>
+        <tr><th>Cliente</th><td><a href="/clientes/{{ policy.client_party_id }}">{{ client_name }}</a>{% if client_id_doc %} · {{ client_id_doc }}{% endif %}</td></tr>
+        <tr><th>Aseguradora</th><td>{{ carrier_name }} ({{ carrier_code }})</td></tr>
+        <tr><th>Ramo</th><td>{{ line_name }} · <span class="mono">{{ line_code }}</span></td></tr>
+        <tr><th>Inicio</th><td class="mono">{{ term.effective_date if term else '—' }}</td></tr>
+        <tr><th>Fin</th><td class="mono">{{ term.expiration_date if term else '—' }}</td></tr>
+        <tr><th>Prima anual</th><td class="mono">{% if premium_annual %}${{ premium_annual|money }}{% else %}—{% endif %}</td></tr>
+        <tr><th>Prima neta</th><td class="mono">{% if premium_net %}${{ premium_net|money }}{% else %}—{% endif %}</td></tr>
+        <tr><th>Prima bruta</th><td class="mono">{% if premium_gross %}${{ premium_gross|money }}{% else %}—{% endif %}</td></tr>
+      </table>
+    </section>
+
+    <aside class="poliza-side">
+        {% if vehicle %}
+      <section class="poliza-panel">
+        <h2 class="poliza-panel-title">Vehículo</h2>
+        <table class="poliza-facts">
+          <tr><th>Marca</th><td>{{ vehicle.make or '—' }}</td></tr>
+          <tr><th>Modelo</th><td>{{ vehicle.model or '—' }}</td></tr>
+          <tr><th>Placa</th><td class="mono">{{ vehicle.plate or '—' }}</td></tr>
+          <tr><th>Año</th><td class="mono">{{ vehicle.year or '—' }}</td></tr>
+          <tr><th>Uso</th><td>{{ vehicle.usage or '—' }}</td></tr>
+          <tr><th>Tipo</th><td>{{ vehicle.vehicle_type or '—' }}</td></tr>
+        </table>
+        {% if plan and plan.notes %}
+        <p class="meta" style="margin:0.55rem 0 0">{{ plan.notes }}</p>
+        {% endif %}
+      </section>
+      {% endif %}
+
+      {% if commission %}
+      <section class="poliza-panel">
+        <h2 class="poliza-panel-title">Comisión</h2>
+        <table class="poliza-facts">
+          <tr><th>Base</th><td class="mono">${{ commission.base_amount|money }}</td></tr>
+          <tr><th>Tasa</th><td class="mono">{{ '%.0f'|format(commission.rate * 100) }}%</td></tr>
+          <tr><th>Cia</th><td class="mono"><b>${{ commission.calculated_amount|money }}</b></td></tr>
+          {% if split %}
+          <tr><th>Agente</th><td class="mono">${{ split.broker_amount|money }}</td></tr>
+          <tr><th>Ejecutivo</th><td class="mono">${{ split.executive_amount|money }}</td></tr>
+          <tr><th>Oficina</th><td class="mono">${{ split.office_amount|money }}</td></tr>
+          <tr><th>Referido</th><td class="mono">${{ split.referral_amount|money }}</td></tr>
+          {% endif %}
+        </table>
+      </section>
+      {% endif %}
+
+      {% if renewal %}
+      <section class="poliza-panel">
+        <h2 class="poliza-panel-title">Renovación</h2>
+        <table class="poliza-facts">
+          <tr><th>Estado</th><td>{{ renewal.status }}</td></tr>
+          <tr><th>Objetivo</th><td class="mono">{{ renewal.target_date or '—' }}</td></tr>
+        </table>
+        <p class="meta" style="margin:0.5rem 0 0"><a href="/renovaciones">Ver renovaciones →</a></p>
+      </section>
+      {% endif %}
+
+      {% if not vehicle and not commission and not renewal %}
+      <section class="poliza-panel">
+        <h2 class="poliza-panel-title">Notas</h2>
+        <p class="meta" style="margin:0">Sin vehículo, comisión ni renovación asociada todavía.</p>
+      </section>
+      {% endif %}
+    </aside>
+  </div>
+
+  <section class="poliza-panel poliza-cuotas">
+    <div class="poliza-cuotas-head">
+      <h2 class="poliza-panel-title">Cuotas</h2>
+      <span class="meta">
+        {% if plan %}{% if plan.confirmed %}Confirmado{% else %}Propuesto{% endif %} · {% endif %}
+        {{ installments|length }} cuota{% if installments|length != 1 %}s{% endif %}
+        · saldo <b class="mono">${{ open_balance|money }}</b>
+      </span>
+    </div>
+    <div class="table-card">
+      <table class="data-table">
+        <thead>
+          <tr><th>#</th><th>Vence</th><th>Monto</th><th>Saldo</th><th>Estado</th><th></th></tr>
+        </thead>
+        <tbody>
+        {% for i in installments %}
+          <tr>
+            <td class="mono">{{ i.number }}</td>
+            <td class="mono">{{ i.due_date }}</td>
+            <td class="mono">${{ i.amount|money }}</td>
+            <td class="mono">${{ i.balance|money }}</td>
+            <td><span class="kind-pill">{{ i.status }}</span></td>
+            <td class="cli-action">{% if i.balance > 0 %}<a class="open-link" href="/cobranza/pagos/nuevo?installment_id={{ i.id }}">Cobrar</a>{% else %}—{% endif %}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" class="empty-row">Sin plan de pagos (import incompleto o sin prima/cuotas).</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>
+{% endblock %}

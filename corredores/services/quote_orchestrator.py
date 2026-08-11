@@ -90,8 +90,13 @@ def dispatch_carriers(
     *,
     actor_id: str | None = None,
 ) -> list[CarrierQuoteRequest]:
+    from corredores.domain.models import Carrier
+
     rows: list[CarrierQuoteRequest] = []
     for cid in carrier_ids:
+        carrier = session.get(Carrier, cid)
+        if carrier is None or carrier.organization_id != quote_request.organization_id:
+            raise ValueError(f"carrier not in organization: {cid}")
         cqr = CarrierQuoteRequest(
             quote_request_id=quote_request.id,
             carrier_id=cid,

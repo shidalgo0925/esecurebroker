@@ -1,0 +1,16 @@
+[Unit]
+Description=ESecureBroker — envío automático de estados de cuenta
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=oneshot
+User=adminnode
+Group=adminnode
+WorkingDirectory=/opt/corredores
+Environment=PYTHONPATH=/opt/corredores
+EnvironmentFile=-/opt/corredores/.env
+ExecStart=/opt/corredores/.venv/bin/python -m corredores.cli send-statements
+
+[Install]
+WantedBy=multi-user.target

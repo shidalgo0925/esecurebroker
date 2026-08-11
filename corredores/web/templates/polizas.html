@@ -2,32 +2,80 @@
 {% block title %}Pólizas · ESecureBroker{% endblock %}
 {% block topbar %}Cartera · Pólizas{% endblock %}
 {% block content %}
-<section class="hero-ops row-between">
+<section class="page-head row-between">
   <div>
-    <h1>Pólizas</h1>
-    <p class="lede">Aquí registras y encuentras la cartera emitida. {{ org_name }}</p>
+    <h1 class="page-title">Pólizas</h1>
+    <p class="page-sub">
+      Registro de cartera · <b>{{ org_name }}</b> ·
+      <b>{{ result_count }}</b> póliza{% if result_count != 1 %}s{% endif %}
+      {% if q or status or line or carrier %} · filtrado{% endif %}
+    </p>
   </div>
-  <a class="btn-primary" href="/polizas/nueva">+ Nueva póliza</a>
+  <div class="stack-actions">
+    <a class="btn-secondary" href="/importaciones/emisiones">Importar Excel</a>
+    <a class="btn-secondary" href="/reportes/cartera.csv">Exportar CSV</a>
+    <a class="btn-primary" href="/polizas/nueva">+ Nueva póliza</a>
+  </div>
 </section>
 
-<table class="grid">
-  <thead>
-    <tr><th>Número</th><th>Cliente</th><th>Compañía</th><th>Ramo</th><th>Estado</th><th>Prima</th><th></th></tr>
-  </thead>
-  <tbody>
-  {% for p in policies %}
-    <tr>
-      <td class="mono">{{ p.number or p.id[:8] }}</td>
-      <td><a href="/clientes/{{ p.party_id }}">{{ p.client }}</a></td>
-      <td>{{ p.carrier }}</td>
-      <td>{{ p.line }}</td>
-      <td>{{ p.status }}</td>
-      <td>{% if p.premium %}${{ p.premium|money }}{% else %}—{% endif %}</td>
-      <td><a href="/clientes/{{ p.party_id }}">360°</a></td>
-    </tr>
-  {% else %}
-    <tr><td colspan="7">Aún no hay pólizas. Empieza con <a href="/polizas/nueva">+ Nueva póliza</a>.</td></tr>
-  {% endfor %}
-  </tbody>
-</table>
+<form class="filter-bar" method="get" action="/polizas">
+  <input type="search" name="q" value="{{ q }}" placeholder="Buscar nº, cliente, compañía…" />
+  <select name="status">
+    <option value="">Todo estado</option>
+    {% for s in ['ACTIVE','CANCELLED','EXPIRED','PENDING_EFFECTIVE'] %}
+    <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>
+    {% endfor %}
+  </select>
+  <select name="line">
+    <option value="">Todo ramo</option>
+    {% for l in lines %}
+    <option value="{{ l.code }}" {% if line == l.code %}selected{% endif %}>{{ l.code }}</option>
+    {% endfor %}
+  </select>
+  <select name="carrier">
+    <option value="">Toda compañía</option>
+    {% for c in carriers %}
+    <option value="{{ c.name }}" {% if carrier == c.name %}selected{% endif %}>{{ c.name }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn-secondary">Filtrar</button>
+  {% if q or status or line or carrier %}<a class="filter-clear" href="/polizas">Limpiar</a>{% endif %}
+</form>
+
+<div class="table-card">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Número</th>
+        <th>Cliente</th>
+        <th>Compañía</th>
+        <th>Ramo</th>
+        <th>Vigencia</th>
+        <th>Estado</th>
+        <th>Prima</th>
+        <th>Cuotas</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for p in policies %}
+      <tr>
+        <td class="cli-id"><a href="/polizas/{{ p.id }}">{{ p.number or p.id[:8] }}</a></td>
+        <td class="cli-name"><a href="/clientes/{{ p.party_id }}">{{ p.client }}</a></td>
+        <td>{{ p.carrier }}</td>
+        <td class="mono">{{ p.line }}</td>
+        <td class="mono meta" style="white-space:nowrap">
+          {% if p.effective %}{{ p.effective }}→{{ p.expiration or '—' }}{% else %}—{% endif %}
+        </td>
+        <td><span class="kind-pill">{{ p.status }}</span></td>
+        <td class="mono">{% if p.premium %}${{ p.premium|money }}{% else %}<span class="meta">—</span>{% endif %}</td>
+        <td class="mono">{% if p.has_plan %}{{ p.installments }}{% else %}<span class="meta">—</span>{% endif %}</td>
+        <td class="cli-action"><a class="open-link" href="/polizas/{{ p.id }}">Abrir</a></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="9" class="empty-row">{% if q or status or line or carrier %}Sin resultados.{% else %}Aún no hay pólizas. Empieza con <a href="/polizas/nueva">+ Nueva póliza</a>.{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endblock %}

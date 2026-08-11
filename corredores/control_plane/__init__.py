@@ -1,7 +1,8 @@
-"""Control-plane abstractions (ADR-005 / ADR-006).
+"""Control-plane abstractions (ADR-005 / ADR-006 / ADR-007).
 
 P0 may use these without coupling to EN1 implementation.
 Do NOT build a definitive identity/subscription system here.
+Organization tenancy is enforced in Domain Truth + OrgMembership (ADR-007).
 """
 
 from __future__ import annotations

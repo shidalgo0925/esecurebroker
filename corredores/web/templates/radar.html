@@ -1,18 +1,35 @@
 {% extends "base.html" %}
 {% block title %}Radar · ESecureBroker{% endblock %}
+{% block topbar %}Operación · Radar{% endblock %}
 {% block content %}
-<section class="hero-ops">
-  <h1>Radar</h1>
-  <p class="lede"><strong>Vista de dinero</strong> — cobrar / renovar / vender / en riesgo. No es la lista de tareas de Hoy. {{ org_name }} · {{ snap.as_of }} · <a href="/ayuda">glosario</a></p>
+<section class="page-head row-between">
+  <div>
+    <h1 class="page-title">Radar</h1>
+    <p class="page-sub">Vista de dinero · <b>{{ org_name }}</b> · {{ snap.as_of }} · <a href="/cartera">Dashboard con gráficos</a></p>
+  </div>
+  <a class="btn-primary" href="/hoy">Ir a Hoy</a>
 </section>
+
 <div class="radar-grid">
-  {% for b in [snap.por_cobrar, snap.por_renovar, snap.por_vender, snap.en_riesgo] %}
-  <article class="radar-card">
-    <h2>{{ b.label }}</h2>
-    <p class="money">${{ b.amount|money }}</p>
-    <p class="meta">{{ b.count }} ítems · {{ b.key }}</p>
-  </article>
-  {% endfor %}
+  <a class="radar-card" href="/cobranza">
+    <h2>{{ snap.por_cobrar.label }}</h2>
+    <p class="money">${{ snap.por_cobrar.amount|money }}</p>
+    <p class="meta">{{ snap.por_cobrar.count }} ítems · abrir cobranza</p>
+  </a>
+  <a class="radar-card" href="/renovaciones">
+    <h2>{{ snap.por_renovar.label }}</h2>
+    <p class="money">${{ snap.por_renovar.amount|money }}</p>
+    <p class="meta">{{ snap.por_renovar.count }} ítems · abrir renovaciones</p>
+  </a>
+  <a class="radar-card" href="/oportunidades">
+    <h2>{{ snap.por_vender.label }}</h2>
+    <p class="money">${{ snap.por_vender.amount|money }}</p>
+    <p class="meta">{{ snap.por_vender.count }} ítems · oportunidades</p>
+  </a>
+  <a class="radar-card" href="/cobranza?vencimiento=vencido">
+    <h2>{{ snap.en_riesgo.label }}</h2>
+    <p class="money">${{ snap.en_riesgo.amount|money }}</p>
+    <p class="meta">{{ snap.en_riesgo.count }} ítems · vencidos / riesgo</p>
+  </a>
 </div>
-<p class="hint"><a href="/hoy">Ir a Hoy</a> para ejecutar · <a href="/cobranza">Cobranza</a> para bandas.</p>
 {% endblock %}

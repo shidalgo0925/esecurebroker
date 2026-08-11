@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Morosidad · ESecureBroker{% endblock %}
+{% block topbar %}Cartera · Análisis de morosidad{% endblock %}
+{% block content %}
+<section class="page-head row-between">
+  <div>
+    <h1 class="page-title">Análisis de morosidad</h1>
+    <p class="page-sub">
+      Solo cuotas con saldo y vencidas · Domain Truth · <b>{{ org_name }}</b> · {{ analysis.as_of }}
+      {% if aging %} · banda <b>{{ aging }}</b>{% endif %}
+    </p>
+  </div>
+  <div class="stack-actions">
+    <a class="btn-secondary" href="/morosidad/imprimir{% if aging %}?aging={{ aging }}{% endif %}" target="_blank">Imprimir</a>
+    <a class="btn-secondary" href="/reportes/morosidad.csv{% if aging %}?aging={{ aging }}{% endif %}">CSV</a>
+    <a class="btn-secondary" href="/cobranza?vencimiento=vencido">Cobranza</a>
+    <a class="btn-primary" href="/cartera">Dashboard</a>
+  </div>
+</section>
+
+<div class="report-tiles cobranza-kpis">
+  <div class="report-tile tone-risk">
+    <div class="money-amt">${{ analysis.overdue_balance|money }}</div>
+    <div class="money-title">VENCIDO TOTAL</div>
+    <div class="meta">{{ analysis.overdue_count }} cuotas · {{ analysis.clients_overdue }} clientes</div>
+  </div>
+  <div class="report-tile">
+    <div class="money-amt">${{ analysis.open_balance|money }}</div>
+    <div class="money-title">SALDO ABIERTO CARTERA</div>
+  </div>
+</div>
+
+<section class="dash-block">
+  <div class="block-head">
+    <h2 class="section-title" style="margin:0">Aging</h2>
+    {% if aging %}<a class="see-all" href="/morosidad">Ver todas →</a>{% endif %}
+  </div>
+  <div class="aging-grid">
+    {% for a in analysis.aging %}
+    <a class="aging-card {% if a.amount > 0 %}has-debt{% endif %}" href="/morosidad?aging={{ a.key }}">
+      <div class="aging-label">{{ a.label }}</div>
+      <div class="money-amt">${{ a.amount|money }}</div>
+      <div class="meta">{{ a.count }} cuota{% if a.count != 1 %}s{% endif %}</div>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+
+<form class="filter-bar" method="get" action="/morosidad">
+  <input type="search" name="q" value="{{ q }}" placeholder="Buscar cliente o póliza…" />
+  <select name="aging">
+    <option value="">Todas las bandas</option>
+    {% for a in analysis.aging %}
+    <option value="{{ a.key }}" {% if aging == a.key %}selected{% endif %}>{{ a.label }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn-secondary">Filtrar</button>
+  {% if q or aging %}<a class="filter-clear" href="/morosidad">Limpiar</a>{% endif %}
+</form>
+
+<div class="dash-split">
+  <section>
+    <h2 class="section-title">Detalle vencido</h2>
+    <div class="table-card">
+      <table class="data-table">
+        <thead>
+          <tr><th>Días</th><th>Cliente</th><th>Póliza</th><th>#</th><th>Vence</th><th>Saldo</th><th>Banda</th><th></th></tr>
+        </thead>
+        <tbody>
+        {% for r in rows %}
+          <tr>
+            <td class="mono"><b>{{ r.days_overdue }}</b></td>
+            <td class="cli-name"><a href="/clientes/{{ r.party_id }}/estado-cuenta">{{ r.party_name }}</a></td>
+            <td class="cli-id"><a href="/polizas/{{ r.policy_id }}">{{ r.policy_number or r.policy_id[:8] }}</a></td>
+            <td class="mono">{{ r.installment_number }}</td>
+            <td class="mono">{{ r.due_date }}</td>
+            <td class="mono warn">${{ r.balance|money }}</td>
+            <td><span class="kind-pill">{{ r.aging_label }}</span></td>
+            <td class="cli-action cob-actions">
+              <a class="open-link open-link-strong" href="/cobranza/pagos/nuevo?installment_id={{ r.installment_id }}">Cobrar</a>
+              <a class="open-link" href="/clientes/{{ r.party_id }}/estado-cuenta">Edo. cta</a>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="8" class="empty-row">Sin morosidad en este filtro. Bien.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <section>
+    <h2 class="section-title">Top deudores</h2>
+    <div class="table-card">
+      <table class="data-table">
+        <thead><tr><th>Cliente</th><th>Cuotas</th><th>Máx. días</th><th>Saldo</th><th></th></tr></thead>
+        <tbody>
+        {% for d in analysis.top_debtors %}
+          <tr>
+            <td class="cli-name"><a href="/clientes/{{ d.party_id }}/estado-cuenta">{{ d.party_name }}</a></td>
+            <td class="mono">{{ d.count }}</td>
+            <td class="mono">{{ d.max_days }}</td>
+            <td class="mono warn">${{ d.balance|money }}</td>
+            <td class="cli-action"><a class="open-link" href="/clientes/{{ d.party_id }}/estado-cuenta">Estado →</a></td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5" class="empty-row">Sin deudores vencidos.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

@@ -60,7 +60,10 @@ def create_promise(
 def fulfill_promise(
     session: Session, promise: PaymentPromise, *, actor_id: str | None = None
 ) -> PaymentPromise:
-    if promise.status != PaymentPromiseStatus.ACTIVE:
+    if promise.status not in (
+        PaymentPromiseStatus.ACTIVE,
+        PaymentPromiseStatus.BROKEN,
+    ):
         raise ValueError(f"cannot fulfill promise in status {promise.status}")
     promise.status = PaymentPromiseStatus.FULFILLED
     promise.resolved_at = datetime.now(timezone.utc)
@@ -76,6 +79,31 @@ def fulfill_promise(
     )
     session.flush()
     return promise
+
+
+def fulfill_promises_for_installment(
+    session: Session,
+    *,
+    organization_id: str,
+    installment_id: str,
+    actor_id: str | None = None,
+) -> list[PaymentPromise]:
+    """Al registrar un pago, cierra promesas ACTIVE/BROKEN de esa cuota."""
+    rows = (
+        session.query(PaymentPromise)
+        .filter_by(organization_id=organization_id, installment_id=installment_id)
+        .filter(
+            PaymentPromise.status.in_(
+                [PaymentPromiseStatus.ACTIVE, PaymentPromiseStatus.BROKEN]
+            )
+        )
+        .all()
+    )
+    done: list[PaymentPromise] = []
+    for p in rows:
+        fulfill_promise(session, p, actor_id=actor_id)
+        done.append(p)
+    return done
 
 
 def break_promise(

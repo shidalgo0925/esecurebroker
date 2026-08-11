@@ -46,9 +46,11 @@ from corredores.services.radar import build_radar
 
 def _stamp(*, kind: str, urgency: str, title: str = "") -> str:
     t = title.upper()
+    if kind == "PROMESA" or "INCUMPLIDA" in t:
+        return "VENCIDA"
     if "VENCID" in t:
         return "VENCIDA"
-    if kind == "PROMESA" or urgency == "urgent" or "VENCE HOY" in t or "URGENTE" in t:
+    if urgency == "urgent" or "VENCE HOY" in t or "URGENTE" in t:
         return "URGENTE"
     return "EN CURSO"
 
@@ -188,7 +190,7 @@ def build_today_home(
             amount_label=f"${radar.por_cobrar.amount:,.2f}",
             title="POR COBRAR",
             subtitle=f"{radar.por_cobrar.count} con saldo vencido o por vencer",
-            href="/cobranza",
+            href="/cobranza?vencimiento=vencido",
         ),
         MoneyCard(
             key="por_renovar",
@@ -216,6 +218,9 @@ def build_today_home(
     attention: list[AttentionCard] = []
 
     # Promesas incumplidas primero
+    from corredores.services.promises import refresh_overdue_promises
+
+    refresh_overdue_promises(session, organization_id, actor_id="system")
     promises = (
         session.query(PaymentPromise)
         .filter_by(organization_id=organization_id)
@@ -224,10 +229,23 @@ def build_today_home(
     for pr in promises:
         if not promise_is_broken(pr, today=today) and pr.status != PaymentPromiseStatus.BROKEN:
             continue
+        # Solo si la cuota sigue con saldo
+        if pr.installment_id:
+            inst_chk = session.get(Installment, pr.installment_id)
+            if inst_chk is not None:
+                session.refresh(inst_chk)
+                if outstanding_balance(inst_chk) <= 0:
+                    continue
         party = session.get(Party, pr.party_id) if pr.party_id else None
         if party is None:
             pol = session.get(Policy, pr.policy_id)
             party = session.get(Party, pol.client_party_id) if pol else None
+        cobrar_href = (
+            f"/cobranza/pagos/nuevo?installment_id={pr.installment_id}"
+            if pr.installment_id
+            else f"/cobranza/pagos/nuevo?policy_id={pr.policy_id}"
+        )
+        prometer_href = cobrar_href + ("&" if "?" in cobrar_href else "?") + "modo=promesa"
         attention.append(
             AttentionCard(
                 kind="PROMESA",
@@ -241,8 +259,8 @@ def build_today_home(
                 party_id=party.id if party else None,
                 policy_id=pr.policy_id,
                 actions=[
-                    ("Ver cuenta", f"/clientes/{party.id}" if party else "/cobranza"),
-                    ("Contactar", f"/clientes/{party.id}" if party else "/cobranza"),
+                    ("Cobrar ahora", cobrar_href),
+                    ("Re-prometer", prometer_href),
                 ],
             )
         )
@@ -299,7 +317,7 @@ def build_today_home(
             days = (today - inst.due_date).days
             if status == DerivedInstallmentStatus.OVERDUE:
                 urgency = "urgent"
-                title = "COBRO · VENCIDO"
+                title = "COBRO · URGENTE"
                 detail = f"${bal:,.2f} vencidos · {days} días"
             elif status == DerivedInstallmentStatus.DUE:
                 urgency = "urgent"
@@ -324,9 +342,8 @@ def build_today_home(
                     party_id=party.id if party else None,
                     policy_id=policy.id if policy else None,
                     actions=[
-                        ("Ver cliente", f"/clientes/{party.id}" if party else "/cobranza"),
-                        ("Registrar pago", "/cobranza"),
-                        ("Contactar", f"/clientes/{party.id}" if party else "/cobranza"),
+                        ("Cobrar", f"/cobranza/pagos/nuevo?installment_id={inst.id}"),
+                        ("Prometer", f"/cobranza/pagos/nuevo?installment_id={inst.id}&modo=promesa"),
                     ],
                 )
             )
@@ -408,20 +425,25 @@ def build_today_home(
             AttentionCard(
                 kind="RECLAMO",
                 urgency="watch" if (age or 0) < 14 else "urgent",
-                title="RECLAMO",
+                title="RECLAMO · SEGUIMIENTO",
                 subject=f"{_party_name(party)} · Reclamo {c.claim_number or c.id[:8]}",
                 lines=[
-                    f"{age} días sin movimiento" if age is not None else f"Estado {c.status}",
+                    f"Sin movimiento hace {age} días · posible estancamiento"
+                    if age is not None
+                    else f"Estado {c.status}",
                 ],
                 stamp=_stamp(
                     kind="RECLAMO",
                     urgency="watch" if (age or 0) < 14 else "urgent",
-                    title="RECLAMO",
+                    title="RECLAMO · SEGUIMIENTO",
                 ),
                 party_id=party.id if party else None,
                 policy_id=c.policy_id,
                 claim_id=c.id,
-                actions=[("Ver reclamo", "/reclamos")],
+                actions=[
+                    ("Ver reclamo", "/reclamos"),
+                    ("Actualizar", "/reclamos"),
+                ],
             )
         )
 

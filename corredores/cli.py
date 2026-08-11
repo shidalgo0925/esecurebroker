@@ -169,6 +169,20 @@ def seed() -> int:
     return 0
 
 
+def seed_tenants() -> int:
+    """ADR-007 demo: two orgs + memberships (broker-a / broker-b)."""
+    import json
+
+    from corredores.db import SessionLocal
+    from corredores.services.seed_tenants import seed_multitenant_demo
+
+    with SessionLocal() as session:
+        report = seed_multitenant_demo(session)
+        session.commit()
+    print(json.dumps({"ok": True, **report}, indent=2))
+    return 0
+
+
 def import_excel(argv: list[str]) -> int:
     """Usage: import-excel [--asegurados PATH] [--emisiones PATH]"""
     import json
@@ -203,6 +217,44 @@ def import_excel(argv: list[str]) -> int:
     # Report is aggregate counts only — no PII.
     print(json.dumps({"ok": True, **report.as_dict()}, indent=2, ensure_ascii=False))
     return 0
+
+
+def send_statements(argv: list[str]) -> int:
+    """Usage: send-statements [--dry-run] [--org-id ID]"""
+    import json
+
+    from corredores.db import SessionLocal
+    from corredores.domain.models import Organization
+    from corredores.services.statement_delivery import run_auto_statement_send
+
+    dry_run = False
+    org_id = None
+    i = 0
+    while i < len(argv):
+        if argv[i] == "--dry-run":
+            dry_run = True
+            i += 1
+            continue
+        if argv[i] == "--org-id" and i + 1 < len(argv):
+            org_id = argv[i + 1]
+            i += 2
+            continue
+        print("Usage: send-statements [--dry-run] [--org-id ID]")
+        return 1
+
+    with SessionLocal() as session:
+        if org_id:
+            org = session.get(Organization, org_id)
+        else:
+            org = session.query(Organization).order_by(Organization.created_at.asc()).first()
+        if org is None:
+            print(json.dumps({"ok": False, "error": "no organization"}, indent=2))
+            return 1
+        report = run_auto_statement_send(session, org.id, dry_run=dry_run)
+        if not dry_run:
+            session.commit()
+    print(json.dumps({"ok": True, **report.as_dict()}, indent=2, ensure_ascii=False))
+    return 0 if report.failed == 0 else 2
 
 
 def serve(argv: list[str] | None = None) -> int:
@@ -244,13 +296,17 @@ def main(argv: list[str] | None = None) -> int:
         return client360()
     if argv[0] == "seed":
         return seed()
+    if argv[0] == "seed-tenants":
+        return seed_tenants()
     if argv[0] == "import-excel":
         return import_excel(argv[1:])
+    if argv[0] == "send-statements":
+        return send_statements(argv[1:])
     if argv[0] == "serve":
         return serve(argv[1:])
     print(
         "Usage: python -m corredores.cli "
-        "[doctor|init-db|run-e2e|today|radar|client360|seed|import-excel|serve]"
+        "[doctor|init-db|run-e2e|today|radar|client360|seed|seed-tenants|import-excel|send-statements|serve]"
     )
     return 1
 

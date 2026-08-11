@@ -41,11 +41,33 @@ from corredores.domain.models import (
     Policy,
     PolicyTerm,
     Submission,
-    Task,
     VehicleRisk,
 )
 from corredores.services.auto_e2e import ensure_auto_line, suggest_policy_term
 from corredores.services.payments import record_payment
+
+
+def _ensure_client_role(session: Session, *, organization_id: str, party_id: str) -> None:
+    existing = (
+        session.query(PartyRole)
+        .filter(
+            PartyRole.organization_id == organization_id,
+            PartyRole.party_id == party_id,
+            PartyRole.role_type == PartyRoleType.CLIENT,
+            PartyRole.context_type == "GLOBAL",
+        )
+        .first()
+    )
+    if existing is None:
+        session.add(
+            PartyRole(
+                organization_id=organization_id,
+                party_id=party_id,
+                role_type=PartyRoleType.CLIENT,
+                context_type="GLOBAL",
+                context_id=None,
+            )
+        )
 
 
 LINE_ALIASES: dict[str, str] = {
@@ -148,6 +170,19 @@ class EmissionImportRow:
     effective_date: date | None = None
     expiration_date: date | None = None
     registro_date: date | None = None
+    referrer_name: str | None = None
+    executive_name: str | None = None
+
+
+@dataclass
+class PaymentImportRow:
+    row_number: int
+    policy_number: str | None = None
+    amount: Decimal = Decimal("0")
+    payment_date: date | None = None
+    method: str | None = None
+    reference: str | None = None
+    national_id: str | None = None
 
 
 @dataclass
@@ -158,7 +193,14 @@ class ImportReport:
     policies_skipped_existing: int = 0
     installments_created: int = 0
     payments_from_hint: int = 0
+    payments_imported: int = 0
+    carriers_upserted: int = 0
+    roles_upserted: int = 0
+    role_links: int = 0
+    lines_upserted: int = 0
     tasks_created: int = 0
+    interactions_logged: int = 0
+    materialize: dict = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
     rows_processed: int = 0
 
@@ -170,7 +212,14 @@ class ImportReport:
             "policies_skipped_existing": self.policies_skipped_existing,
             "installments_created": self.installments_created,
             "payments_from_hint": self.payments_from_hint,
+            "payments_imported": self.payments_imported,
+            "carriers_upserted": self.carriers_upserted,
+            "roles_upserted": self.roles_upserted,
+            "role_links": self.role_links,
+            "lines_upserted": self.lines_upserted,
             "tasks_created": self.tasks_created,
+            "interactions_logged": self.interactions_logged,
+            "materialize": dict(self.materialize),
             "warnings": list(self.warnings),
             "rows_processed": self.rows_processed,
         }
@@ -287,9 +336,8 @@ def import_parties(
                 PartyRole.party_id == party.id,
                 PartyRole.role_type == PartyRoleType.CLIENT,
                 PartyRole.context_type == "GLOBAL",
-                PartyRole.context_id.is_(None),
             )
-            .one_or_none()
+            .first()
         )
         if existing is None:
             session.add(
@@ -345,19 +393,31 @@ def import_emissions(
 
         # D-10: GESTIONADO / CAMBIO DE CORREDOR are process hooks, not policy status.
         if status_key in {"GESTIONADO", "CAMBIO DE CORREDOR"}:
+            from corredores.services.interactions import create_task, log_interaction
+
             party = upsert_party(session, organization_id=organization_id, row=row, report=report)
-            session.add(
-                Task(
-                    organization_id=organization_id,
-                    title=f"Excel status follow-up ({status_key})",
-                    status="OPEN",
-                    party_id=party.id if party else None,
-                    related_type="EXCEL_ROW",
-                    related_id=str(row.row_number),
-                    actor_id=actor_id,
-                )
+            if party is not None:
+                _ensure_client_role(session, organization_id=organization_id, party_id=party.id)
+            create_task(
+                session,
+                organization_id=organization_id,
+                title=f"Seguimiento Excel ({status_key})",
+                party_id=party.id if party else None,
+                related_type="EXCEL_ROW",
+                related_id=str(row.row_number),
+                actor_id=actor_id,
+            )
+            log_interaction(
+                session,
+                organization_id=organization_id,
+                summary=f"Gestión importada desde Emisiones · estatus {status_key}",
+                channel="NOTE",
+                party_id=party.id if party else None,
+                actor_id=actor_id,
+                data_source=DataSource.EXCEL_IMPORT,
             )
             report.tasks_created += 1
+            report.interactions_logged += 1
             continue
 
         sub_status = map_submission_status(row.excel_status)
@@ -374,6 +434,7 @@ def import_emissions(
         party = upsert_party(session, organization_id=organization_id, row=row, report=report)
         if party is None:
             continue
+        _ensure_client_role(session, organization_id=organization_id, party_id=party.id)
 
         submission = Submission(
             organization_id=organization_id,
@@ -393,11 +454,13 @@ def import_emissions(
 
         policy_number = (row.policy_number or "").strip() or None
         if policy_number:
+            # Same No Póliza can appear on distinct lines (e.g. AUTO + ASIENTO rider).
             existing = (
                 session.query(Policy)
                 .filter_by(
                     organization_id=organization_id,
                     carrier_id=carrier.id,
+                    insurance_line_id=line.id,
                     policy_number=policy_number,
                 )
                 .one_or_none()
@@ -553,4 +616,284 @@ def run_assisted_import(
         report=report,
     )
     session.flush()
+    # Emisiones is the mother file: derive cobros/renovaciones/comisiones/gestiones.
+    from corredores.services.materialize_portfolio import materialize_portfolio
+
+    mat = materialize_portfolio(
+        session, organization_id=org.id, actor_id=actor_id
+    )
+    report.materialize = mat.as_dict()
+    report.warnings.extend(mat.warnings)
+    session.flush()
+    return report
+
+
+def _split_person_name(full: str) -> tuple[str | None, str | None]:
+    parts = [p for p in re.sub(r"\s+", " ", full.strip()).split(" ") if p]
+    if not parts:
+        return None, None
+    if len(parts) == 1:
+        return parts[0], None
+    return parts[0], " ".join(parts[1:])
+
+
+def _upsert_named_role(
+    session: Session,
+    *,
+    organization_id: str,
+    full_name: str,
+    role_type: str,
+    report: ImportReport,
+) -> Party | None:
+    first, last = _split_person_name(full_name)
+    if not first:
+        return None
+    q = session.query(Party).filter_by(organization_id=organization_id, first_name=first)
+    if last:
+        q = q.filter_by(last_name=last)
+    else:
+        q = q.filter(Party.last_name.is_(None))
+    party = q.one_or_none()
+    if party is None:
+        party = Party(
+            organization_id=organization_id,
+            party_type=PartyType.PERSON,
+            first_name=first,
+            last_name=last,
+            data_source=DataSource.EXCEL_IMPORT,
+        )
+        session.add(party)
+        session.flush()
+        report.parties_upserted += 1
+    existing = (
+        session.query(PartyRole)
+        .filter_by(
+            organization_id=organization_id,
+            party_id=party.id,
+            role_type=role_type,
+            context_type="GLOBAL",
+        )
+        .first()
+    )
+    if existing is None:
+        session.add(
+            PartyRole(
+                organization_id=organization_id,
+                party_id=party.id,
+                role_type=role_type,
+                context_type="GLOBAL",
+                context_id=None,
+            )
+        )
+        report.roles_upserted += 1
+    return party
+
+
+def import_role_directory(
+    session: Session,
+    *,
+    organization_id: str,
+    referrers: Sequence[str] = (),
+    executives: Sequence[str] = (),
+    report: ImportReport | None = None,
+) -> ImportReport:
+    report = report or ImportReport()
+    for name in referrers:
+        report.rows_processed += 1
+        _upsert_named_role(
+            session,
+            organization_id=organization_id,
+            full_name=name,
+            role_type=PartyRoleType.REFERRER,
+            report=report,
+        )
+    for name in executives:
+        report.rows_processed += 1
+        _upsert_named_role(
+            session,
+            organization_id=organization_id,
+            full_name=name,
+            role_type=PartyRoleType.EXECUTIVE,
+            report=report,
+        )
+    return report
+
+
+def import_catalogs(
+    session: Session,
+    *,
+    organization_id: str,
+    catalogs: dict[str, list[str]],
+    report: ImportReport | None = None,
+) -> ImportReport:
+    report = report or ImportReport()
+    for name in catalogs.get("aseguradoras", []):
+        report.rows_processed += 1
+        before = session.query(Carrier).filter_by(organization_id=organization_id).count()
+        ensure_carrier(session, organization_id, name)
+        after = session.query(Carrier).filter_by(organization_id=organization_id).count()
+        if after > before:
+            report.carriers_upserted += 1
+        else:
+            report.carriers_upserted += 1  # touched
+    for risk in catalogs.get("riesgos", []):
+        code = map_line_code(risk)
+        if not code:
+            code = re.sub(r"[^A-Z0-9]+", "", _norm(risk))[:12] or "OTRO"
+        before = session.query(InsuranceLine).filter_by(code=code).one_or_none()
+        ensure_line(session, code, name=risk)
+        if before is None:
+            report.lines_upserted += 1
+        report.rows_processed += 1
+    import_role_directory(
+        session,
+        organization_id=organization_id,
+        referrers=catalogs.get("referidos", []),
+        executives=catalogs.get("ejecutivos", []),
+        report=report,
+    )
+    return report
+
+
+def link_emission_roles(
+    session: Session,
+    *,
+    organization_id: str,
+    rows: Sequence[EmissionImportRow],
+    report: ImportReport | None = None,
+) -> ImportReport:
+    """Attach REFERRER / EXECUTIVE PartyRole to existing policies by policy_number."""
+    report = report or ImportReport()
+    for row in rows:
+        if not row.policy_number:
+            continue
+        if not row.referrer_name and not row.executive_name:
+            continue
+        policy = (
+            session.query(Policy)
+            .filter_by(organization_id=organization_id, policy_number=row.policy_number.strip())
+            .order_by(Policy.created_at.desc())
+            .first()
+        )
+        if policy is None:
+            report.warnings.append(f"row {row.row_number}: sin póliza para vincular referido/ejecutivo")
+            continue
+        if row.referrer_name:
+            party = _upsert_named_role(
+                session,
+                organization_id=organization_id,
+                full_name=row.referrer_name,
+                role_type=PartyRoleType.REFERRER,
+                report=report,
+            )
+            if party:
+                existing = (
+                    session.query(PartyRole)
+                    .filter_by(
+                        organization_id=organization_id,
+                        party_id=party.id,
+                        role_type=PartyRoleType.REFERRER,
+                        context_type="POLICY",
+                        context_id=policy.id,
+                    )
+                    .first()
+                )
+                if existing is None:
+                    session.add(
+                        PartyRole(
+                            organization_id=organization_id,
+                            party_id=party.id,
+                            role_type=PartyRoleType.REFERRER,
+                            context_type="POLICY",
+                            context_id=policy.id,
+                        )
+                    )
+                    report.role_links += 1
+        if row.executive_name:
+            party = _upsert_named_role(
+                session,
+                organization_id=organization_id,
+                full_name=row.executive_name,
+                role_type=PartyRoleType.EXECUTIVE,
+                report=report,
+            )
+            if party:
+                existing = (
+                    session.query(PartyRole)
+                    .filter_by(
+                        organization_id=organization_id,
+                        party_id=party.id,
+                        role_type=PartyRoleType.EXECUTIVE,
+                        context_type="POLICY",
+                        context_id=policy.id,
+                    )
+                    .first()
+                )
+                if existing is None:
+                    session.add(
+                        PartyRole(
+                            organization_id=organization_id,
+                            party_id=party.id,
+                            role_type=PartyRoleType.EXECUTIVE,
+                            context_type="POLICY",
+                            context_id=policy.id,
+                        )
+                    )
+                    report.role_links += 1
+    return report
+
+
+def import_payment_rows(
+    session: Session,
+    *,
+    organization_id: str,
+    rows: Sequence[PaymentImportRow],
+    actor_id: str = "excel-import",
+    report: ImportReport | None = None,
+) -> ImportReport:
+    """Import payments by policy number — never invents OVERDUE."""
+    from corredores.services.installment_status import outstanding_balance
+
+    report = report or ImportReport()
+    for row in rows:
+        report.rows_processed += 1
+        if not row.policy_number or row.amount is None or row.amount <= 0:
+            report.warnings.append(f"row {row.row_number}: pago omitido (póliza/monto)")
+            continue
+        policy = (
+            session.query(Policy)
+            .filter_by(organization_id=organization_id, policy_number=row.policy_number.strip())
+            .order_by(Policy.created_at.desc())
+            .first()
+        )
+        if policy is None:
+            report.warnings.append(f"row {row.row_number}: póliza no encontrada")
+            continue
+        plan = session.query(PaymentPlan).filter_by(policy_id=policy.id).first()
+        target = None
+        if plan:
+            for inst in sorted(plan.installments, key=lambda i: i.installment_number):
+                if outstanding_balance(inst) > 0:
+                    target = inst
+                    break
+        if target is None:
+            report.warnings.append(f"row {row.row_number}: sin cuota abierta en {row.policy_number}")
+            continue
+        pay_date = row.payment_date or date.today()
+        try:
+            record_payment(
+                session,
+                organization_id=organization_id,
+                policy_id=policy.id,
+                amount=min(row.amount, outstanding_balance(target)),
+                payment_date=pay_date,
+                installment_id=target.id,
+                actor_id=actor_id,
+                method=row.method or "EXCEL_IMPORT",
+                reference=row.reference or f"import_pay_row_{row.row_number}",
+                data_source=DataSource.EXCEL_IMPORT,
+            )
+            report.payments_imported += 1
+        except ValueError as exc:
+            report.warnings.append(f"row {row.row_number}: {exc}")
     return report

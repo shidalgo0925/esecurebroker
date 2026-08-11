@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% if view == 'movimientos' %}Movimientos{% else %}Estado de cuenta{% endif %} · {{ stmt.party_name }}</title>
+  {% if not for_email %}
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  {% endif %}
+  {% if for_email %}
+  <style>{{ embedded_css|safe }}</style>
+  {% else %}
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/print.css" />
+  {% endif %}
+</head>
+<body class="print-doc">
+  {% if not for_email %}
+  <div class="print-toolbar">
+    <button type="button" class="btn-print" onclick="window.print()">Imprimir / PDF</button>
+    <a href="/clientes/{{ stmt.party_id }}/estado-cuenta">Volver</a>
+    {% if view == 'movimientos' %}
+    <a href="/clientes/{{ stmt.party_id }}/estado-cuenta/imprimir">Estado completo</a>
+    {% else %}
+    <a href="/clientes/{{ stmt.party_id }}/movimientos/imprimir">Solo movimientos</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <header class="print-header">
+    <div>
+      <div class="print-brand">ESecure<span>Broker</span></div>
+      <div class="doc-sub">{{ org_name }}</div>
+    </div>
+    <div class="print-meta">
+      <div>Generado <span class="mono">{{ generated_at }}</span></div>
+      <div>Corte <span class="mono">{{ stmt.as_of }}</span></div>
+    </div>
+  </header>
+
+  <h1 class="doc-title">{% if view == 'movimientos' %}Movimientos / transacciones{% else %}Estado de cuenta{% endif %}</h1>
+  <p class="doc-sub">
+    <b>{{ stmt.party_name }}</b>
+    {% if stmt.national_id %} · {{ stmt.national_id }}{% endif %}
+  </p>
+
+  <div class="kpis">
+    <div class="kpi">
+      <div class="amt">${{ stmt.open_balance|money }}</div>
+      <div class="lbl">Saldo abierto</div>
+    </div>
+    <div class="kpi risk">
+      <div class="amt">${{ stmt.overdue_balance|money }}</div>
+      <div class="lbl">Vencido</div>
+      <div class="meta">{{ stmt.overdue_count }} cuota{% if stmt.overdue_count != 1 %}s{% endif %}</div>
+    </div>
+    {% for a in stmt.aging %}
+    <div class="kpi {% if a.amount > 0 %}risk{% endif %}">
+      <div class="amt">${{ a.amount|money }}</div>
+      <div class="lbl">{{ a.label }}</div>
+      <div class="meta">{{ a.count }} cuota{% if a.count != 1 %}s{% endif %}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if view != 'movimientos' %}
+  <h2>Cuotas</h2>
+  <table class="doc-table">
+    <thead>
+      <tr>
+        <th>Póliza</th><th>#</th><th>Vence</th>
+        <th class="num">Monto</th><th class="num">Pagado</th><th class="num">Saldo</th>
+        <th>Estado</th><th>Mora</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for r in stmt.installments %}
+      <tr>
+        <td class="mono">{{ r.policy_number or r.policy_id[:8] }}</td>
+        <td class="mono">{{ r.number }}</td>
+        <td class="mono">{{ r.due_date }}</td>
+        <td class="num mono">${{ r.amount|money }}</td>
+        <td class="num mono">${{ r.paid|money }}</td>
+        <td class="num mono {% if r.balance > 0 and r.days_overdue %}warn{% endif %}">${{ r.balance|money }}</td>
+        <td>{{ r.status }}</td>
+        <td class="mono">{% if r.days_overdue %}{{ r.days_overdue }}d{% else %}—{% endif %}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="8" class="empty">Sin cuotas.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  <h2>Movimientos (cargo / abono)</h2>
+  <table class="doc-table">
+    <thead>
+      <tr>
+        <th>Fecha</th><th>Tipo</th><th>Detalle</th>
+        <th class="num">Cargo</th><th class="num">Abono</th><th class="num">Saldo</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for line in stmt.ledger %}
+      <tr>
+        <td class="mono">{{ line.date }}</td>
+        <td>{{ line.kind }}</td>
+        <td>{% if line.policy_number %}<span class="mono">{{ line.policy_number }}</span> · {% endif %}{{ line.description }}</td>
+        <td class="num mono">{% if line.debit %}${{ line.debit|money }}{% else %}—{% endif %}</td>
+        <td class="num mono">{% if line.credit %}${{ line.credit|money }}{% else %}—{% endif %}</td>
+        <td class="num mono">${{ line.balance_after|money }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6" class="empty">Sin movimientos.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  {% if view != 'movimientos' %}
+  <h2>Pagos registrados</h2>
+  <table class="doc-table">
+    <thead>
+      <tr><th>Fecha</th><th>Póliza</th><th>Método</th><th class="num">Monto</th></tr>
+    </thead>
+    <tbody>
+    {% for p in stmt.payments %}
+      <tr>
+        <td class="mono">{{ p.date }}</td>
+        <td class="mono">{{ p.policy_number or p.policy_id[:8] }}</td>
+        <td>{{ p.method or '—' }}{% if p.reference %} · {{ p.reference }}{% endif %}</td>
+        <td class="num mono">${{ p.amount|money }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="4" class="empty">Sin pagos.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  <footer class="print-footer">
+    Saldos según Domain Truth (cuotas y pagos registrados). Vencido = fecha de vencimiento &lt; hoy y saldo &gt; 0.
+    No constituye factura fiscal.
+  </footer>
+
+  {% if auto_print %}
+  <script>window.addEventListener('load', function () { window.print(); });</script>
+  {% endif %}
+</body>
+</html>

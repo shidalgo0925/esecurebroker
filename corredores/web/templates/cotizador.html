@@ -1,63 +1,111 @@
 {% extends "base.html" %}
 {% block title %}Cotizador · ESecureBroker{% endblock %}
+{% block topbar %}Ventas · Cotizador{% endblock %}
 {% block content %}
-<section class="hero-ops">
-  <h1>Cotizador</h1>
-  <p class="lede">Capturas el riesgo <strong>una vez</strong>. El sistema pide a las compañías. Tú comparas y decides. La IA explica — no inventa primas. · {{ org_name }}</p>
-  <p class="hint"><a href="/ayuda">¿Qué es captura / vista / comparador?</a></p>
+<section class="page-head row-between">
+  <div>
+    <h1 class="page-title">Cotizador</h1>
+    <p class="page-sub">Captura una vez · pide a compañías · compara · emite · <b>{{ org_name }}</b></p>
+  </div>
+  <a class="btn-primary" href="#nueva">+ Nueva cotización</a>
 </section>
 
-<ol class="steps wizard">
-  <li class="{% if not selected_id %}on{% endif %}"><span>1</span> Captura<br><small>datos del riesgo</small></li>
-  <li><span>2</span> Aseguradoras<br><small>a quiénes pedir</small></li>
-  <li><span>3</span> Orquestador<br><small>API · archivo · manual</small></li>
-  <li><span>4</span> Normalizar<br><small>mismo formato</small></li>
-  <li class="{% if selected_id %}on{% endif %}"><span>5</span> Comparador<br><small>tú eliges</small></li>
-</ol>
+<section id="nueva" class="poliza-panel" style="margin-bottom:1rem">
+  <h2 class="poliza-panel-title">Nueva cotización</h2>
+  <form method="post" action="/cotizador/nuevo" class="capture-grid" style="max-width:none">
+    <label>Cliente
+      <select name="party_id" required>
+        <option value="">Seleccionar…</option>
+        {% for p in parties %}
+        <option value="{{ p.id }}" {% if preselect_party_id == p.id %}selected{% endif %}>{{ p.name }}{% if p.national_id %} · {{ p.national_id }}{% endif %}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Ramo
+      <select name="line_id" required>
+        {% for l in lines %}
+        <option value="{{ l.id }}" {% if l.code == 'AUTO' %}selected{% endif %}>{{ l.code }} — {{ l.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="span-2">Nota / riesgo
+      <input type="text" name="note" placeholder="Ej. Toyota 2020, uso particular, renovación…" />
+    </label>
+    <div class="span-2">
+      <p class="meta" style="margin:0 0 0.35rem">Aseguradoras a pedir</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0.35rem">
+        {% for c in carriers %}
+        <label style="font-size:0.85rem;font-weight:500;display:flex;gap:0.35rem;align-items:center">
+          <input type="checkbox" name="carrier_ids" value="{{ c.id }}" checked /> {{ c.name }}
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="span-2"><button class="btn-primary" type="submit">Crear y despachar →</button></div>
+  </form>
+  {% if form_error %}<p class="form-error">{{ form_error }}</p>{% endif %}
+</section>
 
 <section>
-  <h2>1–4 · Pedidos de cotización (captura + orquestación)</h2>
-  <p class="meta">Cada fila = un pedido. “Comparar” abre la <strong>vista</strong> del paso 5 (tabla única).</p>
-  <table class="grid">
-    <thead><tr><th>Pedido</th><th>Línea</th><th>Creado</th><th>Vista</th></tr></thead>
-    <tbody>
-    {% for q in quotes %}
-      <tr>
-        <td class="mono">{{ q.id[:8] }}…</td>
-        <td>{{ q.insurance_line_id[:8] }}…</td>
-        <td>{{ q.created_at }}</td>
-        <td><a href="/cotizador?quote_request_id={{ q.id }}">Abrir comparador</a></td>
-      </tr>
-    {% else %}
-      <tr><td colspan="4">Aún no hay capturas. En P0 se crean desde dominio/demo; el formulario completo de captura llega con el diseño definitivo.</td></tr>
-    {% endfor %}
-    </tbody>
-  </table>
+  <h2 class="section-title">Pedidos</h2>
+  <form class="filter-bar" method="get" action="/cotizador">
+    <input type="search" name="q" value="{{ q or '' }}" placeholder="Buscar pedido…" />
+    {% if selected_id %}<input type="hidden" name="quote_request_id" value="{{ selected_id }}" />{% endif %}
+    <button type="submit" class="btn-secondary">Filtrar</button>
+    {% if q %}<a class="filter-clear" href="/cotizador">Limpiar</a>{% endif %}
+  </form>
+  <div class="table-card">
+    <table class="data-table">
+      <thead><tr><th>Pedido</th><th>Ramo</th><th>Cliente / nota</th><th>Creado</th><th>Respuestas</th><th></th></tr></thead>
+      <tbody>
+      {% for qrow in quotes %}
+        <tr>
+          <td class="mono">{{ qrow.id[:8] }}…</td>
+          <td class="mono">{{ qrow.line_code }}</td>
+          <td>{{ qrow.label }}</td>
+          <td class="mono meta">{{ qrow.created_at }}</td>
+          <td class="mono">{{ qrow.responses }}/{{ qrow.carriers }}</td>
+          <td class="cli-action"><a class="open-link" href="/cotizador?quote_request_id={{ qrow.id }}">Comparar</a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="empty-row">{% if q %}Sin resultados.{% else %}Aún no hay cotizaciones. Creá una arriba.{% endif %}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </section>
 
 {% if selected_id %}
-<section>
-  <h2>5 · Comparador <span class="mono">{{ selected_id[:8] }}…</span></h2>
-  <p class="meta">Misma tabla para API, archivo o carga manual. La IA solo puede explicar diferencias — nunca inventar la columna Prima.</p>
-  {% if comparator is not none %}
-  <table class="grid">
-    <thead><tr><th>Compañía</th><th>Fuente</th><th>Estado</th><th>Prima (dominio)</th></tr></thead>
-    <tbody>
-    {% for row in comparator %}
-      <tr>
-        <td>{{ row.carrier_name }} ({{ row.carrier_code }})</td>
-        <td>{{ row.source }}</td>
-        <td>{{ row.status }}</td>
-        <td>{% if row.premium is not none %}${{ row.premium|money }} {{ row.currency }}{% else %}—{% endif %}</td>
-      </tr>
-    {% else %}
-      <tr><td colspan="4">Este pedido aún no tiene respuestas normalizadas.</td></tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <p class="empty">No se pudo armar el comparador para este pedido.</p>
-  {% endif %}
+<section style="margin-top:1.25rem">
+  <div class="block-head" style="display:flex;justify-content:space-between;align-items:baseline;gap:1rem;flex-wrap:wrap">
+    <h2 class="section-title" style="margin:0">Comparador · <span class="mono">{{ selected_id[:8] }}…</span></h2>
+    <a class="btn-primary" href="/polizas/nueva?quote_request_id={{ selected_id }}{% if preselect_party_id %}&party_id={{ preselect_party_id }}{% endif %}">Emitir póliza →</a>
+  </div>
+  <p class="meta">Registrá primas manuales por compañía. La IA no inventa primas.</p>
+  <div class="table-card">
+    <table class="data-table">
+      <thead><tr><th>Compañía</th><th>Fuente</th><th>Estado</th><th>Prima</th><th>Registrar / actualizar</th></tr></thead>
+      <tbody>
+      {% for row in comparator %}
+        <tr>
+          <td class="cli-name">{{ row.carrier_name }} <span class="meta">({{ row.carrier_code }})</span></td>
+          <td>{{ row.source }}</td>
+          <td><span class="kind-pill">{{ row.status }}</span></td>
+          <td class="mono">{% if row.premium is not none %}<b>${{ row.premium|money }}</b> {{ row.currency }}{% else %}—{% endif %}</td>
+          <td>
+            <form method="post" action="/cotizador/{{ selected_id }}/manual" class="stack-actions" style="gap:0.35rem">
+              <input type="hidden" name="carrier_quote_request_id" value="{{ row.carrier_quote_request_id }}" />
+              <input type="number" step="0.01" min="0" name="premium" placeholder="Prima" required style="width:7rem;padding:0.35rem 0.5rem;border:1px solid var(--rule);border-radius:7px" />
+              <button class="btn-secondary" type="submit">Guardar</button>
+            </form>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5" class="empty-row">Sin respuestas aún. Despachá compañías al crear el pedido.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </section>
 {% endif %}
 {% endblock %}

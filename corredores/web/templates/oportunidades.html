@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Oportunidades · ESecureBroker{% endblock %}
+{% block topbar %}Ventas · CRM{% endblock %}
+{% block content %}
+<section class="page-head row-between">
+  <div>
+    <h1 class="page-title">CRM · Oportunidades</h1>
+    <p class="page-sub">Pipeline de renovación y cotización · <b>{{ org_name }}</b> · {{ opportunities|length }} abiertas</p>
+  </div>
+  <div class="stack-actions">
+    <a class="btn-secondary" href="/cotizador">Cotizador</a>
+    <a class="btn-primary" href="/renovaciones">Renovaciones</a>
+  </div>
+</section>
+
+<div class="report-tiles">
+  <div class="report-tile"><div class="money-amt">{{ pipeline.upcoming }}</div><div class="money-title">POR CONTACTAR</div></div>
+  <div class="report-tile"><div class="money-amt">{{ pipeline.quoting }}</div><div class="money-title">COTIZANDO</div></div>
+  <div class="report-tile"><div class="money-amt">{{ pipeline.waiting }}</div><div class="money-title">ESPERANDO CLIENTE</div></div>
+  <div class="report-tile"><div class="money-amt">${{ premium_at_stake|money }}</div><div class="money-title">PRIMA EN JUEGO</div></div>
+</div>
+
+<section style="margin-top:1rem">
+  <h2 class="section-title">Cola CRM</h2>
+  <div class="table-card">
+    <table class="data-table">
+      <thead>
+        <tr><th>Tipo</th><th>Póliza</th><th>Cliente</th><th>Estado</th><th>Fecha</th><th>Prima</th><th></th></tr>
+      </thead>
+      <tbody>
+      {% for o in opportunities %}
+        <tr>
+          <td><span class="kind-pill">{{ o.kind }}</span></td>
+          <td class="cli-id"><a href="/polizas/{{ o.policy_id }}">{{ o.policy_number }}</a></td>
+          <td class="cli-name">{{ o.client }}</td>
+          <td><span class="kind-pill">{{ o.status }}</span></td>
+          <td class="mono">{{ o.target_date or '—' }}</td>
+          <td class="mono">{% if o.premium %}${{ o.premium|money }}{% else %}—{% endif %}</td>
+          <td class="cli-action"><a class="open-link" href="/oportunidades/{{ o.id }}">Gestionar</a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7" class="empty-row">Sin oportunidades abiertas.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

@@ -2,87 +2,161 @@
 {% block title %}Nueva póliza · ESecureBroker{% endblock %}
 {% block topbar %}Cartera · Nueva póliza{% endblock %}
 {% block content %}
-<section class="hero-ops">
-  <h1>Nueva póliza</h1>
-  {% if from_quote %}
-  <p class="lede">Vienes de una <strong>cotización aceptada</strong>: reutiliza cliente + riesgo + aseguradora; completa número y datos finales.</p>
-  {% else %}
-  <p class="lede">Flujo completo de registro. Si partes de cotización aceptada, no vuelves a capturar todo.</p>
-  {% endif %}
+<section class="page-head row-between">
+  <div>
+    <h1 class="page-title">Nueva póliza</h1>
+    <p class="page-sub">
+      {% if from_renewal %}
+      Emisión desde renovación CRM · se cierra como RENEWED al guardar
+      {% elif from_quote %}
+      Desde cotización · completa número y primas
+      {% else %}
+      Alta completa · <b>{{ org_name }}</b>
+      {% endif %}
+    </p>
+  </div>
+  <div class="stack-actions">
+    <a class="btn-secondary" href="/polizas">Cancelar</a>
+    <a class="btn-secondary" href="/clientes/nuevo">+ Cliente</a>
+  </div>
 </section>
 
-<ol class="wizard-steps">
-  {% for key, label in steps %}
-  <li><span>{{ loop.index }}</span> {{ label }}</li>
-  {% endfor %}
-</ol>
-
-<form method="post" action="/polizas/nueva" class="wizard-form">
+<form method="post" action="/polizas/nueva" class="capture-form capture-dense" id="polizaNuevaForm">
   <input type="hidden" name="step" value="revisar" />
   <input type="hidden" name="quote_request_id" value="{{ quote_request_id or '' }}" />
+  <input type="hidden" name="renewal_id" value="{{ renewal_id or '' }}" />
 
   <fieldset>
-    <legend>1 · Cliente / contratante</legend>
-    <label>Cliente
-      <select name="party_id" required>
-        <option value="">— seleccionar —</option>
-        {% for p in parties %}
-        <option value="{{ p.id }}">{{ p.first_name or '' }} {{ p.last_name or '' }}{{ p.legal_name or '' }} · {{ p.national_id or p.id[:8] }}</option>
-        {% endfor %}
-      </select>
-    </label>
-    <p class="meta"><a href="/clientes/nuevo">+ Nuevo cliente</a> si no está en la lista.</p>
+    <legend>Cliente y producto</legend>
+    <div class="capture-grid">
+      <label class="span-2">Cliente
+        <select name="party_id" required>
+          <option value="">— seleccionar —</option>
+          {% for p in parties %}
+          <option value="{{ p.id }}" {% if preselect_party_id == p.id %}selected{% endif %}>
+            {{ p.first_name or '' }} {{ p.last_name or '' }}{{ p.legal_name or '' }} · {{ p.national_id or p.id[:8] }}
+          </option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Aseguradora
+        <select name="carrier_id" required>
+          <option value="">— seleccionar —</option>
+          {% for c in carriers %}
+          <option value="{{ c.id }}" {% if preselect_carrier_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Ramo
+        <select name="line_id" id="lineSelect">
+          {% for l in lines %}
+          <option value="{{ l.id }}" data-code="{{ l.code }}" {% if preselect_line_id == l.id or (not preselect_line_id and l.code == 'AUTO') %}selected{% endif %}>{{ l.code }} — {{ l.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
   </fieldset>
 
   <fieldset>
-    <legend>2 · Riesgo (AUTO)</legend>
-    <label>Marca <input name="make" placeholder="Toyota" /></label>
-    <label>Modelo <input name="model" placeholder="Hilux" /></label>
-    <label>Año <input name="year" placeholder="2024" /></label>
-    <label>Placa <input name="plate" placeholder="ABC123" /></label>
+    <legend>Póliza · vigencia · primas</legend>
+    <div class="capture-grid">
+      <label>Nº póliza
+        <input name="policy_number" class="mono" placeholder="POL-…" autocomplete="off" required />
+      </label>
+      <label>Factura / recibo
+        <input name="invoice_number" class="mono" placeholder="opcional" autocomplete="off" />
+      </label>
+      <label>Vigencia inicio
+        <input type="date" name="effective_date" value="{{ today }}" required />
+      </label>
+      <label>Vigencia fin
+        <input type="date" name="expiration_date" />
+      </label>
+      <label>Prima anual
+        <input name="annual_premium" class="mono" placeholder="0.00" value="{{ prefill_premium or '' }}" />
+      </label>
+      <label>Prima neta
+        <input name="net_premium" class="mono" placeholder="0.00" value="{{ prefill_premium or '' }}" />
+      </label>
+      <label>Prima bruta
+        <input name="gross_premium" class="mono" placeholder="0.00" />
+      </label>
+      <label>Forma de pago
+        <select name="payment_form">
+          <option value="">—</option>
+          <option value="CONTADO">Contado</option>
+          <option value="CUOTAS" selected>Cuotas</option>
+          <option value="ACH">ACH / débito</option>
+          <option value="TARJETA">Tarjeta</option>
+          <option value="OTRO">Otro</option>
+        </select>
+      </label>
+      <label>Nº cuotas
+        <input name="num_payments" class="mono" value="12" inputmode="numeric" />
+      </label>
+      <label>1ª cuota (fecha)
+        <input type="date" name="first_due_date" value="{{ today }}" />
+      </label>
+      <label class="span-2">Notas
+        <input name="notes" placeholder="Referido, ejecutivo, observaciones…" />
+      </label>
+    </div>
   </fieldset>
 
-  <fieldset>
-    <legend>3 · Aseguradora / producto</legend>
-    <label>Aseguradora
-      <select name="carrier_id" required>
-        <option value="">— seleccionar —</option>
-        {% for c in carriers %}
-        <option value="{{ c.id }}">{{ c.name }}</option>
-        {% endfor %}
-      </select>
-    </label>
-    <label>Ramo
-      <select name="line_id">
-        {% for l in lines %}
-        <option value="{{ l.id }}" {% if l.code == 'AUTO' %}selected{% endif %}>{{ l.code }} — {{ l.name }}</option>
-        {% endfor %}
-      </select>
-    </label>
+  <fieldset id="riesgoAuto">
+    <legend>Vehículo (AUTO)</legend>
+    <div class="capture-grid">
+      <label>Marca
+        <input name="make" placeholder="Toyota" autocomplete="off" />
+      </label>
+      <label>Modelo
+        <input name="model" placeholder="Hilux" autocomplete="off" />
+      </label>
+      <label>Año
+        <input name="year" placeholder="2024" inputmode="numeric" />
+      </label>
+      <label>Placa
+        <input name="plate" class="mono" placeholder="ABC123" autocomplete="off" />
+      </label>
+      <label>Uso
+        <select name="usage">
+          <option value="">—</option>
+          <option value="PARTICULAR" selected>Particular</option>
+          <option value="COMERCIAL">Comercial</option>
+        </select>
+      </label>
+      <label>Tipo
+        <input name="vehicle_type" placeholder="Sedán / Pickup / SUV…" />
+      </label>
+      <label>Color
+        <input name="color" placeholder="Blanco" />
+      </label>
+      <label>Motor
+        <input name="motor" class="mono" placeholder="Nº motor" />
+      </label>
+      <label class="span-2">Chasis
+        <input name="chassis" class="mono" placeholder="Nº chasis / VIN" />
+      </label>
+    </div>
   </fieldset>
 
-  <fieldset>
-    <legend>4–6 · Póliza · Vigencia · Prima</legend>
-    <label>Número de póliza <input name="policy_number" placeholder="POL-…" /></label>
-    <label>Vigencia inicio <input type="date" name="effective_date" /></label>
-    <label>Vigencia fin <input type="date" name="expiration_date" /></label>
-    <label>Prima anual <input name="annual_premium" placeholder="1200.00" value="1200" /></label>
-  </fieldset>
-
-  <fieldset>
-    <legend>7–9 · Pagos · Comisión · Documentos</legend>
-    <label>Número de cuotas <input name="num_payments" value="12" /></label>
-    <p class="meta">Comisión: regla del dominio al calcular. Documentos: módulo Gestión (próximo).</p>
-  </fieldset>
-
-  <fieldset>
-    <legend>10 · Revisar / Guardar</legend>
-    <p class="lede">Al guardar se crea la póliza en el dominio (no inventa primas: usas las que escribes).</p>
-  </fieldset>
-
-  <div class="wizard-actions">
+  <div class="wizard-actions capture-sticky-actions">
     <a class="btn-secondary" href="/polizas">Cancelar</a>
     <button type="submit" class="btn-primary">Guardar póliza</button>
   </div>
 </form>
+<script>
+(function () {
+  var sel = document.getElementById("lineSelect");
+  var block = document.getElementById("riesgoAuto");
+  if (!sel || !block) return;
+  function sync() {
+    var opt = sel.options[sel.selectedIndex];
+    var code = (opt && opt.getAttribute("data-code")) || "";
+    block.hidden = code && code !== "AUTO";
+  }
+  sel.addEventListener("change", sync);
+  sync();
+})();
+</script>
 {% endblock %}

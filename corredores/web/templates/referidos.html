@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Referidos · ESecureBroker{% endblock %}
+{% block topbar %}Ventas · Referidos{% endblock %}
+{% block content %}
+<section class="page-head row-between">
+  <div>
+    <h1 class="page-title">Referidos</h1>
+    <p class="page-sub">Plan vigente <b>{{ plan.reference }}</b> · {{ org_name }}</p>
+  </div>
+  <div class="stack-actions">
+    <a class="btn-secondary" href="/importaciones/referidos">Importar Excel</a>
+    <a class="btn-secondary" href="/comisiones">Plan de comisiones</a>
+  </div>
+</section>
+
+<div class="report-tiles">
+  <div class="report-tile">
+    <div class="money-amt">{{ plan.referral_pct }}</div>
+    <div class="money-title">SHARE REFERIDO</div>
+    <div class="meta">de la comisión Cia</div>
+  </div>
+  <div class="report-tile">
+    <div class="money-amt">${{ referral_total|money }}</div>
+    <div class="money-title">DEVENGADO</div>
+    <div class="meta">en cartera calculada</div>
+  </div>
+  <div class="report-tile">
+    <div class="money-amt">{{ plan.broker_pct }}</div>
+    <div class="money-title">AGENTE</div>
+  </div>
+  <div class="report-tile">
+    <div class="money-amt">{{ plan.executive_pct }} / {{ plan.office_pct }}</div>
+    <div class="money-title">EJEC. / OFICINA</div>
+  </div>
+</div>
+
+<section style="margin-top:1rem">
+  <h2 class="section-title">Regla</h2>
+  <p class="page-sub">{{ plan.rule }}</p>
+  <div class="table-card">
+    <table class="data-table">
+      <thead><tr><th>Escenario</th><th>Split</th></tr></thead>
+      <tbody>
+        <tr><td class="cli-name">Con referido + ejecutivo (vigente)</td><td class="mono">55 / 10 / 30 / 5</td></tr>
+        <tr><td class="cli-name">Con ejecutivo, sin referido</td><td class="mono">60 / 10 / 30 / 0</td></tr>
+        <tr><td class="cli-name">Solo agente / oficina</td><td class="mono">70 / 0 / 30 / 0</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<p class="hint" style="margin-top:1rem">
+  El referido se liquida sobre comisión Cia, no sobre prima.
+  <a href="/cartera">Ver dashboard</a> · <a href="/comisiones">Detalle de tasas</a>
+</p>
+{% endblock %}

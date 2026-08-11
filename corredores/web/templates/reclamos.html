@@ -1,24 +1,44 @@
 {% extends "base.html" %}
 {% block title %}Reclamos · ESecureBroker{% endblock %}
+{% block topbar %}Cartera · Reclamos{% endblock %}
 {% block content %}
-<section class="hero-ops">
-  <h1>Reclamos</h1>
-  <p class="lede">Bandeja + hooks portal (UI completa fuera de alcance). {{ org_name }}</p>
+<section class="page-head row-between">
+  <div>
+    <h1 class="page-title">Reclamos</h1>
+    <p class="page-sub">Bandeja de siniestros · <b>{{ org_name }}</b>
+      {% if q or status %} · {{ result_count }} resultado{% if result_count != 1 %}s{% endif %}{% endif %}
+    </p>
+  </div>
 </section>
-<table class="grid">
-  <thead><tr><th>Número</th><th>Estado</th><th>Póliza</th><th>Pérdida</th><th>Fuente</th></tr></thead>
-  <tbody>
-  {% for r in rows %}
-    <tr>
-      <td>{{ r.claim_number or r.id[:8] }}</td>
-      <td>{{ r.status }}</td>
-      <td class="mono">{{ r.policy_id[:8] }}…</td>
-      <td>{{ r.loss_date or '—' }}</td>
-      <td>{{ r.source }}</td>
-    </tr>
-  {% else %}
-    <tr><td colspan="5">Sin reclamos.</td></tr>
-  {% endfor %}
-  </tbody>
-</table>
+
+<form class="filter-bar" method="get" action="/reclamos">
+  <input type="search" name="q" value="{{ q }}" placeholder="Buscar número, póliza, estado…" />
+  <select name="status">
+    <option value="">Todo estado</option>
+    {% for s in statuses %}
+    <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn-secondary">Filtrar</button>
+  {% if q or status %}<a class="filter-clear" href="/reclamos">Limpiar</a>{% endif %}
+</form>
+
+<div class="table-card">
+  <table class="data-table">
+    <thead><tr><th>Número</th><th>Estado</th><th>Póliza</th><th>Pérdida</th><th>Fuente</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td class="cli-id">{{ r.claim_number or r.id[:8] }}</td>
+        <td><span class="kind-pill">{{ r.status }}</span></td>
+        <td class="mono"><a href="/polizas/{{ r.policy_id }}">{{ r.policy_id[:8] }}…</a></td>
+        <td class="mono">{{ r.loss_date or '—' }}</td>
+        <td>{{ r.source }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5" class="empty-row">{% if q or status %}Sin resultados.{% else %}Sin reclamos.{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endblock %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Importaciones · ESecureBroker{% endblock %}
+{% block topbar %}Gestión · Importaciones Excel{% endblock %}
+{% block content %}
+<section class="page-head row-between">
+  <div>
+    <h1 class="page-title">Motor de importaciones</h1>
+    <p class="page-sub">
+      Excel → Domain Truth · <b>{{ org_name }}</b> · no inventa primas ni mora
+    </p>
+  </div>
+</section>
+
+{% if flash_ok %}
+<p class="flash-ok">{{ flash_ok }}</p>
+{% endif %}
+{% if flash_err %}
+<p class="form-error">{{ flash_err }}</p>
+{% endif %}
+
+{% for module, items in by_module.items() %}
+<section class="dash-block">
+  <h2 class="section-title">{{ module }}</h2>
+  <div class="report-tiles">
+    {% for p in items %}
+    <a class="report-tile" href="/importaciones/{{ p.id }}">
+      <div class="money-title">{{ p.title }}</div>
+      <div class="meta" style="margin-top:0.45rem">{{ p.description }}</div>
+      <div class="meta" style="margin-top:0.35rem"><b>{{ p.accepts }}</b></div>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endfor %}
+
+<p class="meta" style="margin-top:1rem">
+  Flujo: elegir módulo → subir XLSX → previsualizar → confirmar.
+  Comisiones y renovaciones se derivan (no se leen montos inventados del Excel).
+</p>
+{% endblock %}

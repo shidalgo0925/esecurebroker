@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Documentos · ESecureBroker{% endblock %}
+{% block topbar %}Gestión · Documentos{% endblock %}
+{% block content %}
+<section class="page-head row-between">
+  <div>
+    <h1 class="page-title">Documentos</h1>
+    <p class="page-sub">Expediente PDF por cliente · <b>{{ org_name }}</b>
+      {% if q %} · {{ result_count }} resultado{% if result_count != 1 %}s{% endif %}{% endif %}
+    </p>
+  </div>
+</section>
+
+<form class="filter-bar" method="get" action="/documentos">
+  <input type="search" name="q" value="{{ q }}" placeholder="Buscar título, archivo o tipo…" />
+  <button type="submit" class="btn-secondary">Filtrar</button>
+  {% if q %}<a class="filter-clear" href="/documentos">Limpiar</a>{% endif %}
+</form>
+
+<p class="meta" style="margin-bottom:1rem">Para adjuntar un PDF, abrí el <strong>Cliente 360°</strong> y usá la sección Documentos.</p>
+
+<div class="table-card">
+  <table class="data-table">
+    <thead>
+      <tr><th>Cliente</th><th>Título</th><th>Tipo</th><th>Archivo</th><th>Fecha</th><th></th></tr>
+    </thead>
+    <tbody>
+    {% for d in documents %}
+      <tr>
+        <td class="cli-name">{% if d.party_id %}<a href="/clientes/{{ d.party_id }}#documentos">{{ d.party_name }}</a>{% else %}{{ d.party_name }}{% endif %}</td>
+        <td>{{ d.title }}</td>
+        <td><span class="kind-pill">{{ d.kind }}</span></td>
+        <td class="cli-id">{{ d.filename }}</td>
+        <td class="mono">{{ d.created_at }}</td>
+        <td class="cli-action"><a class="open-link" href="/documentos/{{ d.id }}/archivo" target="_blank" rel="noopener">Ver PDF →</a></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6" class="empty-row">{% if q %}Sin resultados.{% else %}Aún no hay PDFs. Adjuntá desde un Cliente 360°.{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

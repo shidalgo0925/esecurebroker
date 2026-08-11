@@ -1,25 +1,64 @@
 {% extends "base.html" %}
 {% block title %}Clientes · ESecureBroker{% endblock %}
+{% block topbar %}Cartera · Clientes{% endblock %}
 {% block content %}
-<section class="hero-ops row-between">
+<section class="page-head row-between">
   <div>
-    <h1>Clientes</h1>
-    <p class="lede">Centro relacional — elegir sujeto. {{ org_name }}</p>
+    <h1 class="page-title">Clientes</h1>
+    <p class="page-sub">
+      <b>{{ result_count }}</b> registro{% if result_count != 1 %}s{% endif %} · {{ org_name }}
+      {% if q or tipo %} · filtrado{% endif %}
+    </p>
   </div>
-  <a class="btn-primary" href="/clientes/nuevo">+ Nuevo cliente</a>
+  <div class="stack-actions">
+    <a class="btn-secondary" href="/importaciones/clientes">Importar Excel</a>
+    <a class="btn-primary" href="/clientes/nuevo">+ Nuevo cliente</a>
+  </div>
 </section>
-<table class="grid">
-  <thead><tr><th>Nombre</th><th>ID</th><th></th></tr></thead>
-  <tbody>
-  {% for p in parties %}
-    <tr>
-      <td>{{ p.first_name or '' }} {{ p.last_name or '' }}{{ p.legal_name or '' }}</td>
-      <td class="mono">{{ p.national_id or '—' }}</td>
-      <td><a href="/clientes/{{ p.id }}">Abrir 360°</a></td>
-    </tr>
-  {% else %}
-    <tr><td colspan="3">Sin parties — corre <code>cli run-e2e</code> o import.</td></tr>
-  {% endfor %}
-  </tbody>
-</table>
+
+<form class="filter-bar" method="get" action="/clientes">
+  <input type="search" name="q" value="{{ q }}" placeholder="Buscar nombre, cédula, teléfono…" />
+  <select name="tipo">
+    <option value="">Todo tipo</option>
+    <option value="PERSON" {% if tipo == 'PERSON' %}selected{% endif %}>Persona</option>
+    <option value="ORGANIZATION" {% if tipo == 'ORGANIZATION' %}selected{% endif %}>Empresa</option>
+  </select>
+  <button type="submit" class="btn-secondary">Filtrar</button>
+  {% if q or tipo %}<a class="filter-clear" href="/clientes">Limpiar</a>{% endif %}
+</form>
+
+<div class="table-card">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>Cédula / ID</th>
+        <th>Tipo</th>
+        <th>Teléfono</th>
+        <th>Email</th>
+        <th>Distrito</th>
+        <th>Pólizas</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for p in parties %}
+      <tr>
+        <td class="cli-name"><a href="/clientes/{{ p.id }}">{{ p.name }}</a></td>
+        <td class="cli-id">{{ p.national_id }}</td>
+        <td><span class="kind-pill">{{ p.party_type }}</span></td>
+        <td class="mono">{{ p.phone }}</td>
+        <td class="meta">{{ p.email }}</td>
+        <td>{{ p.district }}</td>
+        <td class="mono">{{ p.policies }}</td>
+        <td class="cli-action"><a class="open-link" href="/clientes/{{ p.id }}">360°</a></td>
+      </tr>
+    {% else %}
+      <tr>
+        <td colspan="8" class="empty-row">{% if q or tipo %}Sin resultados para el filtro.{% else %}Sin clientes — importá Emisiones / Asegurados o creá uno nuevo.{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endblock %}

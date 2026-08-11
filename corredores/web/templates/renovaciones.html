@@ -1,23 +1,45 @@
 {% extends "base.html" %}
 {% block title %}Renovaciones · ESecureBroker{% endblock %}
+{% block topbar %}Cartera · Renovaciones{% endblock %}
 {% block content %}
-<section class="hero-ops">
-  <h1>Renovaciones</h1>
-  <p class="lede">Pipeline — misma cia o recotizar multi (dominio). {{ org_name }}</p>
+<section class="page-head row-between">
+  <div>
+    <h1 class="page-title">Renovaciones</h1>
+    <p class="page-sub">Pipeline — misma cia o recotizar · <b>{{ org_name }}</b>
+      {% if q or status %} · {{ result_count }} resultado{% if result_count != 1 %}s{% endif %}{% endif %}
+    </p>
+  </div>
+  <a class="btn-secondary" href="/reportes/renovaciones.csv">Exportar CSV</a>
 </section>
-<table class="grid">
-  <thead><tr><th>Estado</th><th>Target</th><th>Póliza previa</th><th>Nueva</th></tr></thead>
-  <tbody>
-  {% for r in rows %}
-    <tr>
-      <td>{{ r.status }}</td>
-      <td>{{ r.target_date or '—' }}</td>
-      <td class="mono">{{ r.previous_policy_id[:8] }}…</td>
-      <td class="mono">{% if r.new_policy_id %}{{ r.new_policy_id[:8] }}…{% else %}—{% endif %}</td>
-    </tr>
-  {% else %}
-    <tr><td colspan="4">Sin oportunidades — corre E2E.</td></tr>
-  {% endfor %}
-  </tbody>
-</table>
+
+<form class="filter-bar" method="get" action="/renovaciones">
+  <input type="search" name="q" value="{{ q }}" placeholder="Buscar cliente, póliza, estado…" />
+  <select name="status">
+    <option value="">Todo estado</option>
+    {% for s in statuses %}
+    <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn-secondary">Filtrar</button>
+  {% if q or status %}<a class="filter-clear" href="/renovaciones">Limpiar</a>{% endif %}
+</form>
+
+<div class="table-card">
+  <table class="data-table">
+    <thead><tr><th>Estado</th><th>Target</th><th>Cliente</th><th>Póliza</th><th></th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td><span class="kind-pill">{{ r.status }}</span></td>
+        <td class="mono">{{ r.target_date or '—' }}</td>
+        <td class="cli-name">{% if r.party_id %}<a href="/clientes/{{ r.party_id }}">{{ r.client }}</a>{% else %}{{ r.client }}{% endif %}</td>
+        <td class="cli-id"><a href="/polizas/{{ r.previous_policy_id }}">{{ r.policy_number }}</a></td>
+        <td class="cli-action"><a class="open-link" href="/polizas/{{ r.previous_policy_id }}">Abrir →</a></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5" class="empty-row">{% if q or status %}Sin resultados.{% else %}Sin oportunidades de renovación.{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endblock %}

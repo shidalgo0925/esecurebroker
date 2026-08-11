@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Configuración · ESecureBroker{% endblock %}
+{% block topbar %}Configuración{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1 class="page-title">Configuración</h1>
+  <p class="page-sub">Correo, estados de cuenta automáticos y preferencias de la organización.</p>
+</section>
+
+{% if flash == 'auto_ok' %}
+<p class="flash-ok">Corrida automática ejecutada{% if dry_run %} (dry-run){% endif %}: enviados {{ auto_sent }}, omitidos {{ auto_skipped }}, fallidos {{ auto_failed }}.</p>
+{% elif flash == 'auto_blocked' %}
+<p class="form-error">{{ flash_detail or 'Auto-envío deshabilitado o SMTP incompleto' }}</p>
+{% endif %}
+
+<div class="dash-split">
+  <section>
+    <h2 class="section-title">Correo (SMTP)</h2>
+    <div class="table-card" style="padding:1rem">
+      <p class="meta">Se configura en <span class="mono">.env</span> del servidor (no se edita desde la UI).</p>
+      <table class="data-table" style="margin-top:0.5rem">
+        <tbody>
+          <tr><td>MAIL_ENABLED</td><td class="mono">{% if mail.mail_enabled %}sí{% else %}no{% endif %}</td></tr>
+          <tr><td>SMTP listo</td><td class="mono">{% if mail.configured %}sí{% else %}no{% endif %}</td></tr>
+          <tr><td>Host</td><td class="mono">{{ mail.smtp_host or '—' }}:{{ mail.smtp_port }}</td></tr>
+          <tr><td>From</td><td class="mono">{{ mail.smtp_from or '—' }}</td></tr>
+          <tr><td>TLS / SSL</td><td class="mono">{% if mail.smtp_tls %}TLS{% endif %}{% if mail.smtp_ssl %} SSL{% endif %}{% if not mail.smtp_tls and not mail.smtp_ssl %}—{% endif %}</td></tr>
+          <tr><td>Usuario</td><td class="mono">{% if mail.smtp_user_set %}configurado{% else %}—{% endif %}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <section>
+    <h2 class="section-title">Envío automático de estados</h2>
+    <div class="table-card" style="padding:1rem">
+      <p class="meta">Envía el estado de cuenta a clientes con saldo vencido (Domain Truth), respetando cooldown.</p>
+      <table class="data-table" style="margin-top:0.5rem">
+        <tbody>
+          <tr><td>STATEMENT_AUTO_ENABLED</td><td class="mono">{% if mail.auto_enabled %}sí{% else %}no{% endif %}</td></tr>
+          <tr><td>Mín. días mora</td><td class="mono">{{ mail.auto_min_days }}</td></tr>
+          <tr><td>Cooldown</td><td class="mono">{{ mail.auto_cooldown_days }} días</td></tr>
+          <tr><td>Solo vencidos</td><td class="mono">{% if mail.auto_only_overdue %}sí{% else %}no{% endif %}</td></tr>
+        </tbody>
+      </table>
+      <div class="stack-actions" style="margin-top:0.85rem">
+        <form method="post" action="/configuracion/estados-auto" style="display:inline">
+          <input type="hidden" name="dry_run" value="1" />
+          <button type="submit" class="btn-secondary">Simular (dry-run)</button>
+        </form>
+        <form method="post" action="/configuracion/estados-auto" style="display:inline" onsubmit="return confirm('¿Enviar estados de cuenta reales ahora?');">
+          <input type="hidden" name="dry_run" value="0" />
+          <button type="submit" class="btn-primary" {% if not mail.configured or not mail.auto_enabled %}disabled title="Activa MAIL_ENABLED, SMTP y STATEMENT_AUTO_ENABLED"{% endif %}>Ejecutar ahora</button>
+        </form>
+      </div>
+      <p class="meta" style="margin-top:0.6rem">Timer systemd: <span class="mono">esecurebroker-statements.timer</span> · CLI: <span class="mono">python -m corredores.cli send-statements [--dry-run]</span></p>
+    </div>
+  </section>
+</div>
+
+<section style="margin-top:1rem">
+  <h2 class="section-title">Últimos envíos de estado de cuenta</h2>
+  <div class="table-card">
+    <table class="data-table">
+      <thead>
+        <tr><th>Cuándo</th><th>Cliente</th><th>Canal</th><th>Trigger</th><th>Para</th><th>Estado</th><th>Vencido</th><th>Detalle</th></tr>
+      </thead>
+      <tbody>
+      {% for d in deliveries %}
+        <tr>
+          <td class="mono">{{ d.created_at }}</td>
+          <td class="cli-name"><a href="/clientes/{{ d.party_id }}/estado-cuenta">{{ party_names.get(d.party_id, d.party_id[:8]) }}</a></td>
+          <td>{{ d.channel }}</td>
+          <td><span class="kind-pill">{{ d.trigger }}</span></td>
+          <td class="mono">{{ d.to_email or '—' }}</td>
+          <td><span class="kind-pill">{{ d.status }}</span></td>
+          <td class="mono">${{ d.overdue_balance|money }}</td>
+          <td class="meta">{{ d.detail or '—' }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="8" class="empty-row">Aún no hay envíos registrados.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

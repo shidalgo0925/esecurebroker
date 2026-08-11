@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ESecureBroker — tu correduría, bajo control</title>
+  <meta name="description" content="ESecureBroker está diseñado para la administración de pólizas, cobranza de primas, comisiones, cotizaciones, CRM, renovaciones, reportes y la operación diaria del corredor de seguros." />
+  <link rel="icon" href="/static/brand/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=Inter:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;1,6..72,500&display=swap" rel="stylesheet" />
+  {# Nombre sin "landing" — algunos adblockers bloquean */landing.css #}
+  <link rel="stylesheet" type="text/css" href="/static/esb-public.css?v=20260811j" />
+  <style>
+    /* Fallback mínimo si el CSS externo falla */
+    body.land-body{margin:0;font-family:Inter,Segoe UI,system-ui,sans-serif;color:#141b30;background:#fbfaf6}
+    .land-header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem;padding:0.85rem 1.25rem;border-bottom:1px solid #e8e6db;background:#fbfaf6}
+    .land-brand{display:flex;align-items:center;gap:.55rem;text-decoration:none;color:#141b30}
+    .land-wordmark{font-family:Georgia,serif;font-size:1.25rem;font-weight:700}
+    .land-wordmark .wm-secure{color:#141b30}
+    .land-wordmark .wm-broker{color:#8c651e}
+    .land-nav-main{display:flex;flex-wrap:wrap;gap:1rem}
+    .land-nav-main a,.land-btn-ghost,.land-btn-text{color:#141b30;text-decoration:none;font-weight:500}
+    .land-btn-primary{display:inline-flex;padding:.65rem 1.1rem;border-radius:8px;background:linear-gradient(180deg,#cd9a34,#8c651e);color:#1a1408;font-weight:600;text-decoration:none}
+    .land-hero{display:grid;gap:1.5rem;padding:2rem 1.25rem;background:#f7f5ef}
+    .land-brand-lockup{display:flex;align-items:center;gap:.85rem;margin-bottom:.85rem}
+    .land-brand-hero{font-family:Georgia,serif;font-size:clamp(2.2rem,5.5vw,3.2rem);margin:0;line-height:1.05;font-weight:700}
+    .land-brand-hero .wm-secure{color:#141b30}
+    .land-brand-hero .wm-broker{color:#8c651e}
+    .land-brand-sub{margin:.2rem 0 0;font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:rgba(20,27,48,.48)}
+    .land-hero-line{font-family:Georgia,serif;font-size:1.55rem;margin:0 0 .75rem}
+    .land-hero-line em{font-style:normal;color:#8c651e}
+    .land-hero-support{max-width:30rem;color:rgba(20,27,48,.62);line-height:1.5}
+    .land-hoy-mock{border:1px solid #e8e6db;border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 16px 32px rgba(20,27,48,.1)}
+    .mock-chrome{background:#141b30;color:rgba(255,255,255,.55);padding:.55rem .75rem;font-size:.75rem}
+    .mock-body{padding:1rem;background:#fbfaf6}
+  </style>
+</head>
+<body class="land-body">
+  <header class="land-header">
+    <a class="land-brand" href="/">
+      <img src="/static/brand/crest.svg?v=20260811b" width="36" height="36" alt="" />
+      <span class="land-wordmark"><span class="wm-secure">ESecure</span><span class="wm-broker">Broker</span></span>
+    </a>
+    <nav class="land-nav-main" aria-label="Principal">
+      <a href="/">Inicio</a>
+      <a href="#producto">Producto</a>
+      <a href="#portales">Portales</a>
+      <a href="#capacidades">Capacidades</a>
+      <a href="#integraciones">Integraciones</a>
+      <a href="#nosotros">Nosotros</a>
+      <a href="#contacto">Contáctanos</a>
+      <a href="#precios">Precios</a>
+    </nav>
+    <div class="land-nav-cta">
+      <a class="land-btn-ghost" href="{{ login_href }}">Acceder</a>
+      <a class="land-btn-primary" href="{{ start_href }}">Registrarse</a>
+    </div>
+  </header>
+
+  {# —— Hero: cream + marca metálica + mock /hoy —— #}
+  <section class="land-hero" id="producto">
+    <div class="land-hero-copy">
+      <div class="land-brand-lockup">
+        <img class="land-crest-hero" src="/static/brand/crest.svg?v=20260811b" width="56" height="56" alt="" />
+        <div>
+          <h1 class="land-brand-hero">
+            <span class="wm-secure">ESecure</span><span class="wm-broker">Broker</span>
+          </h1>
+          <p class="land-brand-sub">Corredores de seguros</p>
+        </div>
+      </div>
+      <p class="land-eyebrow">EasyTech · Plataformas</p>
+      <p class="land-hero-line">Tu correduría, <em>bajo control</em>.</p>
+      <p class="land-hero-support">
+        Diseñado para la administración de pólizas, pagos de primas, comisiones, cotizaciones,
+        CRM, campañas, reportes y todo lo referente a la operación diaria del corredor.
+      </p>
+      <div class="land-hero-actions">
+        <a class="land-btn-primary land-btn-lg" href="{{ start_href }}">Registrarse</a>
+        <a class="land-btn-text" href="#capacidades">Explorar capacidades</a>
+      </div>
+    </div>
+
+    <aside class="land-hoy-mock" aria-label="Vista previa de Hoy">
+      <div class="mock-chrome">
+        <span class="mock-dot"></span><span class="mock-dot"></span><span class="mock-dot"></span>
+        <span class="mock-url">app · /hoy</span>
+      </div>
+      <div class="mock-body">
+        <p class="mock-eyebrow">Expediente del día</p>
+        <h2 class="mock-date">Martes 11 de agosto</h2>
+        <p class="mock-greet">Buenos días. Tienes <strong>4</strong> asuntos que necesitan tu atención.</p>
+        <div class="mock-money">
+          <div class="mock-tile">
+            <div class="mock-amt">$2,480.00</div>
+            <div class="mock-lbl">Vencido</div>
+          </div>
+          <div class="mock-tile">
+            <div class="mock-amt">$1,150.00</div>
+            <div class="mock-lbl">Vence hoy</div>
+          </div>
+          <div class="mock-tile">
+            <div class="mock-amt">3</div>
+            <div class="mock-lbl">Renovaciones</div>
+          </div>
+        </div>
+        <div class="mock-dossier">
+          <div class="mock-tab"></div>
+          <div>
+            <div class="mock-row-top">
+              <span class="mock-pill">Cobro vencido</span>
+              <span class="mock-stamp">URGENTE</span>
+            </div>
+            <div class="mock-subject">María Delgado · AUTO-10482</div>
+            <p class="mock-line">Prima pendiente $420.00 · promesa incumplida</p>
+          </div>
+        </div>
+        <div class="mock-dossier soft">
+          <div class="mock-tab warn"></div>
+          <div>
+            <div class="mock-row-top">
+              <span class="mock-pill">Renovación</span>
+              <span class="mock-stamp warn">EN 12 DÍAS</span>
+            </div>
+            <div class="mock-subject">Transportes Ríos · FLOTA-2201</div>
+            <p class="mock-line">Vence el 23 ago · cotizar antes de emitir</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </section>
+
+  {# —— Stats (inspirado Eco Integrations; métricas de producto honestas) —— #}
+  <section class="land-stats" aria-label="Indicadores">
+    <div class="land-stats-inner">
+      <div>
+        <strong>Vista Hoy</strong>
+        <span>Prioridades cada mañana</span>
+      </div>
+      <div>
+        <strong>1 org / correduría</strong>
+        <span>Datos separados por equipo</span>
+      </div>
+      <div>
+        <strong>Cartera viva</strong>
+        <span>Pólizas · cobranza · renovaciones</span>
+      </div>
+    </div>
+  </section>
+
+  {# —— Personas usando la app —— #}
+  <section class="land-band land-band-alt" id="en-uso" aria-label="En la correduría">
+    <div class="land-band-inner">
+      <p class="land-eyebrow">En la correduría</p>
+      <h2 class="land-h2">Hecho para el día a día del equipo.</h2>
+      <p class="land-p land-p-narrow">
+        Desde la vista Hoy hasta la cartera compartida: ESecureBroker acompaña la operación
+        real del corredor y de la oficina.
+      </p>
+
+      <div class="land-people">
+        <figure class="land-people-card">
+          <img
+            src="/static/img/esb-people-hoy.jpg?v=20260811i"
+            width="1200"
+            height="800"
+            alt="Corredora revisando la vista Hoy de ESecureBroker en su laptop"
+            loading="lazy"
+            decoding="async"
+          />
+          <figcaption>
+            <strong>Prioridades cada mañana</strong>
+            <span>Abre /hoy y ve cobros, renovaciones y seguimientos que requieren atención.</span>
+          </figcaption>
+        </figure>
+        <figure class="land-people-card">
+          <img
+            src="/static/img/esb-people-equipo.jpg?v=20260811i"
+            width="1200"
+            height="800"
+            alt="Equipo de correduría revisando cartera y pólizas en una tablet con ESecureBroker"
+            loading="lazy"
+            decoding="async"
+          />
+          <figcaption>
+            <strong>Una org, un equipo</strong>
+            <span>Misma cartera, roles claros y datos separados por correduría.</span>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  {# —— Portales (patrón tipo catálogo de accesos) —— #}
+  <section class="land-band" id="portales">
+    <div class="land-band-inner">
+      <p class="land-eyebrow">Portales</p>
+      <h2 class="land-h2">Todo lo que necesitas para operar seguros.</h2>
+      <p class="land-p land-p-narrow">
+        Un solo producto con áreas claras: entra a lo que usas cada día — pólizas, cobranza,
+        cotizaciones, CRM y reportes — sin cambiar de herramienta.
+      </p>
+
+      <div class="land-portals">
+        <article class="land-portal">
+          <div class="land-portal-visual">
+            <img src="/static/img/portal-hoy.jpg?v=20260811j" width="900" height="675" alt="" loading="lazy" decoding="async" />
+          </div>
+          <div class="land-portal-body">
+            <h3>Operación · Hoy</h3>
+            <p>
+              Empieza el día sabiendo qué requiere atención: cobros, renovaciones, vencimientos
+              y seguimientos prioritarios.
+            </p>
+            <a class="land-portal-cta" href="#hoy">Visitar</a>
+          </div>
+        </article>
+
+        <article class="land-portal">
+          <div class="land-portal-visual">
+            <img src="/static/img/portal-polizas.jpg?v=20260811j" width="900" height="675" alt="" loading="lazy" decoding="async" />
+          </div>
+          <div class="land-portal-body">
+            <h3>Pólizas y cartera</h3>
+            <p>
+              Administra y consulta la cartera de pólizas con el cliente, la aseguradora y el
+              estado del negocio en un mismo expediente.
+            </p>
+            <a class="land-portal-cta" href="{{ start_href }}">Visitar</a>
+          </div>
+        </article>
+
+        <article class="land-portal">
+          <div class="land-portal-visual">
+            <img src="/static/img/portal-cobranza.jpg?v=20260811j" width="900" height="675" alt="" loading="lazy" decoding="async" />
+          </div>
+          <div class="land-portal-body">
+            <h3>Cobranza de primas</h3>
+            <p>
+              Seguimiento operativo de pagos de pólizas, cuotas pendientes, promesas y estados
+              de cuenta — el trabajo diario del corredor.
+            </p>
+            <a class="land-portal-cta" href="{{ start_href }}">Visitar</a>
+          </div>
+        </article>
+
+        <article class="land-portal">
+          <div class="land-portal-visual">
+            <img src="/static/img/portal-cotiza.jpg?v=20260811j" width="900" height="675" alt="" loading="lazy" decoding="async" />
+          </div>
+          <div class="land-portal-body">
+            <h3>Cotizador</h3>
+            <p>
+              Cotiza y da seguimiento al proceso previo a la emisión, con las aseguradoras
+              con las que trabaja tu correduría.
+            </p>
+            <a class="land-portal-cta" href="{{ start_href }}">Visitar</a>
+          </div>
+        </article>
+
+        <article class="land-portal">
+          <div class="land-portal-visual">
+            <img src="/static/img/portal-crm.jpg?v=20260811j" width="900" height="675" alt="" loading="lazy" decoding="async" />
+          </div>
+          <div class="land-portal-body">
+            <h3>CRM y oportunidades</h3>
+            <p>
+              Consulta información de clientes, oportunidades, indicadores de gestión y el
+              seguimiento comercial de tu cartera.
+            </p>
+            <a class="land-portal-cta" href="{{ start_href }}">Visitar</a>
+          </div>
+        </article>
+
+        <article class="land-portal">
+          <div class="land-portal-visual">
+            <img src="/static/img/portal-reportes.jpg?v=20260811j" width="900" height="675" alt="" loading="lazy" decoding="async" />
+          </div>
+          <div class="land-portal-body">
+            <h3>Comisiones y reportes</h3>
+            <p>
+              Visibilidad sobre comisiones, desempeño y reportes de la operación de tu
+              correduría — listos para decidir.
+            </p>
+            <a class="land-portal-cta" href="{{ start_href }}">Visitar</a>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  {# —— Capacidades (estilo features + producción) —— #}
+  <section class="land-band land-band-ink" id="capacidades">
+    <div class="land-band-inner">
+      <p class="land-eyebrow land-eyebrow-light">Capacidades</p>
+      <h2 class="land-h2 land-h2-light">Desbloquea la operación digital de tu correduría.</h2>
+      <p class="land-p land-p-light land-p-narrow">
+        En la era digital, el corredor gana con claridad, velocidad y una experiencia
+        coherente para su equipo y sus clientes. ESecureBroker concentra esa operación
+        en un solo expediente.
+      </p>
+
+      <div class="land-cap-grid">
+        <article class="land-cap">
+          <h3>Operación del corredor</h3>
+          <p>
+            Impulsa tu correduría con una plataforma pensada para interactuar con clientes,
+            pólizas y socios del negocio asegurador — sin hojas sueltas ni herramientas dispersas.
+          </p>
+          <a href="#portales">Saber más</a>
+        </article>
+        <article class="land-cap">
+          <h3>Cotiza y da seguimiento a pólizas</h3>
+          <p>
+            Desde la cotización hasta la renovación: acelera el proceso operativo y ofrece
+            a tus clientes respuestas más rápidas y ordenadas.
+          </p>
+          <a href="{{ start_href }}">Saber más</a>
+        </article>
+        <article class="land-cap">
+          <h3>Producción de tu corretaje</h3>
+          <p>Consulta y organiza la producción de tu cartera:</p>
+          <ul class="land-cap-tags">
+            <li>Pólizas nuevas</li>
+            <li>Renovaciones</li>
+            <li>Cobros</li>
+            <li>Comisiones</li>
+            <li>Morosidad</li>
+            <li>Reclamos</li>
+          </ul>
+          <a href="{{ start_href }}">Saber más</a>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  {# —— Integraciones + panel código —— #}
+  <section class="land-band" id="integraciones">
+    <div class="land-band-inner land-split">
+      <div>
+        <p class="land-eyebrow">Integraciones</p>
+        <h2 class="land-h2">Conectividad con el ecosistema asegurador.</h2>
+        <p class="land-p">
+          Importa producción, alinea aseguradoras y mantén credenciales y rangos de
+          pólizas/pagos bajo control. La meta: menos fricción entre tu correduría y las
+          compañías con las que trabajas.
+        </p>
+        <p class="land-p">
+          Desde la gestión de pólizas hasta el seguimiento de cobranza y reclamos,
+          ESecureBroker simplifica procesos complejos y aumenta la agilidad operativa.
+        </p>
+        <div class="land-hero-actions">
+          <a class="land-btn-primary" href="{{ start_href }}">Registrarse</a>
+          <a class="land-btn-text" href="#contacto">Hablar con nosotros</a>
+        </div>
+      </div>
+      <aside class="land-code" aria-label="Ejemplo de estructura de datos">
+        <div class="land-code-bar">
+          <span>POST</span> /api/v1/policies/sync
+        </div>
+<pre class="land-code-pre">{
+  "organization": "correduria-rios",
+  "as_of": "2026-08-11",
+  "items": [
+    {
+      "policy": "AUTO-10482",
+      "insured": "María Delgado",
+      "premium_due": 420.00,
+      "status": "OVERDUE"
+    }
+  ]
+}</pre>
+        <p class="land-code-note">Ejemplo ilustrativo del tipo de información que opera tu correduría.</p>
+      </aside>
+    </div>
+  </section>
+
+  {# —— Empieza por Hoy —— #}
+  <section class="land-band land-band-alt" id="hoy">
+    <div class="land-band-inner land-split">
+      <div>
+        <p class="land-eyebrow">El concepto central</p>
+        <h2 class="land-h2">Empieza el día sabiendo qué necesita tu atención.</h2>
+        <p class="land-p">
+          ESecureBroker no es solo una base de datos de pólizas.
+          Cada mañana responde: <em>¿Qué necesita mi atención hoy?</em>
+        </p>
+        <ul class="land-check">
+          <li>Pendientes y seguimientos</li>
+          <li>Renovaciones próximas</li>
+          <li>Pólizas por vencer</li>
+          <li>Cobros de primas pendientes</li>
+          <li>Alertas y tareas prioritarias</li>
+        </ul>
+      </div>
+      <div class="land-pillars">
+        <article>
+          <h3>Control</h3>
+          <p>Saber qué ocurre en la cartera y qué requiere acción.</p>
+        </article>
+        <article>
+          <h3>Organización</h3>
+          <p>Clientes, pólizas, documentos y tareas en la misma plataforma.</p>
+        </article>
+        <article>
+          <h3>Seguimiento</h3>
+          <p>Anticipar vencimientos antes de que se conviertan en problemas.</p>
+        </article>
+        <article>
+          <h3>Visibilidad</h3>
+          <p>Entrar cada mañana con una vista clara de prioridades.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  {# —— Operación conectada —— #}
+  <section class="land-band" id="operacion">
+    <div class="land-band-inner">
+      <p class="land-eyebrow">Operación conectada</p>
+      <h2 class="land-h2">Nada vive aislado.</h2>
+      <p class="land-p land-p-narrow">
+        Cliente, póliza, cartera, cobranza y renovación forman un mismo hilo.
+        ESecureBroker lo mantiene visible.
+      </p>
+      <ol class="land-flow" aria-label="Flujo operativo">
+        <li><span>Cliente</span></li>
+        <li aria-hidden="true">→</li>
+        <li><span>Póliza</span></li>
+        <li aria-hidden="true">→</li>
+        <li><span>Cartera</span></li>
+        <li aria-hidden="true">→</li>
+        <li><span>Cobranza</span></li>
+        <li aria-hidden="true">→</li>
+        <li><span>Renovación</span></li>
+      </ol>
+    </div>
+  </section>
+
+  {# —— Nosotros —— #}
+  <section class="land-band land-band-alt" id="nosotros">
+    <div class="land-band-inner">
+      <p class="land-eyebrow">Sobre nosotros</p>
+      <h2 class="land-h2">Especialistas en la operación del corredor.</h2>
+      <div class="land-about-grid">
+        <div>
+          <p class="land-p">
+            ESecureBroker nace para dar a corredores y corredurías una ventaja competitiva:
+            automatizar el día a día, ordenar la cartera y poner lo urgente frente a ti cada mañana.
+          </p>
+          <p class="land-p">
+            Nuestro compromiso es la claridad y la excelencia operativa — respaldados por un
+            producto construido específicamente para el sector de seguros, no por un ERP genérico.
+          </p>
+          <p class="land-p">
+            Estamos dedicados a impulsar el crecimiento y el rendimiento de tu correduría con
+            tecnología moderna y una experiencia de expediente que el equipo entiende al instante.
+          </p>
+        </div>
+        <div class="land-org-card">
+          <div class="land-org-row"><strong>Tu correduría</strong><span>Organización propia</span></div>
+          <div class="land-org-row"><strong>Usuarios del equipo</strong><span>Acceso compartido</span></div>
+          <div class="land-org-row"><strong>Cartera y cobranza</strong><span>Datos separados</span></div>
+          <div class="land-org-row"><strong>Integraciones</strong><span>Aseguradoras / imports</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {# —— Precios —— #}
+  <section class="land-band" id="precios">
+    <div class="land-band-inner">
+      <p class="land-eyebrow">Precios</p>
+      <h2 class="land-h2">Planes sencillos para empezar.</h2>
+      <p class="land-p land-p-narrow">
+        Elige según cómo operas: solo, con tu equipo, con una red de agentes, o a escala Enterprise.
+      </p>
+      <div class="land-plans land-plans-4">
+        {% for plan in plans %}
+        <a class="land-plan{% if plan.highlighted %} is-hot{% endif %}{% if plan.contact_sales %} is-enterprise{% endif %}" href="{{ plan.register_href }}">
+          <div class="land-plan-top">
+            <p class="land-plan-audience">{{ plan.audience }}</p>
+            {% if plan.highlighted %}<span class="land-plan-badge">Recomendado</span>{% endif %}
+            {% if plan.contact_sales %}<span class="land-plan-badge">A medida</span>{% endif %}
+          </div>
+          <h3 class="land-plan-name">{{ plan.name }}</h3>
+          <p class="land-plan-price">{{ plan.price_label }}{% if plan.price_suffix %}<span>{{ plan.price_suffix }}</span>{% endif %}</p>
+          <p class="land-plan-tag">{{ plan.tagline }}</p>
+          <ul>
+            {% for f in plan.features %}
+            <li>{{ f }}</li>
+            {% endfor %}
+          </ul>
+          <span class="land-plan-cta">{{ plan.cta }}</span>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  {# —— Contacto —— #}
+  <section class="land-band land-band-alt" id="contacto">
+    <div class="land-band-inner land-contact">
+      <p class="land-eyebrow">Contáctanos</p>
+      <h2 class="land-h2">Hablemos de tu correduría.</h2>
+      <p class="land-p">
+        ¿Quieres una demostración o ayuda para empezar?
+        Escríbenos y te orientamos en el alta de ESecureBroker.
+      </p>
+      <div class="land-contact-actions">
+        <a class="land-btn-primary" href="mailto:{{ contact_email }}?subject=ESecureBroker%20—%20contacto">
+          Escribir a {{ contact_email }}
+        </a>
+        <a class="land-btn-ghost land-btn-ghost-ink" href="{{ start_href }}">Comenzar ahora</a>
+      </div>
+    </div>
+  </section>
+
+  {# —— FAQ —— #}
+  <section class="land-band" id="faq">
+    <div class="land-band-inner land-faq">
+      <p class="land-eyebrow">Preguntas frecuentes</p>
+      <h2 class="land-h2">Antes de comenzar</h2>
+      <details open>
+        <summary>¿Para quién es ESecureBroker?</summary>
+        <p>Para corredores independientes, corredurías, agencias y el personal administrativo de la cartera.</p>
+      </details>
+      <details>
+        <summary>¿Qué incluye?</summary>
+        <p>Administración de pólizas, cobranza de primas, comisiones, cotizaciones, CRM, renovaciones, reclamos y reportes — centrados en la vista Hoy.</p>
+      </details>
+      <details>
+        <summary>¿Ya tengo cuenta?</summary>
+        <p><a href="{{ login_href }}">Accede</a> para entrar a la aplicación y abrir tu expediente.</p>
+      </details>
+    </div>
+  </section>
+
+  <section class="land-finale">
+    <h2 class="land-h2">Pon tu correduría bajo control.</h2>
+    <p class="land-p">Organiza la operación de seguros en un solo lugar y empieza por lo que importa hoy.</p>
+    <a class="land-btn-primary land-btn-lg" href="{{ start_href }}">Comenzar con ESecureBroker</a>
+  </section>
+
+  {# —— Footer (estilo catálogo / legal) —— #}
+  <footer class="land-footer land-footer-rich">
+    <div class="land-footer-top">
+      <div class="land-footer-brand">
+        <img src="/static/brand/crest.svg" width="32" height="32" alt="" />
+        <span class="land-wordmark">ESecure<span>Broker</span></span>
+      </div>
+      <nav class="land-footer-nav" aria-label="Pie">
+        <a href="/">Inicio</a>
+        <a href="#portales">Portales</a>
+        <a href="#integraciones">Integraciones</a>
+        <a href="#nosotros">Nosotros</a>
+        <a href="#contacto">Contáctanos</a>
+        <a href="#precios">Precios</a>
+        <a href="{{ login_href }}">Acceder</a>
+      </nav>
+    </div>
+    <div class="land-footer-mid">
+      <div class="land-footer-legal">
+        <a href="#privacidad">Políticas de privacidad</a>
+        <a href="#terminos">Términos y condiciones</a>
+      </div>
+      <div class="land-pay" aria-label="Medios de pago">
+        <span class="land-pay-badge" title="Visa">VISA</span>
+        <span class="land-pay-badge mc" title="Mastercard">MC</span>
+      </div>
+    </div>
+    <p class="land-footer-copy">© {{ year }} ESecureBroker</p>
+
+    <div id="privacidad" class="land-legal-blurb">
+      <strong>Políticas de privacidad.</strong>
+      ESecureBroker trata los datos de tu correduría para prestar el servicio operativo.
+      No vendemos información de clientes ni de pólizas a terceros.
+    </div>
+    <div id="terminos" class="land-legal-blurb">
+      <strong>Términos y condiciones.</strong>
+      El uso de la plataforma implica una suscripción activa al plan contratado.
+      Cada organización es responsable del uso legítimo de los datos que carga.
+    </div>
+  </footer>
+</body>
+</html>

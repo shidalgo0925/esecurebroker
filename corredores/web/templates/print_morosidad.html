@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Análisis de morosidad · {{ org_name }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/print.css" />
+</head>
+<body class="print-doc">
+  <div class="print-toolbar">
+    <button type="button" class="btn-print" onclick="window.print()">Imprimir / PDF</button>
+    <a href="/morosidad{% if aging %}?aging={{ aging }}{% endif %}">Volver</a>
+  </div>
+
+  <header class="print-header">
+    <div>
+      <div class="print-brand">ESecure<span>Broker</span></div>
+      <div class="doc-sub">{{ org_name }}</div>
+    </div>
+    <div class="print-meta">
+      <div>Generado <span class="mono">{{ generated_at }}</span></div>
+      <div>Corte <span class="mono">{{ analysis.as_of }}</span></div>
+      {% if aging %}<div>Banda <span class="mono">{{ aging }}</span></div>{% endif %}
+    </div>
+  </header>
+
+  <h1 class="doc-title">Análisis de morosidad</h1>
+  <p class="doc-sub">Solo cuotas con saldo y vencidas (Domain Truth).</p>
+
+  <div class="kpis">
+    <div class="kpi risk">
+      <div class="amt">${{ analysis.overdue_balance|money }}</div>
+      <div class="lbl">Vencido total</div>
+      <div class="meta">{{ analysis.overdue_count }} cuotas · {{ analysis.clients_overdue }} clientes</div>
+    </div>
+    <div class="kpi">
+      <div class="amt">${{ analysis.open_balance|money }}</div>
+      <div class="lbl">Saldo abierto cartera</div>
+    </div>
+    {% for a in analysis.aging %}
+    <div class="kpi {% if a.amount > 0 %}risk{% endif %}">
+      <div class="amt">${{ a.amount|money }}</div>
+      <div class="lbl">{{ a.label }}</div>
+      <div class="meta">{{ a.count }} cuota{% if a.count != 1 %}s{% endif %}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <h2>Detalle por cuota</h2>
+  <table class="doc-table">
+    <thead>
+      <tr>
+        <th>Cliente</th><th>Póliza</th><th>#</th><th>Vence</th>
+        <th class="num">Saldo</th><th>Banda</th><th>Mora</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td>{{ r.party_name }}</td>
+        <td class="mono">{{ r.policy_number or r.policy_id[:8] }}</td>
+        <td class="mono">{{ r.installment_number }}</td>
+        <td class="mono">{{ r.due_date }}</td>
+        <td class="num mono warn">${{ r.balance|money }}</td>
+        <td>{{ r.aging_label or r.aging }}</td>
+        <td class="mono">{{ r.days_overdue }}d</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="7" class="empty">Sin cuotas vencidas.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <footer class="print-footer">
+    Vencido = due_date &lt; hoy y saldo &gt; 0. No se inventa mora desde colores de Excel.
+  </footer>
+
+  {% if auto_print %}
+  <script>window.addEventListener('load', function () { window.print(); });</script>
+  {% endif %}
+</body>
+</html>

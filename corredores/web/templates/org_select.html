@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Organización · ESecureBroker</title>
+  <link rel="icon" href="/static/brand/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/auth.css" />
+</head>
+<body class="auth-body">
+  <div class="auth-stage">
+    <div class="auth-login-wrap">
+      <div class="auth-login-brand">
+        <img src="/static/brand/crest.svg" width="44" height="44" alt="" />
+        <span class="auth-wordmark">ESecure<span>Broker</span></span>
+        <p>Hola {{ username }}. Elige la organización con la que vas a trabajar.</p>
+      </div>
+      <form class="auth-form" method="post" action="/orgs/seleccionar">
+        <input type="hidden" name="next" value="{{ next }}" />
+        {% for o in orgs %}
+        <button type="submit" name="organization_id" value="{{ o.organization_id }}" style="text-align:left">
+          {{ o.name }}
+          <span style="display:block;font-size:0.75rem;font-weight:500;opacity:0.75;margin-top:0.2rem">{{ o.role }}</span>
+        </button>
+        {% endfor %}
+      </form>
+      <a class="auth-back" href="/logout">Salir</a>
+    </div>
+    <footer class="auth-foot">Contexto de organización · ADR-007 · sustituible por EN1</footer>
+  </div>
+</body>
+</html>

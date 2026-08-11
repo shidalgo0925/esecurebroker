@@ -449,3 +449,98 @@ class RecommendationRecord(Base, TimestampMixin):
     decision: Mapped[Optional[str]] = mapped_column(String(32))  # ACCEPTED|DISCARDED|POSTPONED
     decided_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     decided_by: Mapped[Optional[str]] = mapped_column(String(64))
+
+
+class Document(Base, TimestampMixin):
+    """Client/policy PDF attachments — binary on disk, metadata in Domain Truth."""
+
+    __tablename__ = "documents"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    party_id: Mapped[Optional[str]] = mapped_column(ForeignKey("parties.id"), index=True)
+    policy_id: Mapped[Optional[str]] = mapped_column(ForeignKey("policies.id"), index=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    original_filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    content_type: Mapped[str] = mapped_column(String(120), nullable=False, default="application/pdf")
+    stored_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    doc_kind: Mapped[str] = mapped_column(String(40), nullable=False, default="OTRO")
+    uploaded_by: Mapped[Optional[str]] = mapped_column(String(64))
+    data_source: Mapped[str] = mapped_column(String(32), default="MANUAL")
+
+
+class StatementDelivery(Base, TimestampMixin):
+    """Log of account-statement sends (manual or auto) — idempotency + audit."""
+
+    __tablename__ = "statement_deliveries"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    party_id: Mapped[str] = mapped_column(ForeignKey("parties.id"), index=True)
+    channel: Mapped[str] = mapped_column(String(32), nullable=False, default="EMAIL")
+    trigger: Mapped[str] = mapped_column(String(32), nullable=False, default="MANUAL")  # MANUAL|AUTO
+    to_email: Mapped[Optional[str]] = mapped_column(String(200))
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="SENT")  # SENT|SKIPPED|FAILED
+    as_of: Mapped[date] = mapped_column(Date, nullable=False)
+    overdue_balance: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False, default=0)
+    open_balance: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False, default=0)
+    detail: Mapped[Optional[str]] = mapped_column(Text)
+    actor_id: Mapped[Optional[str]] = mapped_column(String(64))
+
+
+class OrgMembership(Base, TimestampMixin):
+    """Subject ↔ Organization (ADR-007). Piloto uses actor_id; EN1 will map subjects later.
+
+    Not a definitive identity system — replace subject resolution with EN1 (ADR-006).
+    Supports multiple memberships per subject.
+    """
+
+    __tablename__ = "org_memberships"
+    __table_args__ = (UniqueConstraint("subject_id", "organization_id", name="uq_org_membership_subject_org"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    subject_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    # Optional display for piloto; EN1 will own profile later
+    display_name: Mapped[Optional[str]] = mapped_column(String(200))
+    role_code: Mapped[str] = mapped_column(String(64), nullable=False, default="BROKER")
+    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    external_en1_membership_id: Mapped[Optional[str]] = mapped_column(String(64), unique=True)
+
+
+class BrokerAccount(Base, TimestampMixin):
+    """Cuenta self-serve del corredor (piloto hasta identidad EN1 / ADR-006).
+
+    No sustituye el control plane de EN1; permite registro+login local mientras tanto.
+    """
+
+    __tablename__ = "broker_accounts"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    email: Mapped[str] = mapped_column(String(200), nullable=False, unique=True, index=True)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    display_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    subject_id: Mapped[str] = mapped_column(String(128), nullable=False, unique=True, index=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+
+class OrgSubscription(Base, TimestampMixin):
+    """Suscripción SaaS de la organización (piloto; billing definitivo → EN1)."""
+
+    __tablename__ = "org_subscriptions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(
+        ForeignKey("organizations.id"), nullable=False, unique=True, index=True
+    )
+    plan_code: Mapped[str] = mapped_column(String(40), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="pending"
+    )  # pending|active|past_due|canceled
+    billing_provider: Mapped[str] = mapped_column(String(32), nullable=False, default="piloto")
+    stripe_customer_id: Mapped[Optional[str]] = mapped_column(String(64))
+    stripe_subscription_id: Mapped[Optional[str]] = mapped_column(String(64))
+    stripe_checkout_session_id: Mapped[Optional[str]] = mapped_column(String(128))
+    current_period_end: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    activated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))

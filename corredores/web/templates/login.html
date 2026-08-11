@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Entrar · ESecureBroker</title>
+  <link rel="icon" href="/static/brand/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/auth.css?v=20260811b" />
+</head>
+<body class="auth-body">
+  <div class="auth-stage">
+    <div class="auth-login-wrap">
+      <div class="auth-login-brand">
+        <img src="/static/brand/crest.svg" width="44" height="44" alt="" />
+        <span class="auth-wordmark">ESecure<span>Broker</span></span>
+        <p>Ingresa para abrir el expediente del día.</p>
+      </div>
+
+      {% if error %}
+      <p class="auth-error" role="alert">{{ error }}</p>
+      {% endif %}
+
+      <form class="auth-form" method="post" action="/login" autocomplete="on">
+        <input type="hidden" name="next" value="{{ next }}" />
+        <label>
+          Usuario o correo
+          <input type="text" name="username" required autofocus autocomplete="username" />
+        </label>
+        <label>
+          Contraseña
+          <input type="password" name="password" required autocomplete="current-password" />
+        </label>
+        <button type="submit" {% if not auth_ready %}disabled title="Configura AUTH_SECRET en .env"{% endif %}>
+          Acceder
+        </button>
+      </form>
+
+      <p class="auth-alt">
+        <a href="/registro?plan=oficina">Crear cuenta y elegir plan</a>
+      </p>
+      <a class="auth-back" href="/">← Volver al inicio</a>
+    </div>
+    <footer class="auth-foot">Sesión firmada del piloto · sustituible por EN1</footer>
+  </div>
+</body>
+</html>

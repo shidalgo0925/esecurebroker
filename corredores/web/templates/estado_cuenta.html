@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}Estado de cuenta · {{ stmt.party_name }}{% endblock %}
+{% block topbar %}Cartera · Estado de cuenta{% endblock %}
+{% block content %}
+<section class="page-head row-between">
+  <div>
+    <h1 class="page-title">Estado de cuenta</h1>
+    <p class="page-sub">
+      <a href="/clientes/{{ stmt.party_id }}">{{ stmt.party_name }}</a>
+      {% if stmt.national_id %} · {{ stmt.national_id }}{% endif %}
+      · al <b class="mono">{{ stmt.as_of }}</b>
+    </p>
+  </div>
+  <div class="stack-actions">
+    <a class="btn-secondary" href="/clientes/{{ stmt.party_id }}">360°</a>
+    <a class="btn-secondary" href="/clientes/{{ stmt.party_id }}/estado-cuenta/imprimir" target="_blank">Imprimir</a>
+    <a class="btn-secondary" href="/clientes/{{ stmt.party_id }}/movimientos/imprimir" target="_blank">Movimientos</a>
+    <a class="btn-secondary" href="/clientes/{{ stmt.party_id }}/estado-cuenta.csv">CSV</a>
+    <a class="btn-primary" href="/cobranza/pagos/nuevo">Registrar pago</a>
+  </div>
+</section>
+
+{% if flash == 'mail_ok' %}
+<p class="flash-ok">Estado de cuenta enviado por correo.</p>
+{% elif flash == 'mail_skip' %}
+<p class="form-error">No se envió: {{ flash_detail or 'revisa el correo del cliente o SMTP' }}</p>
+{% elif flash == 'mail_fail' %}
+<p class="form-error">Error al enviar: {{ flash_detail or 'falló SMTP' }}</p>
+{% endif %}
+
+<section class="mail-box" style="margin:0.75rem 0 0.25rem;padding:0.75rem 1rem;border:1px solid var(--line,#d8dde8);border-radius:8px;background:#fafbfd">
+  <form method="post" action="/clientes/{{ stmt.party_id }}/estado-cuenta/enviar" class="filter-bar" style="margin:0;align-items:flex-end">
+    <label style="display:flex;flex-direction:column;gap:0.2rem;font-size:12px;color:#5c6578">
+      Enviar estado de cuenta
+      <input type="email" name="to_email" value="{{ party_email or '' }}" placeholder="correo@cliente.com" required style="min-width:220px" />
+    </label>
+    <button type="submit" class="btn-primary">Enviar por correo</button>
+  </form>
+  {% if not party_email %}<p class="meta" style="margin:0.4rem 0 0">Este cliente no tiene email en ficha; indícalo arriba.</p>{% endif %}
+</section>
+
+<div class="report-tiles cartera-kpis">
+  <div class="report-tile">
+    <div class="money-amt">${{ stmt.open_balance|money }}</div>
+    <div class="money-title">SALDO ABIERTO</div>
+  </div>
+  <a class="report-tile tone-risk" href="/morosidad">
+    <div class="money-amt">${{ stmt.overdue_balance|money }}</div>
+    <div class="money-title">VENCIDO</div>
+    <div class="meta">{{ stmt.overdue_count }} cuota{% if stmt.overdue_count != 1 %}s{% endif %}</div>
+  </a>
+  {% for a in stmt.aging %}
+  <div class="report-tile {% if a.amount > 0 %}tone-risk{% endif %}">
+    <div class="money-amt">${{ a.amount|money }}</div>
+    <div class="money-title">{{ a.label|upper }}</div>
+    <div class="meta">{{ a.count }} cuota{% if a.count != 1 %}s{% endif %}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<section style="margin-top:0.85rem">
+  <h2 class="section-title">Cuotas abiertas / historial de cuotas</h2>
+  <div class="table-card">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Póliza</th><th>#</th><th>Vence</th><th>Monto</th><th>Pagado</th><th>Saldo</th><th>Estado</th><th>Mora</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for r in stmt.installments %}
+        <tr>
+          <td class="cli-id"><a href="/polizas/{{ r.policy_id }}">{{ r.policy_number or r.policy_id[:8] }}</a></td>
+          <td class="mono">{{ r.number }}</td>
+          <td class="mono">{{ r.due_date }}</td>
+          <td class="mono">${{ r.amount|money }}</td>
+          <td class="mono">${{ r.paid|money }}</td>
+          <td class="mono {% if r.balance > 0 and r.days_overdue %}warn{% endif %}">${{ r.balance|money }}</td>
+          <td><span class="kind-pill">{{ r.status }}</span></td>
+          <td class="mono">{% if r.days_overdue %}{{ r.days_overdue }}d{% else %}—{% endif %}</td>
+          <td class="cli-action cob-actions">
+            {% if r.balance > 0 %}
+            <a class="open-link open-link-strong" href="/cobranza/pagos/nuevo?installment_id={{ r.installment_id }}">Cobrar</a>
+            <a class="open-link" href="/cobranza/pagos/nuevo?installment_id={{ r.installment_id }}&modo=promesa">Prometer</a>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="9" class="empty-row">Sin cuotas.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="dash-split" style="margin-top:1rem">
+  <section>
+    <h2 class="section-title">Movimientos (cargo / abono)</h2>
+    <div class="table-card">
+      <table class="data-table">
+        <thead><tr><th>Fecha</th><th>Tipo</th><th>Detalle</th><th>Cargo</th><th>Abono</th><th>Saldo</th></tr></thead>
+        <tbody>
+        {% for line in stmt.ledger %}
+          <tr>
+            <td class="mono">{{ line.date }}</td>
+            <td><span class="kind-pill">{{ line.kind }}</span></td>
+            <td>
+              {% if line.policy_number %}<span class="mono">{{ line.policy_number }}</span> · {% endif %}
+              {{ line.description }}
+            </td>
+            <td class="mono">{% if line.debit %}${{ line.debit|money }}{% else %}—{% endif %}</td>
+            <td class="mono">{% if line.credit %}${{ line.credit|money }}{% else %}—{% endif %}</td>
+            <td class="mono">${{ line.balance_after|money }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" class="empty-row">Sin movimientos.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <section>
+    <h2 class="section-title">Pagos registrados</h2>
+    <div class="table-card">
+      <table class="data-table">
+        <thead><tr><th>Fecha</th><th>Póliza</th><th>Método</th><th>Monto</th></tr></thead>
+        <tbody>
+        {% for p in stmt.payments %}
+          <tr>
+            <td class="mono">{{ p.date }}</td>
+            <td class="cli-id"><a href="/polizas/{{ p.policy_id }}">{{ p.policy_number or p.policy_id[:8] }}</a></td>
+            <td>{{ p.method or '—' }}{% if p.reference %} · <span class="meta">{{ p.reference }}</span>{% endif %}</td>
+            <td class="mono">${{ p.amount|money }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4" class="empty-row">Sin pagos.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

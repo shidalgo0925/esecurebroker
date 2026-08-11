@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Importar {{ profile.title }} · ESecureBroker{% endblock %}
+{% block topbar %}Gestión · Importar{% endblock %}
+{% block content %}
+<section class="page-head row-between">
+  <div>
+    <h1 class="page-title">{{ profile.title }}</h1>
+    <p class="page-sub">{{ profile.description }} · <a href="{{ profile.href_module }}">Ir al módulo →</a></p>
+  </div>
+  <a class="btn-secondary" href="/importaciones">← Todos</a>
+</section>
+
+{% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+
+{% if not preview %}
+<form class="capture-form capture-dense" method="post" action="/importaciones/{{ profile.id }}/preview" enctype="multipart/form-data">
+  <fieldset>
+    <legend>Archivo</legend>
+    <div class="capture-grid">
+      {% if profile.id in ['comisiones','renovaciones'] %}
+      <p class="span-2 meta" style="margin:0">Este perfil no pide Excel. Al confirmar se ejecuta materialize sobre la cartera actual.</p>
+      {% elif profile.multi_file %}
+        {% for key in profile.file_keys %}
+        <label class="span-2">{{ key|capitalize }} (.xlsx)
+          <input type="file" name="{{ key }}" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" {% if profile.id == 'madre' %}required{% endif %} />
+        </label>
+        {% endfor %}
+      {% else %}
+      <label class="span-2">{{ profile.accepts }}
+        <input type="file" name="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required />
+      </label>
+      {% endif %}
+    </div>
+  </fieldset>
+  <div class="wizard-actions">
+    <a class="btn-secondary" href="/importaciones">Cancelar</a>
+    {% if profile.id in ['comisiones','renovaciones'] %}
+    <button class="btn-primary" type="submit">Preparar →</button>
+    {% else %}
+    <button class="btn-primary" type="submit">Previsualizar →</button>
+    {% endif %}
+  </div>
+</form>
+{% else %}
+
+<div class="capture-summary">
+  <div><span class="meta">Archivo</span><strong>{{ preview.filename }}</strong></div>
+  <div><span class="meta">Filas</span><strong class="mono">{{ preview.rows }}</strong></div>
+  {% for k,v in preview.summary.items() %}
+  <div><span class="meta">{{ k }}</span><strong class="mono">{{ v }}</strong></div>
+  {% endfor %}
+</div>
+
+{% if preview.warnings %}
+<ul class="worklist" style="margin-bottom:1rem">
+  {% for w in preview.warnings %}
+  <li><span class="chip">aviso</span> {{ w }}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{% if preview.sample %}
+<section style="margin-bottom:1rem">
+  <h2 class="section-title">Muestra (sin PII completo)</h2>
+  <div class="table-card">
+    <table class="data-table">
+      <thead>
+        <tr>
+          {% for key in preview.sample[0].keys() %}
+          <th>{{ key }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in preview.sample %}
+        <tr>
+          {% for val in row.values() %}
+          <td>{{ val }}</td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<form method="post" action="/importaciones/{{ profile.id }}/commit" class="wizard-actions">
+  <input type="hidden" name="token" value="{{ preview.token }}" />
+  <a class="btn-secondary" href="/importaciones/{{ profile.id }}">← Subir otro</a>
+  <button class="btn-primary" type="submit">Confirmar importación</button>
+</form>
+{% endif %}
+{% endblock %}

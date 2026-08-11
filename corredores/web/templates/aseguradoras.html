@@ -2,18 +2,37 @@
 {% block title %}Aseguradoras · ESecureBroker{% endblock %}
 {% block topbar %}Gestión · Aseguradoras{% endblock %}
 {% block content %}
-<section class="hero-ops">
-  <h1>Aseguradoras</h1>
-  <p class="lede">Catálogo de compañías de la organización. {{ org_name }}</p>
+<section class="page-head row-between">
+  <div>
+    <h1 class="page-title">Aseguradoras</h1>
+    <p class="page-sub">Catálogo de compañías · <b>{{ org_name }}</b>
+      {% if q or activa %} · {{ result_count }} resultado{% if result_count != 1 %}s{% endif %}{% endif %}
+    </p>
+  </div>
+  <a class="btn-secondary" href="/importaciones/catalogos">Importar Tablas.xlsx</a>
 </section>
-<table class="grid">
-  <thead><tr><th>Código</th><th>Nombre</th><th>Activa</th></tr></thead>
-  <tbody>
-  {% for c in carriers %}
-    <tr><td class="mono">{{ c.code }}</td><td>{{ c.name }}</td><td>{{ 'Sí' if c.active else 'No' }}</td></tr>
-  {% else %}
-    <tr><td colspan="3">Sin aseguradoras — corre <code>cli seed</code>.</td></tr>
-  {% endfor %}
-  </tbody>
-</table>
+
+<form class="filter-bar" method="get" action="/aseguradoras">
+  <input type="search" name="q" value="{{ q }}" placeholder="Buscar código o nombre…" />
+  <select name="activa">
+    <option value="">Todas</option>
+    <option value="si" {% if activa == 'si' %}selected{% endif %}>Activas</option>
+    <option value="no" {% if activa == 'no' %}selected{% endif %}>Inactivas</option>
+  </select>
+  <button type="submit" class="btn-secondary">Filtrar</button>
+  {% if q or activa %}<a class="filter-clear" href="/aseguradoras">Limpiar</a>{% endif %}
+</form>
+
+<div class="table-card">
+  <table class="data-table">
+    <thead><tr><th>Código</th><th>Nombre</th><th>Activa</th></tr></thead>
+    <tbody>
+    {% for c in carriers %}
+      <tr><td class="cli-id">{{ c.code }}</td><td class="cli-name">{{ c.name }}</td><td>{{ 'Sí' if c.active else 'No' }}</td></tr>
+    {% else %}
+      <tr><td colspan="3" class="empty-row">{% if q or activa %}Sin resultados.{% else %}Sin aseguradoras — corre <code>cli seed</code>.{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endblock %}

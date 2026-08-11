@@ -8,6 +8,10 @@
 </section>
 
 <p class="greet">{{ home.greeting }}{% if actor_name %}, <span class="display-inline">{{ actor_name.split()[0] }}</span>{% endif %}.</p>
+<p class="stack-actions" style="margin:0 0 1.25rem">
+  <a class="btn-primary" href="/captura/poliza-foto">📷 Escanear póliza (un clic)</a>
+  <a class="btn-secondary" href="/cobranza/pagos/nuevo">Registrar pago</a>
+</p>
 {% if home.attention_count %}
 <p class="lede strong">Tienes <strong class="mono">{{ home.attention_count }}</strong> asunto{{ 's' if home.attention_count != 1 else '' }} que necesitan tu atención.</p>
 {% else %}
@@ -23,7 +27,7 @@
 
 <div class="money-row">
   {% for m in home.money %}
-  <a class="money-tile ledger-card" href="{{ m.href }}">
+  <a class="money-tile ledger-card tone-{{ m.key }}" href="{{ m.href }}">
     <div class="ledger-perf"></div>
     <div class="money-amt mono">{{ m.amount_label }}</div>
     <div class="money-title">{{ m.title }}</div>
@@ -34,25 +38,30 @@
 
 <section class="hoy-block">
   <div class="block-head">
-    <h2>Requiere tu atención</h2>
-    {% if home.attention %}<a class="see-all" href="/cobranza">Ver cobranza →</a>{% endif %}
+    <h2><span class="block-mark" aria-hidden="true"></span> Requiere tu atención</h2>
+    {% if home.attention %}<a class="see-all" href="/cobranza">Ver todo →</a>{% endif %}
   </div>
 
   {% if home.attention %}
   <ul class="attention-list">
     {% for a in home.attention %}
-    <li class="dossier att-{{ a.urgency }} kind-{{ a.kind|lower }}">
+    <li class="dossier kind-{{ a.kind|lower }} stamp-{{ a.stamp|lower|replace(' ', '-') }}">
       <div class="dossier-tab" aria-hidden="true"></div>
       <div class="dossier-body">
         <div class="dossier-top">
-          <div class="att-kind">{{ a.title }}</div>
-          <span class="stamp stamp-{{ a.stamp|lower|replace(' ', '-') }}">{{ a.stamp }}</span>
+          <span class="kind-pill">{{ a.title }}</span>
+          <span class="stamp">{{ a.stamp }}</span>
         </div>
         <div class="att-subject display">{{ a.subject }}</div>
-        {% for line in a.lines %}<p class="att-line {% if '$' in line %}mono{% endif %}">{{ line }}</p>{% endfor %}
+        {% for line in a.lines %}
+        <p class="att-line {% if loop.first %}att-lead{% endif %}">
+          {# highlight money snippets in mono without breaking copy #}
+          {{ line }}
+        </p>
+        {% endfor %}
         <div class="actions">
           {% for label, href in a.actions %}
-          <a href="{{ href }}">{{ label }}</a>
+          <a href="{{ href }}" class="{% if loop.last %}btn-act-primary{% else %}btn-act{% endif %}">{{ label }}</a>
           {% endfor %}
         </div>
       </div>
@@ -66,7 +75,7 @@
 
 <section class="hoy-block auto-block">
   <div class="block-head">
-    <h2>El sistema trabajó por ti hoy</h2>
+    <h2><span class="block-mark" aria-hidden="true"></span> El sistema trabajó por ti hoy</h2>
     <a class="see-all" href="/radar">Ver radar →</a>
   </div>
   {% if home.auto_activity %}
@@ -83,7 +92,7 @@
 
 <section class="hoy-block opp-block">
   <div class="block-head">
-    <h2>Oportunidades detectadas</h2>
+    <h2><span class="block-mark" aria-hidden="true"></span> Oportunidades detectadas</h2>
     <a class="see-all" href="/radar">Ver oportunidades →</a>
   </div>
   {% if home.opportunities %}

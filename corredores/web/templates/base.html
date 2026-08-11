@@ -4,21 +4,25 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{% block title %}ESecureBroker{% endblock %}</title>
+  <link rel="icon" href="/static/brand/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,600;6..72,700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/piloto.css" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,500;1,6..72,600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/piloto.css?v=dash7" />
 </head>
 {% from "macros_icons.html" import icon %}
 <body class="app {% if sidebar_collapsed %}sidebar-collapsed{% endif %}">
   <aside class="sidebar" id="sidebar">
-    <div class="side-brand">
-      <a href="/hoy" class="brand-name">ESecureBroker</a>
+    <div class="brand">
+      <a href="/hoy" class="brand-mark" title="ESecureBroker">
+        <img class="brand-crest" src="/static/brand/crest.svg" width="30" height="30" alt="" />
+        <div class="brand-word">ESecure<span>Broker</span></div>
+      </a>
       <button type="button" class="collapse-btn" id="collapseBtn" title="Colapsar menú">«</button>
     </div>
 
-    <details class="nueva-gestion" open>
-      <summary>{{ icon('plus') }} <span>Nueva gestión</span></summary>
+    <details class="nueva-gestion" id="nuevaGestion" {% if nueva_gestion_open %}open{% endif %}>
+      <summary><span class="plus">+</span> <span>Nueva gestión</span></summary>
       <ul>
         {% for label, href, ico in nueva_gestion %}
         <li><a href="{{ href }}">{{ icon(ico) }} <span>{{ label }}</span></a></li>
@@ -47,7 +51,14 @@
       {% endfor %}
     </div>
 
-    <div class="side-actor">{{ actor_name }}</div>
+    <div class="side-actor">
+      {% if org_name %}<div class="side-org">{{ org_name }}</div>{% endif %}
+      <div>{{ actor_name }}</div>
+    </div>
+    <a class="nav-link nav-logout" href="/logout" title="Salir">
+      <span class="nav-ico">{{ icon("logout") }}</span>
+      <span class="nav-txt">Salir</span>
+    </a>
   </aside>
 
   <div class="workspace">
@@ -62,14 +73,22 @@
   <script>
     (function () {
       var btn = document.getElementById("collapseBtn");
-      if (!btn) return;
-      btn.addEventListener("click", function () {
-        document.body.classList.toggle("sidebar-collapsed");
-        var collapsed = document.body.classList.contains("sidebar-collapsed");
-        document.cookie = "sidebar=" + (collapsed ? "collapsed" : "open") + ";path=/;max-age=31536000";
-        btn.textContent = collapsed ? "»" : "«";
-      });
-      if (document.body.classList.contains("sidebar-collapsed")) btn.textContent = "»";
+      if (btn) {
+        btn.addEventListener("click", function () {
+          document.body.classList.toggle("sidebar-collapsed");
+          var collapsed = document.body.classList.contains("sidebar-collapsed");
+          document.cookie = "sidebar=" + (collapsed ? "collapsed" : "open") + ";path=/;max-age=31536000";
+          btn.textContent = collapsed ? "»" : "«";
+        });
+        if (document.body.classList.contains("sidebar-collapsed")) btn.textContent = "»";
+      }
+      var ng = document.getElementById("nuevaGestion");
+      if (ng) {
+        ng.addEventListener("toggle", function () {
+          document.cookie =
+            "nueva_gestion=" + (ng.open ? "open" : "closed") + ";path=/;max-age=31536000";
+        });
+      }
     })();
   </script>
 </body>

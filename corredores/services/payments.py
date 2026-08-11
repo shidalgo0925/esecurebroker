@@ -26,9 +26,19 @@ def record_payment(
     reference: str | None = None,
     data_source: str = DataSource.MANUAL,
 ) -> Payment:
+    from corredores.domain.models import PaymentPlan, Policy
+
     inst = session.get(Installment, installment_id)
     if inst is None:
         raise ValueError("installment not found")
+    plan = session.get(PaymentPlan, inst.payment_plan_id)
+    if plan is None:
+        raise ValueError("payment plan not found")
+    policy = session.get(Policy, plan.policy_id)
+    if policy is None or policy.organization_id != organization_id:
+        raise ValueError("installment not in organization")
+    if policy.id != policy_id:
+        raise ValueError("installment does not belong to policy")
     bal = outstanding_balance(inst)
     if amount <= 0:
         raise ValueError("amount must be positive")

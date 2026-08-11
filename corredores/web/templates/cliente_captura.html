@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if party else 'Nuevo' }} cliente · ESecureBroker{% endblock %}
+{% block topbar %}Cartera · {{ 'Editar cliente' if party else 'Nuevo cliente' }}{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1 class="page-title">{{ 'Editar cliente' if party else 'Nuevo cliente' }}</h1>
+  <p class="page-sub">Captura eficiente — lo mínimo para operar · <b>ESecureBroker</b></p>
+</section>
+
+<form method="post" action="{{ form_action }}" class="capture-form">
+  <div class="capture-grid">
+    <label class="span-2">Tipo
+      <select name="party_type">
+        <option value="PERSON" {% if not party or party.party_type == 'PERSON' %}selected{% endif %}>Persona</option>
+        <option value="ORGANIZATION" {% if party and party.party_type == 'ORGANIZATION' %}selected{% endif %}>Empresa / organización</option>
+      </select>
+    </label>
+
+    <label>Nombre
+      <input name="first_name" value="{{ party.first_name if party else '' }}" placeholder="Nombre" {% if not party %}required{% endif %} />
+    </label>
+    <label>Apellido
+      <input name="last_name" value="{{ party.last_name if party else '' }}" placeholder="Apellido" />
+    </label>
+
+    <label class="span-2">Razón social (si empresa)
+      <input name="legal_name" value="{{ party.legal_name if party else '' }}" placeholder="Razón social" />
+    </label>
+
+    <label>Cédula / RUC
+      <input name="national_id" value="{{ party.national_id if party else '' }}" placeholder="0-000-0000" class="mono" />
+    </label>
+    <label>Teléfono
+      <input name="phone" value="{{ party.phone if party else '' }}" placeholder="+507 …" />
+    </label>
+
+    <label>Email
+      <input type="email" name="email" value="{{ party.email if party else '' }}" placeholder="correo@…" />
+    </label>
+    <label>Distrito
+      <input name="district" value="{{ party.district if party else '' }}" />
+    </label>
+
+    <label class="span-2">Dirección
+      <input name="address" value="{{ party.address if party else '' }}" />
+    </label>
+
+    <label>Fecha nacimiento
+      <input type="date" name="birth_date" value="{{ party.birth_date.isoformat() if party and party.birth_date else '' }}" />
+    </label>
+  </div>
+
+  {% if error %}
+  <p class="form-error">{{ error }}</p>
+  {% endif %}
+
+  <div class="wizard-actions">
+    <a class="btn-secondary" href="{{ cancel_href }}">Cancelar</a>
+    <button class="btn-primary" type="submit">{{ 'Guardar cambios' if party else 'Guardar y abrir 360°' }}</button>
+  </div>
+</form>
+{% endblock %}

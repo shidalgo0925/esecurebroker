@@ -31,6 +31,10 @@ class CobranzaRow:
     balance: Decimal
     status: str
     promise_id: str | None = None
+    promise_date: date | None = None
+    promise_amount: Decimal | None = None
+    promise_status: str | None = None
+    days_overdue: int = 0
 
 
 @dataclass
@@ -84,6 +88,7 @@ def build_cobranza_board(
                     installment_id=inst.id,
                     status=PaymentPromiseStatus.ACTIVE,
                 )
+                .order_by(PaymentPromise.promised_date.desc())
                 .first()
             )
             broken_row = (
@@ -93,17 +98,23 @@ def build_cobranza_board(
                     installment_id=inst.id,
                     status=PaymentPromiseStatus.BROKEN,
                 )
+                .order_by(PaymentPromise.promised_date.desc())
                 .first()
             )
+            # Promesa activa vigente tapa una incumplida anterior (re-promesa).
             if active and promise_is_broken(active, today=today):
                 broken_row = active
                 active = None
+            elif active:
+                broken_row = None
             band = classify_collection_band(
                 inst,
                 active_promise=active,
                 broken_promise=broken_row,
                 today=today,
             )
+            prom = active or broken_row
+            days = (today - inst.due_date).days
             row = CobranzaRow(
                 band=band.value,
                 policy_id=policy.id,
@@ -116,8 +127,14 @@ def build_cobranza_board(
                 amount=inst.amount,
                 balance=bal,
                 status=status.value,
-                promise_id=(active or broken_row).id if (active or broken_row) else None,
+                promise_id=prom.id if prom else None,
+                promise_date=prom.promised_date if prom else None,
+                promise_amount=prom.promised_amount if prom else None,
+                promise_status=prom.status if prom else None,
+                days_overdue=days if days > 0 else 0,
             )
             board.bands[band.value].append(row)
             board.totals[band.value] += bal
+    for key in board.bands:
+        board.bands[key].sort(key=lambda r: (-r.days_overdue, r.due_date, r.party_name))
     return board
