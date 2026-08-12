@@ -1,5 +1,7 @@
 # ADR-008 F2 — AccessContext / RBAC (DEV)
 
+**Estado:** DONE · commit `7632049`
+
 ## Delivered
 
 - `corredores/services/access_control.py`
@@ -7,14 +9,12 @@
   - `require_permission`, `apply_scope_to_policy_query`, `apply_scope_to_party_query`
   - `require_policy_in_scope`, `require_party_in_scope` (404 anti-IDOR)
 - Mobile `/me` reports `role`, `scope`, `permissions`, `producer_profile_id`
-- Mobile customer/policy **detail** + 360 policy filter use AccessContext
+- Mobile customer/policy **detail** use AccessContext
 - PRODUCER → `scope=ASSIGNED_PORTFOLIO` when Membership + profile linked by Party.email
 
-## Not in F2 (→ F3)
+## Deferred to F3 (now in progress / done separately)
 
-- `build_today_home` scoped lists
-- Mobile `/customers` and `/policies` **list** filtering
-- Producer Admin UI / seats
+- Listas `/customers` `/policies`, `/today`, Web Hoy/Radar scoped
 
 ## Link Membership → ProducerProfile (temporary)
 

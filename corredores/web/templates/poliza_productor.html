@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Productor · {{ policy.policy_number or policy.id[:8] }}{% endblock %}
+{% block topbar %}Gestión · Productor de póliza{% endblock %}
+{% block content %}
+<section class="page-head">
+  <p class="page-sub">
+    <a href="/productores">← Productores</a>
+    · <a href="/polizas/{{ policy.id }}">Póliza</a>
+    · <b>{{ org_name }}</b>
+  </p>
+  <h1 class="page-title">PRIMARY · {{ policy.policy_number or policy.id[:8] }}</h1>
+</section>
+
+{% if flash %}<p class="flash-ok">Reasignación guardada</p>{% endif %}
+{% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+
+<section class="poliza-panel catalog-editor">
+  <h2 class="poliza-panel-title">Reasignar PRIMARY</h2>
+  <form class="catalog-form" method="post" action="/polizas/{{ policy.id }}/productor">
+    <div class="catalog-row">
+      <label class="catalog-field name">Productor
+        <select name="producer_profile_id" required>
+          <option value="">— elegir —</option>
+          {% for p in producers %}
+          <option value="{{ p.id }}"
+            {% if current and current.producer_profile_id == p.id %}selected{% endif %}>
+            {{ p.display_name }}{% if p.code %} ({{ p.code }}){% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="catalog-field name">Motivo (obligatorio)
+        <input name="reason" required maxlength="500" placeholder="Motivo de reasignación" />
+      </label>
+      <div class="wizard-actions">
+        <button class="btn-primary" type="submit">Reasignar</button>
+      </div>
+    </div>
+  </form>
+</section>
+
+<div class="table-card">
+  <h2 class="poliza-panel-title" style="padding:0.75rem 1rem 0">Historial</h2>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Productor</th>
+        <th>Desde</th>
+        <th>Hasta</th>
+        <th>Motivo</th>
+        <th>Asignado por</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for row in history %}
+      <tr>
+        <td>{{ row.producer.display_name if row.producer else row.assignment.producer_profile_id[:8] }}</td>
+        <td>{{ row.assignment.effective_from }}</td>
+        <td>{{ row.assignment.effective_to or "vigente" }}</td>
+        <td>{{ row.assignment.reason or "—" }}</td>
+        <td class="mono">{{ row.assignment.assigned_by_subject_id or "—" }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5" class="empty-row">Sin historial de asignación.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

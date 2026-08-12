@@ -17,8 +17,11 @@ from corredores.services.today_home import build_today_home
 from corredores.web.auth_session import actor_id_for_username, verify_credentials
 from corredores.services.access_control import (
     AccessDenied,
+    apply_scope_to_party_query,
+    apply_scope_to_policy_query,
     require_party_in_scope,
     require_policy_in_scope,
+    scope_allowlists,
 )
 from corredores.web.mobile.deps import (
     MobileContext,
@@ -283,7 +286,15 @@ def mobile_today(
     ctx: MobileContext = Depends(require_org_context),
     session: Session = Depends(get_db),
 ) -> TodayResponse:
-    home = build_today_home(session, ctx.organization.id, today=date.today())
+    assert ctx.access is not None
+    policy_ids, party_ids = scope_allowlists(session, ctx.access)
+    home = build_today_home(
+        session,
+        ctx.organization.id,
+        today=date.today(),
+        policy_ids=policy_ids,
+        party_ids=party_ids,
+    )
     return TodayResponse(
         as_of=home.as_of.isoformat(),
         date_label=home.date_label,
@@ -342,18 +353,19 @@ def mobile_customers(
     ctx: MobileContext = Depends(require_org_context),
     session: Session = Depends(get_db),
 ) -> CustomerListResponse:
+    assert ctx.access is not None
     org_id = ctx.organization.id
     needle = (q or "").strip()
     tipo = (party_type or "").strip().upper()
-    parties = (
-        session.query(Party)
-        .filter_by(organization_id=org_id)
-        .order_by(Party.created_at.desc())
-        .limit(500)
-        .all()
-    )
+    parties_q = apply_scope_to_party_query(
+        session.query(Party), session, ctx.access
+    ).order_by(Party.created_at.desc())
+    parties = parties_q.limit(500).all()
     policy_counts: dict[str, int] = {}
-    for pol in session.query(Policy).filter_by(organization_id=org_id).all():
+    scoped_policies = apply_scope_to_policy_query(
+        session.query(Policy), session, ctx.access
+    ).all()
+    for pol in scoped_policies:
         if pol.client_party_id:
             policy_counts[pol.client_party_id] = policy_counts.get(pol.client_party_id, 0) + 1
     items: list[CustomerListItem] = []
@@ -446,17 +458,11 @@ def mobile_customer_360(
         snap = build_client_360(session, ctx.organization.id, p.id, today=date.today())
     except ValueError as e:
         raise MobileAPIError("not_found", "Customer not found.", status_code=404) from e
-    # F2: filter policies in 360 when ASSIGNED_PORTFOLIO (full list filtering → F3 lists)
+    # F3: 360 filtrado por portfolio (0 policies visibles → 404)
     policies = list(snap.policies)
-    if ctx.access.scope == "ASSIGNED_PORTFOLIO":
-        from corredores.services.access_control import active_primary_policy_ids
-
-        allowed = active_primary_policy_ids(
-            session,
-            organization_id=ctx.access.organization_id,
-            producer_profile_id=ctx.access.producer_profile_id or "",
-        )
-        policies = [x for x in policies if x.get("id") in allowed]
+    policy_ids, _ = scope_allowlists(session, ctx.access)
+    if policy_ids is not None:
+        policies = [x for x in policies if x.get("id") in policy_ids]
         if not policies:
             raise MobileAPIError("not_found", "Customer not found.", status_code=404)
     return Customer360Response(
@@ -498,12 +504,11 @@ def mobile_policies(
     ctx: MobileContext = Depends(require_org_context),
     session: Session = Depends(get_db),
 ) -> PolicyListResponse:
-    org_id = ctx.organization.id
+    assert ctx.access is not None
     needle = (q or "").strip().lower()
     st = (status or "").strip().upper()
     policies = (
-        session.query(Policy)
-        .filter_by(organization_id=org_id)
+        apply_scope_to_policy_query(session.query(Policy), session, ctx.access)
         .order_by(Policy.created_at.desc())
         .limit(500)
         .all()

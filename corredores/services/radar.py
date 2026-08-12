@@ -50,7 +50,9 @@ def build_radar(
     *,
     today: date | None = None,
     renewal_horizon_days: int = 90,
+    policy_ids: frozenset[str] | set[str] | None = None,
 ) -> RadarSnapshot:
+    """Radar aggregates. ``policy_ids`` None = org-wide; empty set = empty portfolio."""
     today = today or date.today()
     horizon = today + timedelta(days=renewal_horizon_days)
 
@@ -62,6 +64,8 @@ def build_radar(
         .filter(Policy.organization_id == organization_id)
         .all()
     )
+    if policy_ids is not None:
+        plans = [p for p in plans if p.policy_id in policy_ids]
     overdue_amt = Decimal("0")
     overdue_n = 0
     for plan in plans:
@@ -102,6 +106,8 @@ def build_radar(
         .all()
     )
     for ren in renewals:
+        if policy_ids is not None and ren.previous_policy_id not in policy_ids:
+            continue
         if ren.target_date and ren.target_date > horizon:
             continue
         policy = session.get(Policy, ren.previous_policy_id)
@@ -115,17 +121,20 @@ def build_radar(
     vender_n = 0
     # lightweight: proposals not yet won — renewals in QUOTING count as "por vender" uplift
     for ren in renewals:
+        if policy_ids is not None and ren.previous_policy_id not in policy_ids:
+            continue
         if ren.status == RenewalOpportunityStatus.QUOTING:
             policy = session.get(Policy, ren.previous_policy_id)
             prima = (policy.annual_premium or Decimal("0")) if policy else Decimal("0")
             vender_amt += prima
             vender_n += 1
 
-    broken = (
-        session.query(PaymentPromise)
-        .filter_by(organization_id=organization_id, status=PaymentPromiseStatus.BROKEN)
-        .count()
+    broken_q = session.query(PaymentPromise).filter_by(
+        organization_id=organization_id, status=PaymentPromiseStatus.BROKEN
     )
+    if policy_ids is not None:
+        broken_q = broken_q.filter(PaymentPromise.policy_id.in_(list(policy_ids) or ["__none__"]))
+    broken = broken_q.count()
     riesgo_amt = overdue_amt
     riesgo_n = overdue_n + broken
 

@@ -9,12 +9,11 @@ from sqlalchemy.orm import Session
 
 from corredores.domain.models import Organization, OrgSubscription
 from corredores.services.en1_commercial import (
-    En1ActivationResult,
     En1CommercialClient,
     En1CommerceError,
+    DEV_PROMO_CODE,
     new_correlation_id,
 )
-from corredores.services.payments.providers.promo import PromoCodeProvider
 from corredores.services.saas_signup import activate_subscription
 
 
@@ -27,12 +26,13 @@ class PaymentResult:
     entitlements: list[Any]
     user_message: str | None = None
     error_detail: str | None = None
+    checkout_raw: dict[str, Any] | None = None
+    entitlement_raw: dict[str, Any] | None = None
 
 
 class PaymentService:
     def __init__(self, client: En1CommercialClient | None = None) -> None:
         self._client = client or En1CommercialClient()
-        self._promo = PromoCodeProvider(self._client)
 
     def process_promo_activation(
         self,
@@ -41,22 +41,25 @@ class PaymentService:
         organization: Organization,
         local_subscription: OrgSubscription,
         promo_code: str,
+        en1_customer_id: str | None = None,
         en1_subscription_id: str | None = None,
         en1_organization_id: str | None = None,
     ) -> PaymentResult:
         """
-        Promo → EN1 payment ($0 OK con ledger) → activate → mirror local ACTIVE.
-        Requiere ids EN1 en org/sub o parámetros explícitos.
+        C1: checkout (promo → $0 → ACTIVE) → entitlement → mirror local ACTIVE.
+        Fail-closed: sin bypass piloto.
         """
+        del en1_organization_id, en1_subscription_id  # legacy kwargs ignored
         correlation_id = new_correlation_id()
-        en1_org = (en1_organization_id or organization.external_en1_org_id or "").strip()
-        en1_sub = (en1_subscription_id or getattr(local_subscription, "external_en1_subscription_id", None) or "").strip()
-        # Until migration adds column, allow stripe_checkout_session_id reuse? Better store in billing_provider metadata.
-        # Use organization.external_en1_org_id + plan intent id stored in stripe_subscription_id temporarily? Ugly.
-        # For M1 scaffolding: read from local_subscription.stripe_subscription_id if provider is en1.
-        if not en1_sub and local_subscription.billing_provider == "en1":
-            en1_sub = (local_subscription.stripe_subscription_id or "").strip()
-        if not en1_org or not en1_sub:
+        customer_id = (
+            en1_customer_id
+            or (local_subscription.stripe_customer_id or "").strip()
+            or (organization.external_en1_org_id or "").strip()
+        )
+        if local_subscription.billing_provider != "en1":
+            # Still allow if ids present (re-try after partial)
+            pass
+        if not customer_id:
             return PaymentResult(
                 ok=False,
                 correlation_id=correlation_id,
@@ -67,32 +70,21 @@ class PaymentService:
                     "Falta vinculación comercial con EN1. Completa el registro de nuevo "
                     "cuando el comercio EN1 esté disponible."
                 ),
-                error_detail="missing en1 org/subscription ids",
+                error_detail="missing en1 customer_id",
             )
-        if not (promo_code or "").strip():
-            return PaymentResult(
-                ok=False,
-                correlation_id=correlation_id,
-                payment_id=None,
-                subscription_status=None,
-                entitlements=[],
-                user_message="Ingresa un código promocional válido.",
-                error_detail="empty promo",
-            )
+        promo = (promo_code or "").strip() or DEV_PROMO_CODE
 
         try:
-            charge = self._promo.charge(
-                subscription_id=en1_sub,
-                organization_id=en1_org,
-                promo_code=promo_code.strip(),
+            checkout = self._client.checkout(
+                customer_id=customer_id,
+                plan_code=local_subscription.plan_code,
+                promo_code=promo,
                 correlation_id=correlation_id,
-                idempotency_key=f"promo-pay:{en1_sub}:{promo_code.strip().upper()}",
+                idempotency_key=f"esb:checkout:{customer_id}:{promo.upper()}:{local_subscription.plan_code}",
             )
-            activation: En1ActivationResult = self._client.activate_subscription(
-                subscription_id=en1_sub,
-                payment_id=charge.payment_id or "",
+            entitlement = self._client.get_entitlement(
+                customer_id=customer_id,
                 correlation_id=correlation_id,
-                idempotency_key=f"activate:{en1_sub}:{charge.payment_id}",
             )
         except En1CommerceError as e:
             return PaymentResult(
@@ -105,20 +97,48 @@ class PaymentService:
                 error_detail=str(e),
             )
 
+        if not entitlement.entitled:
+            return PaymentResult(
+                ok=False,
+                correlation_id=correlation_id,
+                payment_id=None,
+                subscription_status=checkout.subscription_status,
+                entitlements=[],
+                user_message=(
+                    "EN1 no confirmó el entitlement. No activamos la cuenta local. "
+                    "Puedes reintentar sin un segundo pago."
+                ),
+                error_detail=f"entitled=false state={entitlement.state}",
+                checkout_raw=checkout.raw,
+                entitlement_raw=entitlement.raw,
+            )
+
         activate_subscription(
             db,
             local_subscription,
             provider="en1",
-            stripe_customer_id=en1_org,
-            stripe_subscription_id=en1_sub,
-            stripe_checkout_session_id=charge.payment_id,
+            stripe_customer_id=customer_id,
+            stripe_subscription_id=checkout.subscription_id,
+            stripe_checkout_session_id=checkout.promo_code,
         )
-        local_subscription.plan_code = local_subscription.plan_code
+        if entitlement.plan_code:
+            # Keep ESB canonical if possible; store EN1 plan only when already ESB-shaped.
+            if entitlement.plan_code in {"individual", "oficina", "broker_red", "enterprise"}:
+                local_subscription.plan_code = entitlement.plan_code
+            elif entitlement.plan_code == "office":
+                local_subscription.plan_code = "oficina"
+            elif entitlement.plan_code == "broker":
+                local_subscription.plan_code = "broker_red"
+        from corredores.services.seats import persist_en1_seat_limits
+
+        persist_en1_seat_limits(db, local_subscription, entitlement.limits)
         db.flush()
         return PaymentResult(
             ok=True,
             correlation_id=correlation_id,
-            payment_id=charge.payment_id,
-            subscription_status=activation.status,
-            entitlements=list(activation.entitlements),
+            payment_id=checkout.subscription_id,
+            subscription_status=checkout.subscription_status,
+            entitlements=[entitlement.raw],
+            checkout_raw=checkout.raw,
+            entitlement_raw=entitlement.raw,
         )

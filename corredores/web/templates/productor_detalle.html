@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}{{ profile.display_name }} · Productores{% endblock %}
+{% block topbar %}Gestión · Productor{% endblock %}
+{% block content %}
+<section class="page-head">
+  <p class="page-sub"><a href="/productores">← Productores</a> · <b>{{ org_name }}</b></p>
+  <h1 class="page-title">{{ profile.display_name }}</h1>
+  <p class="page-sub">
+    Código <span class="mono">{{ profile.code or "—" }}</span>
+    · {{ profile.status }}
+    {% if party and party.email %} · {{ party.email }}{% endif %}
+  </p>
+</section>
+
+{% if flash == 'access' %}<p class="flash-ok">Acceso de sistema (PRODUCER) activado</p>
+{% elif flash %}<p class="flash-ok">Asignación guardada</p>{% endif %}
+{% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+
+{% if seats %}
+<p class="page-sub mono">
+  Cupos · productores {{ seats.producer_seats.used }}/{% if seats.producer_seats.limit is none %}∞{% else %}{{ seats.producer_seats.limit }}{% endif %}
+  · fuente {{ seats.source }}
+</p>
+{% endif %}
+
+<section class="poliza-panel catalog-editor">
+  <h2 class="poliza-panel-title">Acceso al sistema (seat productor)</h2>
+  {% if access_membership %}
+  <p class="hint">Membership PRODUCER activa · subject <span class="mono">{{ access_membership.subject_id }}</span></p>
+  {% else %}
+  <form class="catalog-form" method="post" action="/productores/{{ profile.id }}/acceso">
+    <div class="catalog-row">
+      <label class="catalog-field name">Email de cuenta ESB
+        <input name="account_email" type="email" required maxlength="200"
+          value="{{ party.email if party and party.email else '' }}"
+          placeholder="debe existir como BrokerAccount" />
+      </label>
+      <div class="wizard-actions">
+        <button class="btn-primary" type="submit">Activar acceso PRODUCER</button>
+      </div>
+    </div>
+  </form>
+  <p class="hint">Consume <b>producer_seats</b>. El perfil sin membership no cuenta cupo (ADR-008).</p>
+  {% endif %}
+</section>
+
+<section class="poliza-panel catalog-editor">
+  <h2 class="poliza-panel-title">Asignar / reasignar póliza (PRIMARY)</h2>
+  <form class="catalog-form" method="post" action="/productores/{{ profile.id }}/asignar">
+    <div class="catalog-row">
+      <label class="catalog-field name">Póliza
+        <select name="policy_id" required>
+          <option value="">— elegir —</option>
+          {% for pol in policies %}
+          <option value="{{ pol.id }}">{{ pol.policy_number or pol.id[:8] }} · {{ pol.status }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="catalog-field name">Motivo (obligatorio)
+        <input name="reason" required maxlength="500" placeholder="Traspaso de cartera / corrección" />
+      </label>
+      <div class="wizard-actions">
+        <button class="btn-primary" type="submit">Asignar PRIMARY</button>
+      </div>
+    </div>
+  </form>
+  <p class="hint">Si la póliza ya tiene PRIMARY, se cierra el anterior y se abre historial (ADR-008 §11).</p>
+</section>
+
+<div class="table-card">
+  <h2 class="poliza-panel-title" style="padding:0.75rem 1rem 0">Cartera activa (PRIMARY vigente)</h2>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Póliza</th>
+        <th>Cliente</th>
+        <th>Desde</th>
+        <th>Motivo</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for row in portfolio %}
+      <tr>
+        <td class="mono">{{ row.policy.policy_number if row.policy else row.assignment.target_id[:8] }}</td>
+        <td>{{ row.client_name or "—" }}</td>
+        <td>{{ row.assignment.effective_from }}</td>
+        <td>{{ row.assignment.reason or "—" }}</td>
+        <td class="cli-action">
+          {% if row.policy %}
+          <a class="open-link" href="/polizas/{{ row.policy.id }}/productor">Historial</a>
+          {% endif %}
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5" class="empty-row">Sin pólizas PRIMARY vigentes.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

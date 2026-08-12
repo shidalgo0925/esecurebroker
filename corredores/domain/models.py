@@ -608,6 +608,10 @@ class OrgSubscription(Base, TimestampMixin):
     stripe_checkout_session_id: Mapped[Optional[str]] = mapped_column(String(128))
     current_period_end: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     activated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    # ADR-008 F5 — optional EN1 compound seat limits (None = unlimited when source=en1)
+    seats_limits_source: Mapped[Optional[str]] = mapped_column(String(32))  # en1 | None
+    internal_seats_limit: Mapped[Optional[int]] = mapped_column(Integer)
+    producer_seats_limit: Mapped[Optional[int]] = mapped_column(Integer)
 
 
 class MobileRefreshToken(Base, TimestampMixin):

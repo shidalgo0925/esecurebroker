@@ -26,6 +26,7 @@ def entitlements_payload(session: Session, organization_id: str | None) -> dict[
     """Stable shape for ESB GO. Never invent EN1 commercial truth."""
     from corredores.services.saas_plans import get_plan
     from corredores.services.saas_signup import get_subscription, subscription_allows_access
+    from corredores.services.seats import seat_snapshot
 
     if not organization_id:
         return {
@@ -45,9 +46,12 @@ def entitlements_payload(session: Session, organization_id: str | None) -> dict[
             "subscription_status": None,
         }
     plan = get_plan(sub.plan_code)
-    seats = plan.seats_included if plan else None
+    snap = seat_snapshot(session, organization_id)
+    # Compound seats (ADR-008 F5). ``seats_total`` keeps legacy scalar for older clients.
+    seats = snap.public_dict()
+    seats_total = snap.internal.limit
     if sub.billing_provider == "en1":
-        source = "en1"
+        source = "en1" if snap.source == "en1" else snap.source
     elif subscription_allows_access(sub):
         source = "piloto_mirror"
     else:
@@ -62,6 +66,7 @@ def entitlements_payload(session: Session, organization_id: str | None) -> dict[
         "plan_code": sub.plan_code,
         "entitlements": ents,
         "seats": seats,
+        "seats_total": seats_total,
         "source": source,
         "subscription_status": sub.status,
     }

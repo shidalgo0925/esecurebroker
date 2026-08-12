@@ -109,6 +109,7 @@ NAV_GROUPS = [
         "links": [
             ("aseguradoras", "Aseguradoras", "/aseguradoras", "building"),
             ("ramos", "Ramos", "/ramos", "folder"),
+            ("productores", "Productores", "/productores", "users"),
             ("comisiones", "Comisiones", "/comisiones", "percent"),
             ("importaciones", "Importaciones", "/importaciones", "file"),
             ("documentos", "Documentos", "/documentos", "file"),
@@ -764,11 +765,23 @@ def ayuda(request: Request):
 def hoy(request: Request, session: Session = Depends(get_session)):
     if not entitlements().has("any", "corredores.p0.auto"):
         raise HTTPException(403, "entitlement denied")
+    from corredores.services.access_control import scope_allowlists
     from corredores.services.today_home import build_today_home
+    from corredores.web.deps import current_access_context
 
     org = resolve_org(session)
     actor = current_actor(request)
-    home_snap = build_today_home(session, org.id, actor_name=actor.display_name or "Broker")
+    access = current_access_context(session, request)
+    policy_ids = party_ids = None
+    if access is not None:
+        policy_ids, party_ids = scope_allowlists(session, access)
+    home_snap = build_today_home(
+        session,
+        org.id,
+        actor_name=actor.display_name or "Broker",
+        policy_ids=policy_ids,
+        party_ids=party_ids,
+    )
     return templates.TemplateResponse(
         request,
         "hoy.html",
@@ -778,8 +791,15 @@ def hoy(request: Request, session: Session = Depends(get_session)):
 
 @router.get("/radar", response_class=HTMLResponse)
 def radar(request: Request, session: Session = Depends(get_session)):
+    from corredores.services.access_control import scope_allowlists
+    from corredores.web.deps import current_access_context
+
     org = resolve_org(session)
-    snap = build_radar(session, org.id)
+    access = current_access_context(session, request)
+    policy_ids = None
+    if access is not None:
+        policy_ids, _ = scope_allowlists(session, access)
+    snap = build_radar(session, org.id, policy_ids=policy_ids)
     return templates.TemplateResponse(
         request, "radar.html", _ctx(request, "radar", org_name=org.name, snap=snap)
     )
@@ -3085,6 +3105,340 @@ def ramos_post(
     except ValueError as exc:
         return RedirectResponse(f"/ramos?error={quote(str(exc))}", status_code=303)
     return RedirectResponse(f"/ramos?ok=saved#row-{row.id}", status_code=303)
+
+
+def _require_producers_manage(session: Session, request: Request) -> None:
+    """ADR-008 F4 — producers:manage when AccessContext is available."""
+    from corredores.services.access_control import AccessDenied, require_permission
+    from corredores.web.deps import current_access_context
+
+    access = current_access_context(session, request)
+    if access is None:
+        return  # auth off / piloto
+    try:
+        require_permission(access, "producers:manage")
+    except AccessDenied as e:
+        raise HTTPException(403, "sin permiso para administrar productores") from e
+
+
+@router.get("/productores", response_class=HTMLResponse)
+def productores(request: Request, session: Session = Depends(get_session)):
+    from corredores.services.producer_portfolio import (
+        active_assignments_for_producer,
+        list_producer_profiles,
+    )
+    from corredores.services.seats import seat_snapshot
+
+    org = resolve_org(session)
+    _require_producers_manage(session, request)
+    profiles = list_producer_profiles(session, organization_id=org.id)
+    rows = []
+    for p in profiles:
+        party = session.get(Party, p.party_id)
+        n_active = len(
+            active_assignments_for_producer(
+                session, organization_id=org.id, producer_profile_id=p.id
+            )
+        )
+        rows.append(
+            {
+                "profile": p,
+                "email": party.email if party else None,
+                "active_policies": n_active,
+            }
+        )
+    seats = seat_snapshot(session, org.id)
+    return templates.TemplateResponse(
+        request,
+        "productores.html",
+        _ctx(
+            request,
+            "productores",
+            org_name=org.name,
+            rows=rows,
+            seats=seats.public_dict(),
+            flash=request.query_params.get("ok"),
+            error=request.query_params.get("error"),
+        ),
+    )
+
+
+@router.post("/productores")
+def productores_create(
+    request: Request,
+    first_name: str = Form(""),
+    last_name: str = Form(""),
+    email: str = Form(""),
+    code: str = Form(""),
+    session: Session = Depends(get_session),
+):
+    from urllib.parse import quote
+
+    from corredores.services.producer_portfolio import (
+        ProducerPortfolioError,
+        create_producer_person,
+    )
+
+    org = resolve_org(session)
+    _require_producers_manage(session, request)
+    try:
+        profile = create_producer_person(
+            session,
+            organization_id=org.id,
+            first_name=first_name,
+            last_name=last_name,
+            email=email or None,
+            code=code or None,
+        )
+    except ProducerPortfolioError as exc:
+        return RedirectResponse(f"/productores?error={quote(str(exc))}", status_code=303)
+    return RedirectResponse(f"/productores/{profile.id}?ok=created", status_code=303)
+
+
+@router.get("/productores/{profile_id}", response_class=HTMLResponse)
+def productor_detalle(
+    profile_id: str,
+    request: Request,
+    session: Session = Depends(get_session),
+):
+    from corredores.domain.membership_roles import PRODUCER
+    from corredores.domain.models import BrokerAccount, OrgMembership, ProducerProfile
+    from corredores.services.producer_portfolio import active_assignments_for_producer
+    from corredores.services.seats import seat_snapshot
+
+    org = resolve_org(session)
+    _require_producers_manage(session, request)
+    profile = session.get(ProducerProfile, profile_id)
+    if profile is None or profile.organization_id != org.id:
+        raise HTTPException(404, "productor no encontrado")
+    party = session.get(Party, profile.party_id)
+    assignments = active_assignments_for_producer(
+        session, organization_id=org.id, producer_profile_id=profile.id
+    )
+    portfolio = []
+    for a in assignments:
+        pol = session.get(Policy, a.target_id)
+        client = None
+        if pol and pol.client_party_id:
+            client = session.get(Party, pol.client_party_id)
+        client_name = None
+        if client:
+            client_name = " ".join(
+                x for x in [client.first_name or "", client.last_name or ""] if x
+            ).strip() or (client.legal_name or client.id[:8])
+        portfolio.append(
+            {
+                "assignment": a,
+                "policy": pol,
+                "client_name": client_name,
+            }
+        )
+    policies = (
+        session.query(Policy)
+        .filter_by(organization_id=org.id)
+        .order_by(Policy.created_at.desc())
+        .limit(300)
+        .all()
+    )
+    access_membership = None
+    if party and party.email:
+        acc = (
+            session.query(BrokerAccount)
+            .filter(BrokerAccount.email == party.email.strip().lower())
+            .one_or_none()
+        )
+        if acc:
+            access_membership = (
+                session.query(OrgMembership)
+                .filter_by(
+                    organization_id=org.id,
+                    subject_id=acc.subject_id,
+                    role_code=PRODUCER,
+                    active=True,
+                )
+                .one_or_none()
+            )
+    seats = seat_snapshot(session, org.id)
+    return templates.TemplateResponse(
+        request,
+        "productor_detalle.html",
+        _ctx(
+            request,
+            "productores",
+            org_name=org.name,
+            profile=profile,
+            party=party,
+            portfolio=portfolio,
+            policies=policies,
+            access_membership=access_membership,
+            seats=seats.public_dict(),
+            flash=request.query_params.get("ok"),
+            error=request.query_params.get("error"),
+        ),
+    )
+
+
+@router.post("/productores/{profile_id}/acceso")
+def productor_grant_access(
+    profile_id: str,
+    request: Request,
+    account_email: str = Form(...),
+    session: Session = Depends(get_session),
+):
+    """Grant PRODUCER system access (consumes producer_seat) — ADR-008 F5."""
+    from urllib.parse import quote
+
+    from corredores.domain.models import BrokerAccount, ProducerProfile
+    from corredores.services.seats import SeatLimitError, grant_producer_system_access
+
+    org = resolve_org(session)
+    _require_producers_manage(session, request)
+    profile = session.get(ProducerProfile, profile_id)
+    if profile is None or profile.organization_id != org.id:
+        raise HTTPException(404, "productor no encontrado")
+    email = (account_email or "").strip().lower()
+    acc = session.query(BrokerAccount).filter_by(email=email, active=True).one_or_none()
+    if acc is None:
+        return RedirectResponse(
+            f"/productores/{profile_id}?error={quote('cuenta ESB no encontrada para ese email')}",
+            status_code=303,
+        )
+    try:
+        grant_producer_system_access(
+            session,
+            organization_id=org.id,
+            producer_profile_id=profile.id,
+            subject_id=acc.subject_id,
+            display_name=profile.display_name,
+        )
+    except SeatLimitError as exc:
+        return RedirectResponse(
+            f"/productores/{profile_id}?error={quote(str(exc))}", status_code=303
+        )
+    return RedirectResponse(f"/productores/{profile_id}?ok=access", status_code=303)
+
+
+@router.post("/productores/{profile_id}/asignar")
+def productor_asignar(
+    profile_id: str,
+    request: Request,
+    policy_id: str = Form(...),
+    reason: str = Form(...),
+    session: Session = Depends(get_session),
+):
+    from urllib.parse import quote
+
+    from corredores.domain.models import ProducerProfile
+    from corredores.services.producer_portfolio import (
+        ProducerPortfolioError,
+        reassign_policy_primary,
+    )
+
+    org = resolve_org(session)
+    actor = current_actor(request)
+    _require_producers_manage(session, request)
+    profile = session.get(ProducerProfile, profile_id)
+    if profile is None or profile.organization_id != org.id:
+        raise HTTPException(404, "productor no encontrado")
+    try:
+        reassign_policy_primary(
+            session,
+            organization_id=org.id,
+            producer_profile_id=profile.id,
+            policy_id=policy_id.strip(),
+            reason=reason,
+            assigned_by_subject_id=actor.actor_id,
+        )
+    except ProducerPortfolioError as exc:
+        return RedirectResponse(
+            f"/productores/{profile_id}?error={quote(str(exc))}", status_code=303
+        )
+    return RedirectResponse(f"/productores/{profile_id}?ok=assigned", status_code=303)
+
+
+@router.get("/polizas/{policy_id}/productor", response_class=HTMLResponse)
+def poliza_productor_historial(
+    policy_id: str,
+    request: Request,
+    session: Session = Depends(get_session),
+):
+    from corredores.domain.models import ProducerProfile
+    from corredores.services.producer_portfolio import (
+        active_policy_primary,
+        assignment_history_for_policy,
+        list_producer_profiles,
+    )
+
+    org = resolve_org(session)
+    _require_producers_manage(session, request)
+    pol = session.get(Policy, policy_id)
+    if pol is None or pol.organization_id != org.id:
+        raise HTTPException(404, "póliza no encontrada")
+    history = assignment_history_for_policy(
+        session, organization_id=org.id, policy_id=pol.id
+    )
+    hist_rows = []
+    for a in history:
+        prod = session.get(ProducerProfile, a.producer_profile_id)
+        hist_rows.append({"assignment": a, "producer": prod})
+    current = active_policy_primary(
+        session, organization_id=org.id, policy_id=pol.id
+    )
+    producers = list_producer_profiles(
+        session, organization_id=org.id, include_inactive=False
+    )
+    return templates.TemplateResponse(
+        request,
+        "poliza_productor.html",
+        _ctx(
+            request,
+            "productores",
+            org_name=org.name,
+            policy=pol,
+            history=hist_rows,
+            current=current,
+            producers=producers,
+            flash=request.query_params.get("ok"),
+            error=request.query_params.get("error"),
+        ),
+    )
+
+
+@router.post("/polizas/{policy_id}/productor")
+def poliza_productor_reassign(
+    policy_id: str,
+    request: Request,
+    producer_profile_id: str = Form(...),
+    reason: str = Form(...),
+    session: Session = Depends(get_session),
+):
+    from urllib.parse import quote
+
+    from corredores.services.producer_portfolio import (
+        ProducerPortfolioError,
+        reassign_policy_primary,
+    )
+
+    org = resolve_org(session)
+    actor = current_actor(request)
+    _require_producers_manage(session, request)
+    pol = session.get(Policy, policy_id)
+    if pol is None or pol.organization_id != org.id:
+        raise HTTPException(404, "póliza no encontrada")
+    try:
+        reassign_policy_primary(
+            session,
+            organization_id=org.id,
+            producer_profile_id=producer_profile_id.strip(),
+            policy_id=pol.id,
+            reason=reason,
+            assigned_by_subject_id=actor.actor_id,
+        )
+    except ProducerPortfolioError as exc:
+        return RedirectResponse(
+            f"/polizas/{policy_id}/productor?error={quote(str(exc))}", status_code=303
+        )
+    return RedirectResponse(f"/polizas/{policy_id}/productor?ok=reassigned", status_code=303)
 
 
 @router.get("/comisiones", response_class=HTMLResponse)

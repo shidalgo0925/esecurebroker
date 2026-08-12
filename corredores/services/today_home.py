@@ -149,9 +149,14 @@ def build_today_home(
     *,
     today: date | None = None,
     actor_name: str = "Broker",
+    policy_ids: frozenset[str] | set[str] | None = None,
+    party_ids: frozenset[str] | set[str] | None = None,
 ) -> TodayHome:
+    """Hoy home. ``policy_ids``/``party_ids`` None = org-wide (ADR-008 F3 scope)."""
     today = today or date.today()
-    radar = build_radar(session, organization_id, today=today)
+    radar = build_radar(
+        session, organization_id, today=today, policy_ids=policy_ids
+    )
 
     # Pagos recibidos hoy
     payments_today = (
@@ -159,10 +164,14 @@ def build_today_home(
         .filter(Payment.organization_id == organization_id, Payment.payment_date == today)
         .all()
     )
+    if policy_ids is not None:
+        payments_today = [p for p in payments_today if p.policy_id in policy_ids]
     paid_amt = sum((p.amount for p in payments_today), Decimal("0"))
     paid_n = len(payments_today)
 
     claims = session.query(Claim).filter_by(organization_id=organization_id).all()
+    if policy_ids is not None:
+        claims = [c for c in claims if c.policy_id in policy_ids]
     open_claims = [
         c
         for c in claims
@@ -227,6 +236,8 @@ def build_today_home(
         .all()
     )
     for pr in promises:
+        if policy_ids is not None and pr.policy_id not in policy_ids:
+            continue
         if not promise_is_broken(pr, today=today) and pr.status != PaymentPromiseStatus.BROKEN:
             continue
         # Solo si la cuota sigue con saldo
@@ -274,6 +285,8 @@ def build_today_home(
     )
     auto_managed = 0
     for plan in plans:
+        if policy_ids is not None and plan.policy_id not in policy_ids:
+            continue
         policy = session.get(Policy, plan.policy_id)
         party = session.get(Party, policy.client_party_id) if policy else None
         for inst in plan.installments:
@@ -368,6 +381,8 @@ def build_today_home(
         .all()
     )
     for ren in renewals:
+        if policy_ids is not None and ren.previous_policy_id not in policy_ids:
+            continue
         if ren.target_date and ren.target_date > horizon:
             continue
         pol = session.get(Policy, ren.previous_policy_id)
@@ -502,7 +517,14 @@ def build_today_home(
 
     # Oportunidades (gaps + renovaciones a recotizar) — hechos, no IA inventando $
     opportunities: list[OpportunityLine] = []
-    parties = session.query(Party).filter_by(organization_id=organization_id).limit(50).all()
+    parties_q = session.query(Party).filter_by(organization_id=organization_id)
+    if party_ids is not None:
+        if not party_ids:
+            parties = []
+        else:
+            parties = parties_q.filter(Party.id.in_(list(party_ids))).limit(50).all()
+    else:
+        parties = parties_q.limit(50).all()
     gap_clients = 0
     for p in parties:
         try:
@@ -523,7 +545,8 @@ def build_today_home(
     recotizar = [
         r
         for r in renewals
-        if r.status
+        if (policy_ids is None or r.previous_policy_id in policy_ids)
+        and r.status
         in {
             RenewalOpportunityStatus.QUOTING,
             RenewalOpportunityStatus.PROPOSAL_SENT,

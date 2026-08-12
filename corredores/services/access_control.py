@@ -414,3 +414,32 @@ def access_context_public_dict(ctx: AccessContext) -> dict[str, Any]:
         "organization_id": ctx.organization_id,
         "is_platform": ctx.is_platform,
     }
+
+
+def scope_allowlists(
+    session: Session, ctx: AccessContext
+) -> tuple[frozenset[str] | None, frozenset[str] | None]:
+    """Return (policy_ids, party_ids) for ASSIGNED_PORTFOLIO.
+
+    ``None`` means unrestricted within the organization (ORGANIZATION / PLATFORM).
+    Empty frozenset means scoped but empty portfolio.
+    """
+    if ctx.scope in {SCOPE_ORGANIZATION, SCOPE_PLATFORM}:
+        return None, None
+    if ctx.scope == SCOPE_ASSIGNED_PORTFOLIO:
+        if not ctx.producer_profile_id:
+            return frozenset(), frozenset()
+        pids = frozenset(
+            active_primary_policy_ids(
+                session,
+                organization_id=ctx.organization_id,
+                producer_profile_id=ctx.producer_profile_id,
+            )
+        )
+        party_ids = frozenset(
+            party_ids_in_portfolio(
+                session, organization_id=ctx.organization_id, policy_ids=pids
+            )
+        )
+        return pids, party_ids
+    return frozenset(), frozenset()

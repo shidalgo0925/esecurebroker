@@ -100,8 +100,15 @@ def test_login_me_today_customer_policy_flow(client, seeded):
     assert body["role"] == "OWNER"
     assert body["organization"]["id"] == seeded["alfa"]["organization_id"]
     assert "today:read" in body["permissions"]
-    assert body["entitlements"]["source"] in {"piloto_mirror", "pending", "en1"}
-    assert "ASSIGNED_PORTFOLIO" not in str(body)
+    assert body["entitlements"]["source"] in {
+        "piloto_mirror",
+        "pending",
+        "en1",
+        "en1_plan_mirror",
+        "plan_catalog",
+    }
+    # OWNER stays ORGANIZATION; PRODUCER → ASSIGNED_PORTFOLIO (see test_mobile_producer_f6)
+    assert body["scope"] == "ORGANIZATION"
 
     today = client.get("/api/mobile/v1/today", headers=headers)
     assert today.status_code == 200, today.text

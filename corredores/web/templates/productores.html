@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Productores · ESecureBroker{% endblock %}
+{% block topbar %}Gestión · Productores{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1 class="page-title">Productores</h1>
+  <p class="page-sub">Perfiles de cartera (PRIMARY por póliza) · <b>{{ org_name }}</b></p>
+  {% if seats %}
+  <p class="page-sub mono">
+    Seats · internos {{ seats.internal_seats.used }}/{% if seats.internal_seats.limit is none %}∞{% else %}{{ seats.internal_seats.limit }}{% endif %}
+    · productores {{ seats.producer_seats.used }}/{% if seats.producer_seats.limit is none %}∞{% else %}{{ seats.producer_seats.limit }}{% endif %}
+    · fuente {{ seats.source }}
+  </p>
+  {% endif %}
+</section>
+
+{% if flash %}<p class="flash-ok">Guardado</p>{% endif %}
+{% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+
+<section class="poliza-panel catalog-editor">
+  <h2 class="poliza-panel-title">Alta de productor</h2>
+  <form class="catalog-form" method="post" action="/productores">
+    <div class="catalog-row">
+      <label class="catalog-field name">Nombre
+        <input name="first_name" required maxlength="80" placeholder="Carlos" />
+      </label>
+      <label class="catalog-field name">Apellido
+        <input name="last_name" maxlength="80" placeholder="Agente" />
+      </label>
+      <label class="catalog-field name">Email (opcional · vincula login PRODUCER)
+        <input name="email" type="email" maxlength="200" placeholder="carlos@correduria.local" />
+      </label>
+      <label class="catalog-field code">Código
+        <input name="code" class="mono" maxlength="40" placeholder="CARLOS" />
+      </label>
+      <div class="wizard-actions">
+        <button class="btn-primary" type="submit">Crear productor</button>
+      </div>
+    </div>
+  </form>
+  <p class="hint">Membership / seat ESB GO es opcional (F5). El perfil existe sin acceso al sistema.</p>
+</section>
+
+<div class="table-card">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>Código</th>
+        <th>Email</th>
+        <th>Estado</th>
+        <th>Pólizas PRIMARY</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for row in rows %}
+      <tr id="row-{{ row.profile.id }}">
+        <td class="cli-name">{{ row.profile.display_name }}</td>
+        <td class="cli-id mono">{{ row.profile.code or "—" }}</td>
+        <td>{{ row.email or "—" }}</td>
+        <td>{{ row.profile.status }}</td>
+        <td>{{ row.active_policies }}</td>
+        <td class="cli-action">
+          <a class="open-link" href="/productores/{{ row.profile.id }}">Abrir</a>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6" class="empty-row">Sin productores — creá uno arriba.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

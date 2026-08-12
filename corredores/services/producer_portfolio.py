@@ -1,6 +1,6 @@
-"""F1 schema helpers — ProducerProfile + PortfolioAssignment (ADR-008).
+"""ProducerProfile + PortfolioAssignment (ADR-008 F1 schema · F4 admin ops).
 
-No AccessContext / scope filtering here (F2/F3). Domain integrity only.
+Domain integrity + assign/reassign/history. Authz is AccessContext (callers).
 """
 
 from __future__ import annotations
@@ -240,3 +240,110 @@ def set_default_producer(
     party.default_producer_profile_id = producer_profile_id
     session.flush()
     return party
+
+
+def list_producer_profiles(
+    session: Session, *, organization_id: str, include_inactive: bool = True
+) -> list[ProducerProfile]:
+    q = session.query(ProducerProfile).filter_by(organization_id=organization_id)
+    if not include_inactive:
+        q = q.filter(ProducerProfile.status == PRODUCER_STATUS_ACTIVE)
+    return q.order_by(ProducerProfile.display_name.asc()).all()
+
+
+def reassign_policy_primary(
+    session: Session,
+    *,
+    organization_id: str,
+    producer_profile_id: str,
+    policy_id: str,
+    reason: str,
+    assigned_by_subject_id: str,
+    effective_from: date | None = None,
+) -> PortfolioAssignment:
+    """Reassign PRIMARY — reason + assigned_by required (ADR-008 §11)."""
+    reason_n = (reason or "").strip()
+    if not reason_n:
+        raise ProducerPortfolioError("reason is required for reassignment")
+    by = (assigned_by_subject_id or "").strip()
+    if not by:
+        raise ProducerPortfolioError("assigned_by is required for reassignment")
+    return assign_policy_primary(
+        session,
+        organization_id=organization_id,
+        producer_profile_id=producer_profile_id,
+        policy_id=policy_id,
+        effective_from=effective_from,
+        reason=reason_n,
+        assigned_by_subject_id=by,
+        close_existing=True,
+    )
+
+
+def assignment_history_for_policy(
+    session: Session, *, organization_id: str, policy_id: str
+) -> list[PortfolioAssignment]:
+    return (
+        session.query(PortfolioAssignment)
+        .filter_by(
+            organization_id=organization_id,
+            target_type=TARGET_POLICY,
+            target_id=policy_id,
+            assignment_role=ROLE_PRIMARY,
+        )
+        .order_by(
+            PortfolioAssignment.effective_from.desc(),
+            PortfolioAssignment.created_at.desc(),
+        )
+        .all()
+    )
+
+
+def active_assignments_for_producer(
+    session: Session, *, organization_id: str, producer_profile_id: str
+) -> list[PortfolioAssignment]:
+    return (
+        session.query(PortfolioAssignment)
+        .filter_by(
+            organization_id=organization_id,
+            producer_profile_id=producer_profile_id,
+            target_type=TARGET_POLICY,
+            assignment_role=ROLE_PRIMARY,
+        )
+        .filter(PortfolioAssignment.effective_to.is_(None))
+        .order_by(PortfolioAssignment.effective_from.desc())
+        .all()
+    )
+
+
+def create_producer_person(
+    session: Session,
+    *,
+    organization_id: str,
+    first_name: str,
+    last_name: str = "",
+    email: str | None = None,
+    code: str | None = None,
+    display_name: str | None = None,
+) -> ProducerProfile:
+    """Create PERSON Party + ProducerProfile (membership optional — F5 seats)."""
+    fn = (first_name or "").strip()
+    ln = (last_name or "").strip()
+    if not fn and not ln:
+        raise ProducerPortfolioError("first_name or last_name required")
+    party = Party(
+        organization_id=organization_id,
+        party_type=PartyType.PERSON,
+        first_name=fn or None,
+        last_name=ln or None,
+        email=(email or "").strip().lower() or None,
+    )
+    session.add(party)
+    session.flush()
+    return create_producer_profile(
+        session,
+        organization_id=organization_id,
+        party_id=party.id,
+        display_name=display_name,
+        code=code,
+    )

@@ -11,6 +11,7 @@ from corredores.config import settings
 from corredores.control_plane import Actor, AllowAllEntitlements, OrganizationContext
 from corredores.db import SessionLocal
 from corredores.domain.models import Organization
+from corredores.services.access_control import AccessContext, AccessDenied, resolve_access_context
 from corredores.services.tenant import (
     assert_membership,
     get_organization,
@@ -111,3 +112,29 @@ def subject_memberships(session: Session, request: Request | None = None) -> lis
     if principal is None:
         return []
     return list_memberships(session, principal.actor_id)
+
+
+def current_access_context(
+    session: Session, request: Request | None = None
+) -> AccessContext | None:
+    """Resolve AccessContext for the signed Web session (ADR-008).
+
+    Returns None when auth is off (legacy piloto) — callers treat as ORGANIZATION.
+    """
+    if not settings.auth_enabled:
+        return None
+    req = request or current_request()
+    if req is None:
+        return None
+    principal = read_session(req)
+    if principal is None or not principal.organization_id:
+        return None
+    try:
+        return resolve_access_context(
+            session,
+            subject_id=principal.actor_id,
+            username=principal.username,
+            organization_id=principal.organization_id,
+        )
+    except AccessDenied as e:
+        raise HTTPException(403, str(e) or "forbidden") from e
