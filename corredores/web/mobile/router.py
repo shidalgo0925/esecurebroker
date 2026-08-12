@@ -12,21 +12,23 @@ from sqlalchemy.orm import Session
 
 from corredores.domain.models import Carrier, InsuranceLine, Party, Policy, PolicyTerm, VehicleRisk
 from corredores.services.client_360 import build_client_360
-from corredores.services.saas_signup import find_account_by_subject
-from corredores.services.tenant import (
-    assert_membership,
-    list_accessible_organizations,
-    require_org_owned,
-)
+from corredores.services.tenant import assert_membership, list_accessible_organizations
 from corredores.services.today_home import build_today_home
 from corredores.web.auth_session import actor_id_for_username, verify_credentials
-from corredores.web.mobile.deps import MobileContext, get_db, require_access, require_org_context
-from corredores.web.mobile.errors import MobileAPIError
-from corredores.web.mobile.permissions import (
-    SCOPE_ORGANIZATION,
-    entitlements_payload,
-    permissions_for_role,
+from corredores.services.access_control import (
+    AccessDenied,
+    require_party_in_scope,
+    require_policy_in_scope,
 )
+from corredores.web.mobile.deps import (
+    MobileContext,
+    get_db,
+    map_access_denied,
+    require_access,
+    require_org_context,
+)
+from corredores.web.mobile.errors import MobileAPIError
+from corredores.web.mobile.permissions import entitlements_payload
 from corredores.web.mobile.schemas import (
     AttentionCardOut,
     Customer360Response,
@@ -214,15 +216,22 @@ def mobile_me(
     ctx: MobileContext = Depends(require_access),
     session: Session = Depends(get_db),
 ) -> MeResponse:
+    from corredores.services.saas_signup import find_account_by_subject
+
     acc = find_account_by_subject(session, ctx.principal.subject_id)
     display = acc.display_name if acc else None
-    role = ctx.role_code if ctx.organization else (
-        "PLATFORM" if ctx.is_platform else "BROKER"
-    )
-    if role not in {"OWNER", "BROKER", "PLATFORM"}:
-        # Unknown stored role — still return raw but permissions use base set
-        pass
-    perms = permissions_for_role(role, is_platform=ctx.is_platform)
+    if ctx.access is not None:
+        role = ctx.access.role
+        scope = ctx.access.scope
+        perms = sorted(ctx.access.permissions)
+        producer_profile_id = ctx.access.producer_profile_id
+    else:
+        role = "PLATFORM" if ctx.is_platform else "BROKER"
+        scope = "ORGANIZATION"
+        from corredores.services.access_control import permissions_for_role
+
+        perms = permissions_for_role(role, is_platform=ctx.is_platform)
+        producer_profile_id = None
     ents = entitlements_payload(
         session, ctx.organization.id if ctx.organization else None
     )
@@ -254,16 +263,18 @@ def mobile_me(
             else None
         ),
         role=role,
-        scope=SCOPE_ORGANIZATION,  # type: ignore[arg-type]
+        scope=scope,  # type: ignore[arg-type]
         permissions=perms,
         entitlements=ents,
         session=SessionOut(
             api_version=API_VERSION,
-            scope=SCOPE_ORGANIZATION,  # type: ignore[arg-type]
+            scope=scope,  # type: ignore[arg-type]
             organization_selected=ctx.organization is not None,
             access_expires_at=ctx.principal.exp,
+            producer_profile_id=producer_profile_id,
         ),
         organizations_available=orgs,
+        producer_profile_id=producer_profile_id,
     )
 
 
@@ -408,10 +419,11 @@ def mobile_customer_detail(
     ctx: MobileContext = Depends(require_org_context),
     session: Session = Depends(get_db),
 ) -> CustomerDetailResponse:
+    assert ctx.access is not None
     try:
-        p = require_org_owned(session, Party, customer_id, ctx.organization.id)
-    except FastAPIHTTPException as e:
-        raise MobileAPIError("not_found", "Customer not found.", status_code=404) from e
+        p = require_party_in_scope(session, ctx.access, customer_id)
+    except AccessDenied as e:
+        raise map_access_denied(e) from e
     return _customer_detail(p)
 
 
@@ -425,14 +437,28 @@ def mobile_customer_360(
     ctx: MobileContext = Depends(require_org_context),
     session: Session = Depends(get_db),
 ) -> Customer360Response:
+    assert ctx.access is not None
     try:
-        p = require_org_owned(session, Party, customer_id, ctx.organization.id)
-    except FastAPIHTTPException as e:
-        raise MobileAPIError("not_found", "Customer not found.", status_code=404) from e
+        p = require_party_in_scope(session, ctx.access, customer_id)
+    except AccessDenied as e:
+        raise map_access_denied(e) from e
     try:
         snap = build_client_360(session, ctx.organization.id, p.id, today=date.today())
     except ValueError as e:
         raise MobileAPIError("not_found", "Customer not found.", status_code=404) from e
+    # F2: filter policies in 360 when ASSIGNED_PORTFOLIO (full list filtering → F3 lists)
+    policies = list(snap.policies)
+    if ctx.access.scope == "ASSIGNED_PORTFOLIO":
+        from corredores.services.access_control import active_primary_policy_ids
+
+        allowed = active_primary_policy_ids(
+            session,
+            organization_id=ctx.access.organization_id,
+            producer_profile_id=ctx.access.producer_profile_id or "",
+        )
+        policies = [x for x in policies if x.get("id") in allowed]
+        if not policies:
+            raise MobileAPIError("not_found", "Customer not found.", status_code=404)
     return Customer360Response(
         customer=_customer_detail(p),
         contact={
@@ -442,7 +468,7 @@ def mobile_customer_360(
             "district": p.district,
             "national_id": p.national_id,
         },
-        policies=list(snap.policies),
+        policies=policies,
         vehicles=list(snap.vehicles),
         renewals=list(snap.renewals),
         claims=list(snap.claims),
@@ -536,10 +562,11 @@ def mobile_policy_detail(
     ctx: MobileContext = Depends(require_org_context),
     session: Session = Depends(get_db),
 ) -> PolicyDetailResponse:
+    assert ctx.access is not None
     try:
-        pol = require_org_owned(session, Policy, policy_id, ctx.organization.id)
-    except FastAPIHTTPException as e:
-        raise MobileAPIError("not_found", "Policy not found.", status_code=404) from e
+        pol = require_policy_in_scope(session, ctx.access, policy_id)
+    except AccessDenied as e:
+        raise map_access_denied(e) from e
     client = session.get(Party, pol.client_party_id) if pol.client_party_id else None
     carrier = session.get(Carrier, pol.carrier_id) if pol.carrier_id else None
     line = session.get(InsuranceLine, pol.insurance_line_id) if pol.insurance_line_id else None

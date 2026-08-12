@@ -1,4 +1,4 @@
-"""Permissions + entitlements shapes for Mobile API v1 (extensible, not full RBAC)."""
+"""Mobile permissions/entitlements — delegates RBAC shape to access_control (ADR-008 F2)."""
 
 from __future__ import annotations
 
@@ -6,44 +6,27 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from corredores.services.saas_plans import get_plan
-from corredores.services.saas_signup import get_subscription, subscription_allows_access
-
-# v1 stable capability strings — additive later without breaking clients.
-BASE_ORG_PERMISSIONS: tuple[str, ...] = (
-    "me:read",
-    "organizations:list",
-    "organizations:select",
-    "today:read",
-    "customers:list",
-    "customers:search",
-    "customers:read",
-    "customers:360",
-    "policies:list",
-    "policies:read",
+from corredores.services.access_control import (
+    SCOPE_ASSIGNED_PORTFOLIO,
+    SCOPE_ORGANIZATION,
+    SCOPE_PLATFORM,
+    permissions_for_role,
 )
 
-# Real roles today only.
-KNOWN_ROLES = frozenset({"OWNER", "BROKER", "PLATFORM"})
-
-# Documented future (not operational in v1).
-FUTURE_ROLES = frozenset({"ADMIN", "PRODUCER", "COLLECTIONS", "SUPERVISOR"})
-
-# Only operational scope in Gate B v1.
-SCOPE_ORGANIZATION = "ORGANIZATION"
-# Future — not implemented:
-# SCOPE_ASSIGNED_PORTFOLIO = "ASSIGNED_PORTFOLIO"
-
-
-def permissions_for_role(role_code: str, *, is_platform: bool = False) -> list[str]:
-    perms = list(BASE_ORG_PERMISSIONS)
-    if is_platform or role_code == "PLATFORM":
-        perms.append("platform:admin")
-    return sorted(set(perms))
+__all__ = [
+    "SCOPE_ORGANIZATION",
+    "SCOPE_ASSIGNED_PORTFOLIO",
+    "SCOPE_PLATFORM",
+    "permissions_for_role",
+    "entitlements_payload",
+]
 
 
 def entitlements_payload(session: Session, organization_id: str | None) -> dict[str, Any]:
     """Stable shape for ESB GO. Never invent EN1 commercial truth."""
+    from corredores.services.saas_plans import get_plan
+    from corredores.services.saas_signup import get_subscription, subscription_allows_access
+
     if not organization_id:
         return {
             "plan_code": None,

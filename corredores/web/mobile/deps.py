@@ -1,14 +1,15 @@
-"""Auth dependencies for Mobile API v1."""
+"""Auth dependencies for Mobile API v1 (+ ADR-008 AccessContext)."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
-from fastapi import Depends, Header
+from fastapi import Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 
 from corredores.db import SessionLocal
 from corredores.domain.models import Organization, OrgMembership
+from corredores.services.access_control import AccessContext, AccessDenied, resolve_access_context
 from corredores.services.tenant import assert_membership, is_platform_admin
 from corredores.web.mobile.errors import MobileAPIError
 from corredores.web.mobile.tokens import AccessPrincipal, parse_access_token
@@ -33,6 +34,7 @@ class MobileContext:
     membership: OrgMembership | None
     role_code: str
     is_platform: bool
+    access: AccessContext | None = None
 
 
 def _bearer(authorization: str | None) -> str:
@@ -60,6 +62,7 @@ def require_access(
     org: Organization | None = None
     membership: OrgMembership | None = None
     role = "BROKER"
+    access: AccessContext | None = None
     if principal.organization_id:
         org = session.get(Organization, principal.organization_id)
         if org is None or not org.active:
@@ -76,30 +79,36 @@ def require_access(
                 username=principal.username,
             )
             role = membership.role_code if membership else ("PLATFORM" if is_plat else "BROKER")
-        except Exception as e:
-            # assert_membership raises HTTPException — map to MobileAPIError
-            from fastapi import HTTPException
-
-            if isinstance(e, HTTPException):
-                raise MobileAPIError(
-                    "forbidden",
-                    "No membership for this organization.",
-                    status_code=403,
-                ) from e
-            raise
+        except HTTPException as e:
+            raise MobileAPIError(
+                "forbidden",
+                "No membership for this organization.",
+                status_code=403,
+            ) from e
         if membership is None and is_plat:
             role = "PLATFORM"
+        try:
+            access = resolve_access_context(
+                session,
+                subject_id=principal.subject_id,
+                username=principal.username,
+                organization_id=org.id,
+            )
+            role = access.role
+        except AccessDenied as e:
+            raise MobileAPIError("forbidden", str(e), status_code=403) from e
     return MobileContext(
         principal=principal,
         organization=org,
         membership=membership,
         role_code=role,
         is_platform=is_plat,
+        access=access,
     )
 
 
 def require_org_context(ctx: MobileContext = Depends(require_access)) -> MobileContext:
-    if ctx.organization is None:
+    if ctx.organization is None or ctx.access is None:
         raise MobileAPIError(
             "organization_required",
             "Select an organization first (POST /api/mobile/v1/session/organization).",
@@ -107,3 +116,9 @@ def require_org_context(ctx: MobileContext = Depends(require_access)) -> MobileC
             details={"requires_organization_selection": True},
         )
     return ctx
+
+
+def map_access_denied(exc: AccessDenied) -> MobileAPIError:
+    if exc.not_found:
+        return MobileAPIError("not_found", "Not found.", status_code=404)
+    return MobileAPIError("forbidden", str(exc) or "Forbidden.", status_code=403)

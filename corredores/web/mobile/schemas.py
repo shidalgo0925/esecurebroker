@@ -54,9 +54,10 @@ class MembershipOut(BaseModel):
 
 class SessionOut(BaseModel):
     api_version: str = "v1"
-    scope: Literal["ORGANIZATION"]
+    scope: Literal["ORGANIZATION", "ASSIGNED_PORTFOLIO", "PLATFORM"]
     organization_selected: bool
     access_expires_at: int
+    producer_profile_id: str | None = None
 
 
 class MeResponse(BaseModel):
@@ -64,11 +65,12 @@ class MeResponse(BaseModel):
     organization: OrganizationOut | None
     membership: MembershipOut | None
     role: str
-    scope: Literal["ORGANIZATION"]
+    scope: Literal["ORGANIZATION", "ASSIGNED_PORTFOLIO", "PLATFORM"]
     permissions: list[str]
     entitlements: dict[str, Any]
     session: SessionOut
     organizations_available: list[dict[str, Any]] = Field(default_factory=list)
+    producer_profile_id: str | None = None
 
 
 class MoneyCardOut(BaseModel):

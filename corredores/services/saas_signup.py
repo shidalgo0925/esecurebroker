@@ -1,4 +1,4 @@
-"""Registro self-serve + suscripción org (piloto hasta EN1 billing)."""
+"""Registro self-serve + mirror local. SoR comercial = EN1 (API M2M) cuando está habilitado."""
 
 from __future__ import annotations
 
@@ -10,9 +10,9 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from corredores.domain.models import BrokerAccount, Organization, OrgSubscription
+from corredores.identity_ids import actor_id_for_username
 from corredores.services.saas_plans import require_plan
 from corredores.services.tenant import ensure_membership
-from corredores.web.auth_session import actor_id_for_username
 
 
 _PBKDF2_ROUNDS = 120_000
@@ -86,6 +86,8 @@ def register_broker(
     display_name: str,
     org_name: str,
     plan_code: str,
+    tax_id: str | None = None,
+    phone: str | None = None,
 ) -> tuple[BrokerAccount, Organization, OrgSubscription]:
     email_n = normalize_email(email)
     if not email_n or "@" not in email_n:
@@ -102,7 +104,47 @@ def register_broker(
         raise ValueError("Ya existe una cuenta con ese correo. Inicia sesión.")
 
     plan = require_plan(plan_code)
-    # Username for session cookie = email (unique)
+
+    from corredores.services.en1_commercial import (
+        En1CommercialClient,
+        En1CommerceError,
+        en1_commerce_enabled,
+        new_correlation_id,
+    )
+
+    en1_subject: str | None = None
+    en1_org_id: str | None = None
+    en1_sub_id: str | None = None
+    provider = "piloto"
+
+    if en1_commerce_enabled():
+        # Fail-closed: no crear cuenta local fingiendo que EN1 respondió.
+        client = En1CommercialClient()
+        correlation_id = new_correlation_id()
+        try:
+            ident = client.resolve_or_create_identity(
+                email=email_n,
+                display_name=name,
+                phone=phone,
+                correlation_id=correlation_id,
+                idempotency_key=f"identity:{email_n}",
+            )
+            intent = client.create_commercial_intent(
+                subject_id=ident.subject_id,
+                org_name=agency,
+                tax_id=tax_id,
+                plan_code=plan.code,
+                correlation_id=correlation_id,
+                idempotency_key=f"intent:{email_n}:{plan.code}",
+            )
+        except En1CommerceError as e:
+            raise ValueError(e.user_message) from e
+        en1_subject = ident.subject_id
+        en1_org_id = intent.organization_id
+        en1_sub_id = intent.subscription_id
+        provider = "en1"
+
+    # Sesión ESB: subject local estable; en1_subject queda en org/sub mirror.
     subject = actor_id_for_username(email_n)
     account = BrokerAccount(
         email=email_n,
@@ -111,7 +153,11 @@ def register_broker(
         subject_id=subject,
         active=True,
     )
-    org = Organization(name=agency[:200], active=True)
+    org = Organization(
+        name=agency[:200],
+        active=True,
+        external_en1_org_id=en1_org_id,
+    )
     session.add(account)
     session.add(org)
     session.flush()
@@ -122,11 +168,17 @@ def register_broker(
         display_name=name,
         role_code="OWNER",
     )
+    from corredores.services.seed_pilot import seed_pilot
+
+    seed_pilot(session, org_name=org.name)
     sub = OrgSubscription(
         organization_id=org.id,
         plan_code=plan.code,
         status="pending",
-        billing_provider="piloto",
+        billing_provider=provider,
+        # Mirror provisional: EN1 subscription_id hasta columna dedicada
+        stripe_subscription_id=en1_sub_id,
+        stripe_customer_id=en1_subject,
     )
     session.add(sub)
     session.flush()

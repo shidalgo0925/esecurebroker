@@ -1,5 +1,6 @@
-"""ESB GO Mobile API v1 — Gate B (`/api/mobile/v1`)."""
+"""ESB GO Mobile API v1 — Gate B (`/api/mobile/v1`).
 
-from corredores.web.mobile.router import router
+Import router from corredores.web.mobile.router (avoid circular imports via package __init__).
+"""
 
 __all__ = ["router"]

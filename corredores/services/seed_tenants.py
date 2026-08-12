@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from corredores.services.auto_e2e import run_auto_e2e_demo
 from corredores.services.seed_pilot import seed_pilot
 from corredores.services.tenant import ensure_membership
-from corredores.web.auth_session import actor_id_for_username
+from corredores.identity_ids import actor_id_for_username
 
 
 def seed_multitenant_demo(

@@ -1,6 +1,6 @@
 """Canonical org membership role_code values (ADR-008).
 
-F1: recognized constants only — no RBAC enforcement yet.
+F2: used by access_control.resolve_access_context (role → scope + permissions).
 BROKER remains LEGACY / TRANSITIONAL with ORGANIZATION scope (not plan Broker/Red).
 PLATFORM is SaaS capability, not a normal brokerage operational role.
 """
@@ -19,7 +19,6 @@ CANONICAL_ROLE_CODES: frozenset[str] = frozenset(
     {OWNER, ADMIN, BROKER, PRODUCER, COLLECTIONS, PLATFORM}
 )
 
-# Default scope mapping (documentation for F2+; not enforced in F1)
 DEFAULT_SCOPE_BY_ROLE: dict[str, str] = {
     OWNER: "ORGANIZATION",
     ADMIN: "ORGANIZATION",

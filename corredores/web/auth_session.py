@@ -18,7 +18,7 @@ from fastapi import Request, Response
 
 from corredores.config import settings
 
-_ACTOR_PREFIX = "piloto:"
+from corredores.identity_ids import actor_id_for_username as actor_id_for_username
 
 
 @dataclass(frozen=True)
@@ -34,10 +34,6 @@ class PilotCredential:
     username: str
     password: str
     display_name: str | None = None
-
-
-def actor_id_for_username(username: str) -> str:
-    return f"{_ACTOR_PREFIX}{username.strip()}"
 
 
 def parse_auth_users() -> list[PilotCredential]:
