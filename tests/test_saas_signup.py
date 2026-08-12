@@ -114,6 +114,44 @@ def test_login_with_registered_email():
     assert login.headers["location"] == "/hoy"
 
 
+def test_pending_user_can_change_plan_from_checkout():
+    """Bug: 'Cambiar de plan' → / → /hoy → checkout mismo plan (atrapado)."""
+    client = TestClient(create_app())
+    email = "cambia.plan@example.invalid"
+    client.post(
+        "/registro",
+        data={
+            "email": email,
+            "password": "secreto123",
+            "display_name": "Cambia Plan",
+            "org_name": "Org Cambia Plan",
+            "plan": "oficina",
+        },
+        follow_redirects=False,
+    )
+
+    land = client.get("/", follow_redirects=False)
+    assert land.status_code == 200
+    assert "/registro?plan=individual" in land.text
+    assert "Individual" in land.text
+
+    switch = client.get("/checkout?plan=individual", follow_redirects=False)
+    assert switch.status_code == 200
+    assert "Individual" in switch.text
+    assert 'name="plan" value="individual"' in switch.text
+    assert "/checkout?plan=oficina" in switch.text  # alt switcher
+
+    with db.SessionLocal() as session:
+        sub = (
+            session.query(OrgSubscription)
+            .join(_models.Organization)
+            .filter(_models.Organization.name == "Org Cambia Plan")
+            .one()
+        )
+        assert sub.status == "pending"
+        assert sub.plan_code == "individual"
+
+
 def test_legacy_plan_alias_profesional_maps_to_oficina():
     from corredores.services.saas_plans import require_plan
 

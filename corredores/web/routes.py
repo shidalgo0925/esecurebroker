@@ -252,14 +252,22 @@ def _coming_soon(request: Request, active: str, title: str, blurb: str):
 def home(request: Request):
     from datetime import datetime, timezone
 
+    from corredores.db import SessionLocal
     from corredores.services.runtime_settings import runtime
     from corredores.services.saas_plans import plans_for_landing, start_href
+    from corredores.services.saas_signup import get_subscription, subscription_allows_access
     from corredores.web.auth_session import read_session
 
     principal = read_session(request)
     if principal is not None and principal.organization_id:
-        return RedirectResponse("/hoy", status_code=303)
-    if principal is not None:
+        # Suscripción pendiente: no empujar a /hoy (el gate de billing
+        # rebotaría a checkout y "Cambiar de plan" quedaría atrapado).
+        with SessionLocal() as db:
+            sub = get_subscription(db, principal.organization_id)
+            if subscription_allows_access(sub):
+                return RedirectResponse("/hoy", status_code=303)
+        # Fall through → landing con #precios para cambiar de plan.
+    elif principal is not None:
         return RedirectResponse("/orgs/seleccionar", status_code=303)
     cfg = runtime()
     return templates.TemplateResponse(
@@ -416,8 +424,9 @@ def checkout_get(
     canceled: str = Query(default=""),
     session: Session = Depends(get_session),
 ):
+    from corredores.services.en1_commercial import en1_commerce_enabled
     from corredores.services.saas_billing import stripe_configured
-    from corredores.services.saas_plans import require_plan
+    from corredores.services.saas_plans import plans_for_landing, require_plan
     from corredores.services.saas_signup import get_subscription, subscription_allows_access
     from corredores.web.auth_session import read_session
 
@@ -429,8 +438,17 @@ def checkout_get(
     if subscription_allows_access(sub) and sub is not None and sub.status == "active":
         return RedirectResponse("/hoy", status_code=303)
     p = require_plan(plan or (sub.plan_code if sub else None))
-    from corredores.services.en1_commercial import en1_commerce_enabled
+    # Permitir cambio de plan mientras la sub sigue pendiente (EN1 usa plan_code local).
+    if sub is not None and sub.status == "pending" and sub.plan_code != p.code and not p.contact_sales:
+        sub.plan_code = p.code
+        session.add(sub)
+        session.commit()
 
+    alt_plans = [
+        pl
+        for pl in plans_for_landing()
+        if not pl["contact_sales"] and pl["code"] != p.code
+    ]
     return templates.TemplateResponse(
         request,
         "checkout.html",
@@ -442,6 +460,7 @@ def checkout_get(
             "canceled": canceled == "1",
             "error": None,
             "promo_code": "",
+            "alt_plans": alt_plans,
         },
     )
 
@@ -470,6 +489,10 @@ def checkout_post(
         sub = get_subscription(session, org.id)
         if sub is None:
             return RedirectResponse(f"/registro?plan={p.code}", status_code=303)
+        if sub.status == "pending" and sub.plan_code != p.code and not p.contact_sales:
+            sub.plan_code = p.code
+            session.add(sub)
+            session.commit()
         result = PaymentService().process_promo_activation(
             session,
             organization=org,
@@ -477,6 +500,13 @@ def checkout_post(
             promo_code=promo_code,
         )
         if not result.ok:
+            from corredores.services.saas_plans import plans_for_landing
+
+            alt_plans = [
+                pl
+                for pl in plans_for_landing()
+                if not pl["contact_sales"] and pl["code"] != p.code
+            ]
             return templates.TemplateResponse(
                 request,
                 "checkout.html",
@@ -489,6 +519,7 @@ def checkout_post(
                     "error": result.user_message
                     or "No pudimos completar la activación de tu cuenta.",
                     "promo_code": promo_code,
+                    "alt_plans": alt_plans,
                 },
                 status_code=400,
             )
