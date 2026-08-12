@@ -403,10 +403,12 @@ class Interaction(Base, TimestampMixin):
     organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
     party_id: Mapped[Optional[str]] = mapped_column(ForeignKey("parties.id"), index=True)
     policy_id: Mapped[Optional[str]] = mapped_column(ForeignKey("policies.id"), index=True)
-    channel: Mapped[str] = mapped_column(String(32), default="NOTE")  # NOTE|CALL|EMAIL|WHATSAPP|OTHER
+    channel: Mapped[str] = mapped_column(String(32), default="NOTE")  # NOTE|CALL|EMAIL|WHATSAPP|VISIT|OTHER
     summary: Mapped[str] = mapped_column(Text, nullable=False)
     actor_id: Mapped[Optional[str]] = mapped_column(String(64))
     data_source: Mapped[str] = mapped_column(String(32), default="MANUAL")
+    # Mobile F5A idempotency (nullable; unique per org when set)
+    client_activity_id: Mapped[Optional[str]] = mapped_column(String(128), index=True)
 
 
 class Task(Base, TimestampMixin):
@@ -475,6 +477,9 @@ class Document(Base, TimestampMixin):
     doc_kind: Mapped[str] = mapped_column(String(40), nullable=False, default="OTRO")
     uploaded_by: Mapped[Optional[str]] = mapped_column(String(64))
     data_source: Mapped[str] = mapped_column(String(32), default="MANUAL")
+    # Mobile F5A idempotency
+    client_upload_id: Mapped[Optional[str]] = mapped_column(String(128), index=True)
+    content_sha256: Mapped[Optional[str]] = mapped_column(String(64))
 
 
 class StatementDelivery(Base, TimestampMixin):

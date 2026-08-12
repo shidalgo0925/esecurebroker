@@ -6,12 +6,23 @@ from datetime import date
 from decimal import Decimal
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 from fastapi import HTTPException as FastAPIHTTPException
 from sqlalchemy.orm import Session
 
 from corredores.domain.models import Carrier, InsuranceLine, Party, Policy, PolicyTerm, VehicleRisk
 from corredores.services.client_360 import build_client_360
+from corredores.services.mobile_writes import (
+    MobileWriteError,
+    activity_public_dict,
+    create_activity,
+    document_public_dict,
+    get_activity,
+    get_document,
+    list_activities,
+    list_documents,
+    upload_document,
+)
 from corredores.services.tenant import assert_membership, list_accessible_organizations
 from corredores.services.today_home import build_today_home
 from corredores.web.auth_session import actor_id_for_username, verify_credentials
@@ -33,11 +44,17 @@ from corredores.web.mobile.deps import (
 from corredores.web.mobile.errors import MobileAPIError
 from corredores.web.mobile.permissions import entitlements_payload
 from corredores.web.mobile.schemas import (
+    ActivityCreateRequest,
+    ActivityListResponse,
+    ActivityOut,
     AttentionCardOut,
     Customer360Response,
     CustomerDetailResponse,
     CustomerListItem,
     CustomerListResponse,
+    DocumentListItem,
+    DocumentListResponse,
+    DocumentOut,
     IdentityOut,
     LoginRequest,
     LogoutRequest,
@@ -645,3 +662,174 @@ def mobile_policy_detail(
         expiration_date=term.expiration_date.isoformat() if term and term.expiration_date else None,
         vehicle=veh,
     )
+
+
+def _map_write_error(exc: MobileWriteError) -> MobileAPIError:
+    if exc.conflict:
+        return MobileAPIError(exc.code, exc.message, status_code=409)
+    return MobileAPIError(exc.code, exc.message, status_code=400)
+
+
+@router.get(
+    "/activities",
+    response_model=ActivityListResponse,
+    summary="List gestiones (scoped)",
+)
+def mobile_activities_list(
+    customer_id: str = Query(default=""),
+    policy_id: str = Query(default=""),
+    limit: int = Query(default=50, ge=1, le=100),
+    ctx: MobileContext = Depends(require_org_context),
+    session: Session = Depends(get_db),
+) -> ActivityListResponse:
+    assert ctx.access is not None
+    try:
+        rows = list_activities(
+            session,
+            ctx.access,
+            customer_id=customer_id.strip() or None,
+            policy_id=policy_id.strip() or None,
+            limit=limit,
+        )
+    except AccessDenied as e:
+        raise map_access_denied(e) from e
+    items = [ActivityOut(**activity_public_dict(r)) for r in rows]
+    return ActivityListResponse(items=items, count=len(items))
+
+
+@router.post(
+    "/activities",
+    response_model=ActivityOut,
+    summary="Create gestión (requires customer context)",
+)
+def mobile_activities_create(
+    body: ActivityCreateRequest,
+    ctx: MobileContext = Depends(require_org_context),
+    session: Session = Depends(get_db),
+) -> ActivityOut:
+    assert ctx.access is not None
+    try:
+        result = create_activity(
+            session,
+            ctx.access,
+            customer_id=body.customer_id,
+            policy_id=body.policy_id,
+            activity_type=body.activity_type,
+            note=body.note,
+            client_activity_id=body.client_activity_id,
+        )
+    except AccessDenied as e:
+        raise map_access_denied(e) from e
+    except MobileWriteError as e:
+        raise _map_write_error(e) from e
+    out = activity_public_dict(result.interaction)
+    out["idempotency"] = result.idempotency
+    return ActivityOut(**out)
+
+
+@router.get(
+    "/activities/{activity_id}",
+    response_model=ActivityOut,
+    summary="Activity detail",
+)
+def mobile_activities_detail(
+    activity_id: str,
+    ctx: MobileContext = Depends(require_org_context),
+    session: Session = Depends(get_db),
+) -> ActivityOut:
+    assert ctx.access is not None
+    try:
+        row = get_activity(session, ctx.access, activity_id)
+    except AccessDenied as e:
+        raise map_access_denied(e) from e
+    return ActivityOut(**activity_public_dict(row))
+
+
+@router.get(
+    "/documents",
+    response_model=DocumentListResponse,
+    summary="List documents for a customer (scoped)",
+)
+def mobile_documents_list(
+    customer_id: str = Query(..., description="Required customer context"),
+    limit: int = Query(default=50, ge=1, le=100),
+    ctx: MobileContext = Depends(require_org_context),
+    session: Session = Depends(get_db),
+) -> DocumentListResponse:
+    assert ctx.access is not None
+    try:
+        rows = list_documents(session, ctx.access, customer_id=customer_id, limit=limit)
+    except AccessDenied as e:
+        raise map_access_denied(e) from e
+    items = [
+        DocumentListItem(
+            document_id=d.id,
+            title=d.title,
+            document_type=d.doc_kind,
+            original_filename=d.original_filename,
+            content_type=d.content_type,
+            size_bytes=d.size_bytes,
+            customer_id=d.party_id,
+            policy_id=d.policy_id,
+            created_at=d.created_at.isoformat() if d.created_at else None,
+        )
+        for d in rows
+    ]
+    return DocumentListResponse(items=items, count=len(items), customer_id=customer_id)
+
+
+@router.post(
+    "/documents/upload",
+    response_model=DocumentOut,
+    summary="Upload document/photo (multipart, idempotent)",
+)
+async def mobile_documents_upload(
+    customer_id: str = Form(...),
+    client_upload_id: str = Form(...),
+    document_type: str = Form("OTRO"),
+    policy_id: str = Form(""),
+    title: str = Form(""),
+    file: UploadFile = File(...),
+    ctx: MobileContext = Depends(require_org_context),
+    session: Session = Depends(get_db),
+) -> DocumentOut:
+    assert ctx.access is not None
+    raw = await file.read()
+    try:
+        result = upload_document(
+            session,
+            ctx.access,
+            customer_id=customer_id,
+            policy_id=policy_id.strip() or None,
+            filename=file.filename or "upload.bin",
+            content=raw,
+            content_type=file.content_type,
+            document_type=document_type,
+            title=title.strip() or None,
+            client_upload_id=client_upload_id,
+        )
+    except AccessDenied as e:
+        raise map_access_denied(e) from e
+    except MobileWriteError as e:
+        raise _map_write_error(e) from e
+    except ValueError as e:
+        raise MobileAPIError("validation_error", str(e), status_code=400) from e
+    return DocumentOut(**document_public_dict(result.document, idempotency=result.idempotency))
+
+
+@router.get(
+    "/documents/{document_id}",
+    response_model=DocumentOut,
+    summary="Document metadata (ACK shape)",
+)
+def mobile_documents_detail(
+    document_id: str,
+    ctx: MobileContext = Depends(require_org_context),
+    session: Session = Depends(get_db),
+) -> DocumentOut:
+    assert ctx.access is not None
+    try:
+        doc = get_document(session, ctx.access, document_id)
+    except AccessDenied as e:
+        raise map_access_denied(e) from e
+    return DocumentOut(**document_public_dict(doc))

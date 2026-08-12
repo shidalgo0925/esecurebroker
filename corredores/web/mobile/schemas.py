@@ -208,3 +208,68 @@ class PolicyDetailResponse(BaseModel):
     effective_date: str | None = None
     expiration_date: str | None = None
     vehicle: dict[str, Any] | None = None
+
+
+# --- F5A activities / documents ---
+
+ActivityType = Literal["NOTE", "CALL", "EMAIL", "WHATSAPP", "VISIT", "OTHER"]
+
+
+class ActivityCreateRequest(BaseModel):
+    customer_id: str = Field(..., description="Required context party")
+    policy_id: str | None = None
+    activity_type: ActivityType = "NOTE"
+    note: str = Field(..., min_length=1, max_length=4000)
+    client_activity_id: str | None = Field(
+        default=None, max_length=128, description="Idempotency key from device"
+    )
+
+
+class ActivityOut(BaseModel):
+    id: str
+    customer_id: str | None
+    policy_id: str | None
+    activity_type: str
+    note: str
+    actor_id: str | None
+    client_activity_id: str | None = None
+    created_at: str | None
+    status: Literal["SYNCED"] = "SYNCED"
+    idempotency: Literal["created", "replayed"] | None = None
+
+
+class ActivityListResponse(BaseModel):
+    items: list[ActivityOut]
+    count: int
+
+
+class DocumentOut(BaseModel):
+    document_id: str
+    status: Literal["SYNCED"] = "SYNCED"
+    created_at: str | None
+    title: str
+    document_type: str
+    original_filename: str
+    content_type: str
+    size_bytes: int
+    context: dict[str, Any]
+    idempotency: Literal["created", "replayed"] | None = None
+
+
+class DocumentListItem(BaseModel):
+    document_id: str
+    title: str
+    document_type: str
+    original_filename: str
+    content_type: str
+    size_bytes: int
+    customer_id: str | None
+    policy_id: str | None
+    created_at: str | None
+    status: Literal["SYNCED"] = "SYNCED"
+
+
+class DocumentListResponse(BaseModel):
+    items: list[DocumentListItem]
+    count: int
+    customer_id: str

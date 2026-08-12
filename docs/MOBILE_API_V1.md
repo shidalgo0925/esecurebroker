@@ -52,8 +52,15 @@ Returns: `identity`, `organization`, `membership`, `role`, `scope`, `permissions
 | `/customers/{id}/360` | 360 filtrado; 0 policies visibles → **404** (misma allowlist que lista) |
 | `/policies?q=&status=` | Lista scoped |
 | `/policies/{id}` | Detail · fuera de scope → **404** |
+| `/activities` | List/create gestiones (F5A) · contexto customer obligatorio |
+| `/activities/{id}` | Detail gestión |
+| `/documents?customer_id=` | List documentos del cliente |
+| `/documents/upload` | Multipart upload idempotente (`client_upload_id`) |
+| `/documents/{id}` | Metadata / ACK |
 
 Cross-tenant / cross-portfolio → **404** `not_found` (no leak).
+
+Ver también: `docs/MOBILE_F5A_BACKEND.md` · brief LOCAL `docs/briefs/LOCAL-f5a-after-backend.md`.
 
 ## Errors
 
@@ -75,6 +82,6 @@ Seed: `scripts/seed_mobile_dev_users.py` · password `ESB_DEV_SEED_PASSWORD`
 
 Alfa plan seed: `broker_red` (permite producer seats). Beta: `oficina`.
 
-## Out of v1
+## Out of v1 (aún)
 
-Uploads, claims write, FCM, offline sync, price changes, SECONDARY portfolio.
+Claims write, FCM, offline-first EP1, price changes, SECONDARY portfolio.
