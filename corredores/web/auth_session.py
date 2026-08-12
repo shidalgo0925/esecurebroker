@@ -86,7 +86,14 @@ def verify_credentials(username: str, password: str) -> PilotCredential | None:
         if u_ok and p_ok:
             return cred
     # 2) Self-serve BrokerAccount (email login)
-    if "@" in needle_u or settings.saas_signup_enabled:
+    signup_on = False
+    try:
+        from corredores.services.runtime_settings import runtime
+
+        signup_on = runtime().bool("saas.signup_enabled", True)
+    except Exception:
+        signup_on = True
+    if "@" in needle_u or signup_on:
         try:
             from corredores.db import SessionLocal
             from corredores.services.saas_signup import find_account_by_email, verify_password
@@ -223,6 +230,9 @@ def is_public_path(path: str) -> bool:
     if path.startswith("/static/") or path == "/static":
         return True
     if path.startswith("/webhooks/"):
+        return True
+    # Mobile API uses Bearer tokens — never HTML cookie redirects.
+    if path.startswith("/api/mobile/"):
         return True
     if path in {"/favicon.ico", "/docs", "/openapi.json", "/redoc"}:
         return True

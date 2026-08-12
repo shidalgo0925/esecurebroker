@@ -544,3 +544,37 @@ class OrgSubscription(Base, TimestampMixin):
     stripe_checkout_session_id: Mapped[Optional[str]] = mapped_column(String(128))
     current_period_end: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     activated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
+
+class MobileRefreshToken(Base, TimestampMixin):
+    """Refresh tokens for ESB GO Mobile API (Gate B). Opaque token hashed at rest."""
+
+    __tablename__ = "mobile_refresh_tokens"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    subject_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    username: Mapped[str] = mapped_column(String(200), nullable=False)
+    organization_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True, index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    revoked_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    replaced_by_id: Mapped[Optional[str]] = mapped_column(String(36))
+
+
+class SystemSetting(Base, TimestampMixin):
+    """Configuración operativa editable (mantenimiento) — fuente de verdad en DB.
+
+    Bootstrap mínimo (DATABASE_URL / AUTH_SECRET) puede seguir en .env;
+    correo, captura IA, estados auto, Stripe y dueños de plataforma viven aquí.
+    """
+
+    __tablename__ = "system_settings"
+
+    key: Mapped[str] = mapped_column(String(120), primary_key=True)
+    value: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    category: Mapped[str] = mapped_column(String(40), nullable=False, default="general", index=True)
+    label: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    help_text: Mapped[Optional[str]] = mapped_column(Text)
+    value_type: Mapped[str] = mapped_column(String(20), nullable=False, default="string")  # string|bool|int|secret
+    is_secret: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    updated_by: Mapped[Optional[str]] = mapped_column(String(128))
