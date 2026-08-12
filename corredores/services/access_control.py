@@ -299,6 +299,12 @@ def active_primary_policy_ids(
 def party_ids_in_portfolio(
     session: Session, *, organization_id: str, policy_ids: Iterable[str]
 ) -> set[str]:
+    """Client parties of the given policies (Policy.client_party_id).
+
+    Canonical P0 \"mis clientes\" for ASSIGNED_PORTFOLIO:
+    party with ≥1 PRIMARY-vigente policy in the producer portfolio.
+    Does **not** include default_producer-only parties (preassign only).
+    """
     ids = list(policy_ids)
     if not ids:
         return set()
@@ -313,6 +319,20 @@ def party_ids_in_portfolio(
         .all()
     )
     return {r[0] for r in rows if r[0]}
+
+
+def visible_portfolio_client_party_ids(
+    session: Session, *, organization_id: str, producer_profile_id: str
+) -> set[str]:
+    """Single allowlist for list / detail / 360 under ASSIGNED_PORTFOLIO."""
+    pids = active_primary_policy_ids(
+        session,
+        organization_id=organization_id,
+        producer_profile_id=producer_profile_id,
+    )
+    return party_ids_in_portfolio(
+        session, organization_id=organization_id, policy_ids=pids
+    )
 
 
 def apply_scope_to_policy_query(
@@ -345,13 +365,10 @@ def apply_scope_to_party_query(
     if ctx.scope == SCOPE_ASSIGNED_PORTFOLIO:
         if not ctx.producer_profile_id:
             return query.filter(Party.id.in_([]))
-        pids = active_primary_policy_ids(
+        party_ids = visible_portfolio_client_party_ids(
             session,
             organization_id=ctx.organization_id,
             producer_profile_id=ctx.producer_profile_id,
-        )
-        party_ids = party_ids_in_portfolio(
-            session, organization_id=ctx.organization_id, policy_ids=pids
         )
         if not party_ids:
             return query.filter(Party.id.in_([]))
@@ -390,13 +407,10 @@ def require_party_in_scope(session: Session, ctx: AccessContext, party_id: str) 
     if ctx.scope == SCOPE_ASSIGNED_PORTFOLIO:
         if not ctx.producer_profile_id:
             raise AccessDenied("not found", not_found=True)
-        pids = active_primary_policy_ids(
+        party_ids = visible_portfolio_client_party_ids(
             session,
             organization_id=ctx.organization_id,
             producer_profile_id=ctx.producer_profile_id,
-        )
-        party_ids = party_ids_in_portfolio(
-            session, organization_id=ctx.organization_id, policy_ids=pids
         )
         if party_id not in party_ids:
             raise AccessDenied("not found", not_found=True)
@@ -423,6 +437,8 @@ def scope_allowlists(
 
     ``None`` means unrestricted within the organization (ORGANIZATION / PLATFORM).
     Empty frozenset means scoped but empty portfolio.
+
+    party_ids ≡ clients with ≥1 portfolio PRIMARY policy (same as list/360 gate).
     """
     if ctx.scope in {SCOPE_ORGANIZATION, SCOPE_PLATFORM}:
         return None, None
@@ -437,8 +453,10 @@ def scope_allowlists(
             )
         )
         party_ids = frozenset(
-            party_ids_in_portfolio(
-                session, organization_id=ctx.organization_id, policy_ids=pids
+            visible_portfolio_client_party_ids(
+                session,
+                organization_id=ctx.organization_id,
+                producer_profile_id=ctx.producer_profile_id,
             )
         )
         return pids, party_ids

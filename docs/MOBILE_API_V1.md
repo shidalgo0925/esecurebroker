@@ -47,9 +47,9 @@ Returns: `identity`, `organization`, `membership`, `role`, `scope`, `permissions
 | GET | Description |
 |-----|-------------|
 | `/today` | `build_today_home` filtrado por AccessContext |
-| `/customers?q=&party_type=` | Lista/search scoped |
+| `/customers?q=&party_type=` | Lista/search scoped · **P0:** solo clientes con ≥1 PRIMARY en portfolio |
 | `/customers/{id}` | Detail · fuera de scope → **404** |
-| `/customers/{id}/360` | 360 filtrado; 0 policies visibles → **404** |
+| `/customers/{id}/360` | 360 filtrado; 0 policies visibles → **404** (misma allowlist que lista) |
 | `/policies?q=&status=` | Lista scoped |
 | `/policies/{id}` | Detail · fuera de scope → **404** |
 

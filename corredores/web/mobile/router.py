@@ -354,7 +354,6 @@ def mobile_customers(
     session: Session = Depends(get_db),
 ) -> CustomerListResponse:
     assert ctx.access is not None
-    org_id = ctx.organization.id
     needle = (q or "").strip()
     tipo = (party_type or "").strip().upper()
     parties_q = apply_scope_to_party_query(
@@ -371,6 +370,10 @@ def mobile_customers(
     items: list[CustomerListItem] = []
     for p in parties:
         if tipo and (p.party_type or "").upper() != tipo:
+            continue
+        # P0 invariant: listed customer must have ≥1 scoped policy (same gate as 360).
+        # default_producer alone never grants visibility.
+        if ctx.access.scope == "ASSIGNED_PORTFOLIO" and policy_counts.get(p.id, 0) < 1:
             continue
         blob = " ".join(
             x
@@ -451,33 +454,62 @@ def mobile_customer_360(
 ) -> Customer360Response:
     assert ctx.access is not None
     try:
-        p = require_party_in_scope(session, ctx.access, customer_id)
+        party = require_party_in_scope(session, ctx.access, customer_id)
     except AccessDenied as e:
         raise map_access_denied(e) from e
     try:
-        snap = build_client_360(session, ctx.organization.id, p.id, today=date.today())
+        snap = build_client_360(session, ctx.organization.id, party.id, today=date.today())
     except ValueError as e:
         raise MobileAPIError("not_found", "Customer not found.", status_code=404) from e
-    # F3: 360 filtrado por portfolio (0 policies visibles → 404)
+
+    # Same allowlist as /customers: ≥1 PRIMARY in portfolio → 360 filtrado; 0 → 404.
+    # default_producer does not grant access (ADR-008 P0).
     policies = list(snap.policies)
+    vehicles = list(snap.vehicles)
+    renewals = list(snap.renewals)
+    claims = list(snap.claims)
     policy_ids, _ = scope_allowlists(session, ctx.access)
     if policy_ids is not None:
+        from corredores.domain.models import Claim, RenewalOpportunity
+
         policies = [x for x in policies if x.get("id") in policy_ids]
         if not policies:
             raise MobileAPIError("not_found", "Customer not found.", status_code=404)
+        vis_ids = [x["id"] for x in policies]
+        vis_set = set(vis_ids)
+        vehicles = [v for v in vehicles if v.get("policy_id") in vis_set]
+        renewals = [
+            {"id": r.id, "status": r.status, "target": str(r.target_date)}
+            for r in session.query(RenewalOpportunity)
+            .filter(
+                RenewalOpportunity.organization_id == ctx.organization.id,
+                RenewalOpportunity.previous_policy_id.in_(vis_ids),
+            )
+            .all()
+        ]
+        claims = [
+            {"id": c.id, "status": c.status, "number": c.claim_number}
+            for c in session.query(Claim)
+            .filter(
+                Claim.organization_id == ctx.organization.id,
+                Claim.policy_id.in_(vis_ids),
+            )
+            .all()
+        ]
+
     return Customer360Response(
-        customer=_customer_detail(p),
+        customer=_customer_detail(party),
         contact={
-            "phone": p.phone,
-            "email": p.email,
-            "address": p.address,
-            "district": p.district,
-            "national_id": p.national_id,
+            "phone": party.phone,
+            "email": party.email,
+            "address": party.address,
+            "district": party.district,
+            "national_id": party.national_id,
         },
         policies=policies,
-        vehicles=list(snap.vehicles),
-        renewals=list(snap.renewals),
-        claims=list(snap.claims),
+        vehicles=vehicles,
+        renewals=renewals,
+        claims=claims,
         promises={
             "active": snap.promises_active,
             "broken": snap.promises_broken,
