@@ -17,12 +17,14 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -68,6 +70,11 @@ class Party(Base, TimestampMixin):
     address: Mapped[Optional[str]] = mapped_column(Text)
     birth_date: Mapped[Optional[date]] = mapped_column(Date)
     data_source: Mapped[str] = mapped_column(String(32), default="MANUAL")
+    # ADR-008: optional default for new policies / import — NOT portfolio ownership.
+    # FK enforced in Alembic (Postgres); no ORM FK here to avoid circular create/drop.
+    default_producer_profile_id: Mapped[Optional[str]] = mapped_column(
+        String(36), nullable=True, index=True
+    )
 
 
 class PartyRole(Base, TimestampMixin):
@@ -492,8 +499,8 @@ class StatementDelivery(Base, TimestampMixin):
 class OrgMembership(Base, TimestampMixin):
     """Subject ↔ Organization (ADR-007). Piloto uses actor_id; EN1 will map subjects later.
 
-    Not a definitive identity system — replace subject resolution with EN1 (ADR-006).
-    Supports multiple memberships per subject.
+    role_code (ADR-008): OWNER|ADMIN|BROKER|PRODUCER|COLLECTIONS|PLATFORM.
+    F1 recognizes codes only — RBAC enforcement is F2+. BROKER = legacy/transitional.
     """
 
     __tablename__ = "org_memberships"
@@ -507,6 +514,63 @@ class OrgMembership(Base, TimestampMixin):
     role_code: Mapped[str] = mapped_column(String(64), nullable=False, default="BROKER")
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     external_en1_membership_id: Mapped[Optional[str]] = mapped_column(String(64), unique=True)
+
+
+class ProducerProfile(Base, TimestampMixin):
+    """Domain producer/agent inside an Organization (ADR-008). Membership optional."""
+
+    __tablename__ = "producer_profiles"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "code", name="uq_producer_profile_org_code"),
+        UniqueConstraint("organization_id", "party_id", name="uq_producer_profile_org_party"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    party_id: Mapped[str] = mapped_column(ForeignKey("parties.id"), index=True)
+    code: Mapped[Optional[str]] = mapped_column(String(40))
+    display_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="ACTIVE")
+
+
+class PortfolioAssignment(Base, TimestampMixin):
+    """Versioned portfolio ownership (ADR-008). P0 operational: POLICY + PRIMARY."""
+
+    __tablename__ = "portfolio_assignments"
+    __table_args__ = (
+        Index(
+            "uq_portfolio_primary_policy_active",
+            "organization_id",
+            "target_id",
+            unique=True,
+            sqlite_where=text(
+                "target_type = 'POLICY' AND assignment_role = 'PRIMARY' AND effective_to IS NULL"
+            ),
+            postgresql_where=text(
+                "target_type = 'POLICY' AND assignment_role = 'PRIMARY' AND effective_to IS NULL"
+            ),
+        ),
+        Index("ix_portfolio_assignments_producer", "organization_id", "producer_profile_id"),
+        Index(
+            "ix_portfolio_assignments_target",
+            "organization_id",
+            "target_type",
+            "target_id",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    producer_profile_id: Mapped[str] = mapped_column(
+        ForeignKey("producer_profiles.id"), nullable=False, index=True
+    )
+    target_type: Mapped[str] = mapped_column(String(32), nullable=False)  # POLICY|PARTY
+    target_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    assignment_role: Mapped[str] = mapped_column(String(32), nullable=False, default="PRIMARY")
+    effective_from: Mapped[date] = mapped_column(Date, nullable=False)
+    effective_to: Mapped[Optional[date]] = mapped_column(Date)
+    reason: Mapped[Optional[str]] = mapped_column(String(500))
+    assigned_by_subject_id: Mapped[Optional[str]] = mapped_column(String(128))
 
 
 class BrokerAccount(Base, TimestampMixin):
