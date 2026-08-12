@@ -12,6 +12,7 @@ Formal ADR (**ACCEPTED**):
 | F4 Producer Admin | **DONE** | `docs/ADR-008_F4_PRODUCER_ADMIN.md` |
 | F5 Seats EN1 | **DONE** | `docs/ADR-008_F5_SEATS.md` |
 | F6 ESB GO Producer | **DONE** | `docs/ADR-008_F6_ESB_GO_PRODUCER.md` |
+| DEV live alignment | **DONE** | `docs/ADR-008_DEV_LIVE_ALIGNMENT.md` · restart after `b3101dd` |
 
 Solo DEV. PROD no tocado. ADR-037 sigue como gate M2M PROD.
 
