@@ -13,7 +13,6 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from sqlalchemy.orm import Session
 
-from corredores.config import settings
 from corredores.domain.enums import DataSource
 from corredores.domain.models import Organization, Party, StatementDelivery
 from corredores.services.account_cxc import (
@@ -23,6 +22,7 @@ from corredores.services.account_cxc import (
 )
 from corredores.services.interactions import log_interaction
 from corredores.services.mail import mail_configured, send_email
+from corredores.services.runtime_settings import runtime
 
 _TEMPLATES = Path(__file__).resolve().parent.parent / "web" / "templates"
 _env = Environment(
@@ -274,10 +274,11 @@ def run_auto_statement_send(
     """Send statements to clients with overdue balance, respecting cooldown and mail config."""
     today = today or date.today()
     report = AutoSendReport(as_of=today, dry_run=dry_run)
+    cfg = runtime(session)
 
-    if not settings.statement_auto_enabled and not dry_run:
+    if not cfg.bool("statements.auto_enabled") and not dry_run:
         report.outcomes.append(
-            DeliveryOutcome("—", "—", "SKIPPED", "STATEMENT_AUTO_ENABLED=false")
+            DeliveryOutcome("—", "—", "SKIPPED", "statements.auto_enabled=false (Mantenimiento)")
         )
         report.skipped = 1
         return report
@@ -292,8 +293,8 @@ def run_auto_statement_send(
             seen.add(pid)
             party_ids.append(pid)
 
-    cooldown = timedelta(days=max(1, settings.statement_auto_cooldown_days))
-    min_days = max(1, settings.statement_auto_min_days_overdue)
+    cooldown = timedelta(days=max(1, cfg.int("statements.cooldown_days", 7)))
+    min_days = max(1, cfg.int("statements.min_days_overdue", 1))
     now = datetime.now(timezone.utc)
 
     for party_id in party_ids:
@@ -302,7 +303,7 @@ def run_auto_statement_send(
         name = stmt.party_name
         report.candidates += 1
 
-        if settings.statement_auto_only_overdue and stmt.overdue_balance <= 0:
+        if cfg.bool("statements.only_overdue", True) and stmt.overdue_balance <= 0:
             report.skipped += 1
             report.outcomes.append(
                 DeliveryOutcome(party_id, name, "SKIPPED", "sin saldo vencido", party.email if party else None)
@@ -355,7 +356,7 @@ def run_auto_statement_send(
                         party_id,
                         name,
                         "SKIPPED",
-                        f"cooldown ({settings.statement_auto_cooldown_days}d) — último envío {last.created_at}",
+                        f"cooldown ({cfg.int('statements.cooldown_days', 7)}d) — último envío {last.created_at}",
                         dest,
                     )
                 )

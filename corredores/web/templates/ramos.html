@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Ramos · ESecureBroker{% endblock %}
+{% block topbar %}Gestión · Ramos{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1 class="page-title">Ramos</h1>
+  <p class="page-sub">Catálogo de líneas de seguro (editable) · afecta a todas las orgs · <b>{{ org_name }}</b></p>
+</section>
+
+{% if flash %}<p class="flash-ok">Guardado</p>{% endif %}
+{% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+
+{% if not edit_row %}
+<section class="poliza-panel catalog-editor">
+  <h2 class="poliza-panel-title">Nuevo ramo</h2>
+  <form class="catalog-form" method="post" action="/ramos">
+    <input type="hidden" name="line_id" value="" />
+    <div class="catalog-row">
+      <label class="catalog-field code">Código
+        <input name="code" class="mono" required maxlength="40" placeholder="CAR" />
+      </label>
+      <label class="catalog-field name">Nombre
+        <input name="name" required maxlength="120" placeholder="Todo Riesgo Contratista" />
+      </label>
+      <label class="check-row">
+        <input type="checkbox" name="operational" value="1" />
+        <span>Operativo</span>
+      </label>
+      <div class="wizard-actions">
+        <button class="btn-primary" type="submit">Agregar</button>
+      </div>
+    </div>
+  </form>
+</section>
+{% endif %}
+
+<div class="table-card">
+  <table class="data-table">
+    <thead><tr><th>Código</th><th>Nombre</th><th>Operativo</th><th></th></tr></thead>
+    <tbody>
+    {% for l in lines %}
+      {% if edit_row and l.id == edit_row.id %}
+      <tr class="catalog-edit-row" id="row-{{ l.id }}">
+        <td colspan="4">
+          <form class="catalog-form" method="post" action="/ramos">
+            <input type="hidden" name="line_id" value="{{ l.id }}" />
+            <div class="catalog-row">
+              <label class="catalog-field code">Código
+                <input name="code" class="mono" required maxlength="40" value="{{ l.code }}" autofocus />
+              </label>
+              <label class="catalog-field name">Nombre
+                <input name="name" required maxlength="120" value="{{ l.name }}" />
+              </label>
+              <label class="check-row">
+                <input type="checkbox" name="operational" value="1"
+                  {% if l.operational_in_p0 %}checked{% endif %} />
+                <span>Operativo</span>
+              </label>
+              <div class="wizard-actions">
+                <a class="btn-secondary" href="/ramos#row-{{ l.id }}">Cancelar</a>
+                <button class="btn-primary" type="submit">Guardar</button>
+              </div>
+            </div>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr id="row-{{ l.id }}">
+        <td class="cli-id">{{ l.code }}</td>
+        <td class="cli-name">{{ l.name }}</td>
+        <td>{{ 'Sí' if l.operational_in_p0 else 'No' }}</td>
+        <td class="cli-action"><a class="open-link" href="/ramos?edit={{ l.id }}#row-{{ l.id }}">Editar</a></td>
+      </tr>
+      {% endif %}
+    {% else %}
+      <tr><td colspan="4" class="empty-row">Sin ramos — agregá uno arriba.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="hint" style="margin-top:0.75rem">Las tasas % Cia por ramo se editan en <a href="/comisiones">Comisiones</a>.</p>
+<script>
+(function () {
+  var id = location.hash && location.hash.slice(1);
+  if (!id) return;
+  var el = document.getElementById(id);
+  if (el) {
+    el.scrollIntoView({ block: "center", behavior: "auto" });
+    var input = el.querySelector("input[name=code], input[name=name]");
+    if (input) input.focus({ preventScroll: true });
+  }
+})();
+</script>
+{% endblock %}

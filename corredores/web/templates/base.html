@@ -3,15 +3,15 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{% block title %}ESecureBroker{% endblock %}</title>
+  <title>{% if is_dev_env %}[DEV] {% endif %}{% block title %}ESecureBroker{% endblock %}</title>
   <link rel="icon" href="/static/brand/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,500;1,6..72,600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/piloto.css?v=dash7" />
+  <link rel="stylesheet" href="/static/piloto.css?v=env-teal1" />
 </head>
 {% from "macros_icons.html" import icon %}
-<body class="app {% if sidebar_collapsed %}sidebar-collapsed{% endif %}">
+<body class="app {% if sidebar_collapsed %}sidebar-collapsed{% endif %} {% if is_dev_env %}env-dev{% endif %}">
   <aside class="sidebar" id="sidebar">
     <div class="brand">
       <a href="/hoy" class="brand-mark" title="ESecureBroker">
@@ -20,6 +20,9 @@
       </a>
       <button type="button" class="collapse-btn" id="collapseBtn" title="Colapsar menú">«</button>
     </div>
+    {% if is_dev_env %}
+    <div class="env-badge" title="Entorno de desarrollo — datos aislados de producción">DEV</div>
+    {% endif %}
 
     <details class="nueva-gestion" id="nuevaGestion" {% if nueva_gestion_open %}open{% endif %}>
       <summary><span class="plus">+</span> <span>Nueva gestión</span></summary>
@@ -52,8 +55,14 @@
     </div>
 
     <div class="side-actor">
-      {% if org_name %}<div class="side-org">{{ org_name }}</div>{% endif %}
-      <div>{{ actor_name }}</div>
+      {% if org_name %}
+        {% if can_switch_org %}
+        <a class="side-org side-org-link" href="/orgs/seleccionar?next={{ request.url.path|urlencode }}" title="Cambiar organización">{{ org_name }} ▾</a>
+        {% else %}
+        <div class="side-org">{{ org_name }}</div>
+        {% endif %}
+      {% endif %}
+      <div>{{ actor_name }}{% if platform_admin %} · dueño{% endif %}</div>
     </div>
     <a class="nav-link nav-logout" href="/logout" title="Salir">
       <span class="nav-ico">{{ icon("logout") }}</span>
@@ -87,6 +96,36 @@
         ng.addEventListener("toggle", function () {
           document.cookie =
             "nueva_gestion=" + (ng.open ? "open" : "closed") + ";path=/;max-age=31536000";
+        });
+      }
+
+      /* Mantener posición del menú lateral al navegar (Gestión → Comisiones, etc.) */
+      var side = document.getElementById("sidebar");
+      if (side) {
+        var KEY = "esb.sidebarScroll";
+        function saveScroll() {
+          try { sessionStorage.setItem(KEY, String(side.scrollTop)); } catch (e) {}
+        }
+        var saved = null;
+        try { saved = sessionStorage.getItem(KEY); } catch (e) {}
+        if (saved !== null && saved !== "") {
+          side.scrollTop = parseInt(saved, 10) || 0;
+        }
+        var on = side.querySelector(".nav-link.on");
+        if (on) {
+          var sRect = side.getBoundingClientRect();
+          var oRect = on.getBoundingClientRect();
+          if (oRect.top < sRect.top + 8 || oRect.bottom > sRect.bottom - 8) {
+            on.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "auto" });
+          }
+        }
+        var t;
+        side.addEventListener("scroll", function () {
+          clearTimeout(t);
+          t = setTimeout(saveScroll, 80);
+        }, { passive: true });
+        side.querySelectorAll("a[href]").forEach(function (a) {
+          a.addEventListener("click", saveScroll);
         });
       }
     })();

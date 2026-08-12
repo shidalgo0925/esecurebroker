@@ -4,18 +4,18 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from corredores.config import settings
 from corredores.domain.models import OrgSubscription
+from corredores.services.runtime_settings import runtime
 from corredores.services.saas_plans import SaasPlan, require_plan
 from corredores.services.saas_signup import activate_subscription, get_subscription
 
 
 def stripe_configured() -> bool:
-    return bool((settings.stripe_secret_key or "").strip())
+    return bool(runtime().get("saas.stripe_secret_key").strip())
 
 
 def public_base_url() -> str:
-    return (settings.public_base_url or "http://127.0.0.1:8091").rstrip("/")
+    return (runtime().get("saas.public_base_url") or "http://127.0.0.1:8091").rstrip("/")
 
 
 def create_stripe_checkout_session(
@@ -29,7 +29,7 @@ def create_stripe_checkout_session(
     """Returns Stripe Checkout Session URL."""
     import stripe
 
-    stripe.api_key = settings.stripe_secret_key
+    stripe.api_key = runtime().get("saas.stripe_secret_key")
     session = stripe.checkout.Session.create(
         mode="subscription",
         customer_email=customer_email,
@@ -125,7 +125,7 @@ def confirm_piloto_payment(db: Session, organization_id: str, plan_code: str) ->
 def activate_from_stripe_session(db: Session, checkout_session_id: str) -> OrgSubscription | None:
     import stripe
 
-    stripe.api_key = settings.stripe_secret_key
+    stripe.api_key = runtime().get("saas.stripe_secret_key")
     sess = stripe.checkout.Session.retrieve(checkout_session_id)
     org_id = (sess.metadata or {}).get("organization_id")
     plan_code = (sess.metadata or {}).get("plan_code") or "profesional"

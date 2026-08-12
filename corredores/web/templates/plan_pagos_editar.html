@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Plan de pagos · {{ view.policy_number }} · ESecureBroker{% endblock %}
+{% block topbar %}Cartera · Editar cuotas{% endblock %}
+{% block content %}
+<section class="page-head row-between">
+  <div>
+    <h1 class="page-title">Plan de pagos</h1>
+    <p class="page-sub">
+      Póliza <a href="/polizas/{{ view.policy_id }}">{{ view.policy_number }}</a>
+      · Prima <b class="mono">${{ view.premium|money }}</b>
+      · <b>{{ org_name }}</b>
+    </p>
+  </div>
+  <a class="btn-secondary" href="/polizas/{{ view.policy_id }}">Volver a póliza</a>
+</section>
+
+{% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+{% if ok %}<p class="form-ok">{{ ok }}</p>{% endif %}
+
+<section class="poliza-panel" style="margin-bottom:1.25rem">
+  <h2 class="poliza-panel-title">Regenerar calendario</h2>
+  {% if view.can_regenerate %}
+  <p class="meta" style="margin-top:0">Reemplaza todas las cuotas abiertas. Reparto igualitario sobre la prima.</p>
+  <form class="capture-form" method="post" action="/polizas/{{ view.policy_id }}/plan-pagos/regenerar">
+    <div class="capture-grid">
+      <label>Nº cuotas
+        <input name="count" class="mono" type="number" min="1" max="60" value="{{ regen_count }}" required />
+      </label>
+      <label>1ª cuota
+        <input name="first_due" type="date" value="{{ first_due }}" required />
+      </label>
+      <label>Cada (meses)
+        <input name="frequency_months" class="mono" type="number" min="1" max="12" value="1" required />
+      </label>
+    </div>
+    <div class="wizard-actions">
+      <button class="btn-primary" type="submit">Regenerar plan →</button>
+    </div>
+  </form>
+  {% else %}
+  <p class="meta" style="margin:0">
+    {% if view.locked_count %}Hay {{ view.locked_count }} cuota(s) con pagos — no se puede regenerar completo. Editá fechas/montos de las abiertas abajo.{% else %}Falta prima en la póliza para regenerar.{% endif %}
+  </p>
+  {% endif %}
+</section>
+
+<section class="poliza-panel poliza-cuotas">
+  <div class="poliza-cuotas-head">
+    <h2 class="poliza-panel-title">Cuotas actuales</h2>
+    <span class="meta">{{ view.installments|length }} · suma debe = prima</span>
+  </div>
+  {% if view.installments %}
+  <form method="post" action="/polizas/{{ view.policy_id }}/plan-pagos">
+    <div class="table-card">
+      <table class="data-table">
+        <thead>
+          <tr><th>#</th><th>Vence</th><th>Monto</th><th>Pagado</th><th>Saldo</th><th></th></tr>
+        </thead>
+        <tbody>
+        {% for i in view.installments %}
+          <tr>
+            <td class="mono">
+              {{ i.number }}
+              <input type="hidden" name="inst_id" value="{{ i.id }}" />
+            </td>
+            <td>
+              {% if i.locked %}
+                <span class="mono">{{ i.due_date }}</span>
+                <input type="hidden" name="due_{{ i.id }}" value="{{ i.due_date }}" />
+              {% else %}
+                <input type="date" name="due_{{ i.id }}" value="{{ i.due_date }}" required />
+              {% endif %}
+            </td>
+            <td>
+              {% if i.locked %}
+                <span class="mono">${{ i.amount|money }}</span>
+                <input type="hidden" name="amt_{{ i.id }}" value="{{ i.amount }}" />
+              {% else %}
+                <input name="amt_{{ i.id }}" class="mono" value="{{ '%.2f'|format(i.amount) }}" inputmode="decimal" required />
+              {% endif %}
+            </td>
+            <td class="mono">${{ i.paid|money }}</td>
+            <td class="mono">${{ i.balance|money }}</td>
+            <td>{% if i.locked %}<span class="kind-pill">con pago</span>{% else %}<span class="meta">editable</span>{% endif %}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="wizard-actions" style="margin-top:1rem">
+      <a class="btn-secondary" href="/polizas/{{ view.policy_id }}">Cancelar</a>
+      <button class="btn-primary" type="submit">Guardar cambios</button>
+    </div>
+  </form>
+  {% else %}
+  <p class="empty-row">Sin cuotas. Usá regenerar arriba.</p>
+  {% endif %}
+</section>
+{% endblock %}

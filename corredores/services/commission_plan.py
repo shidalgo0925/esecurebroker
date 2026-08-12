@@ -53,7 +53,12 @@ LINE_RATES: dict[str, Decimal] = {
     "MOTO": Decimal("0.20"),
     "AP": Decimal("0.20"),
     "HOGAR": Decimal("0.20"),
+    "COMERCIAL": Decimal("0.20"),
+    "RC": Decimal("0.20"),
     "INCENDIO": Decimal("0.25"),
+    "CAR": Decimal("0.20"),
+    "EAR": Decimal("0.20"),
+    "EQUIPO": Decimal("0.20"),
     "VIAJE": Decimal("0.25"),
     "TRANSPORTE": Decimal("0.15"),
     "SALUD": Decimal("0.10"),
@@ -65,7 +70,12 @@ LINE_LABELS: dict[str, str] = {
     "MOTO": "Moto",
     "AP": "Asiento / Accidentes personales",
     "HOGAR": "Multirriesgo residencial",
+    "COMERCIAL": "Multirriesgo comercial",
+    "RC": "Responsabilidad civil",
     "INCENDIO": "Incendio y aliadas",
+    "CAR": "Todo Riesgo Contratista",
+    "EAR": "Todo Riesgo Montaje",
+    "EQUIPO": "Equipo de contratistas",
     "VIAJE": "Seguro de viaje",
     "TRANSPORTE": "Transporte de carga",
     "SALUD": "Salud individual",
@@ -133,15 +143,28 @@ def build_commission_plan_view(session: Session, organization_id: str) -> Commis
         if line.code not in by_line or rule.agreement_reference == PLAN_REF:
             by_line[line.code] = rule
 
+    # Prefer all lines in DB; seed catalog LINE_RATES only as fallback labels/rates.
+    db_lines = session.query(InsuranceLine).order_by(InsuranceLine.code.asc()).all()
+    codes: list[str] = []
+    labels: dict[str, str] = dict(LINE_LABELS)
+    for ln in db_lines:
+        codes.append(ln.code)
+        labels[ln.code] = ln.name
+    for code in LINE_RATES:
+        if code not in codes:
+            codes.append(code)
+
     line_rates = []
-    for code, rate in LINE_RATES.items():
+    for code in codes:
         rule = by_line.get(code)
+        fallback = LINE_RATES.get(code, Decimal("0"))
+        rate = rule.rate if rule else fallback
         line_rates.append(
             {
                 "code": code,
-                "label": LINE_LABELS.get(code, code),
-                "rate": rule.rate if rule else rate,
-                "rate_pct": f"{((rule.rate if rule else rate) * 100):.0f}%",
+                "label": labels.get(code, code),
+                "rate": rate,
+                "rate_pct": f"{(rate * 100):.2f}".rstrip("0").rstrip(".") + "%",
                 "base": rule.calculation_base if rule else "ANNUAL_PREMIUM",
                 "carrier_specific": bool(rule and rule.carrier_id),
                 "agreement": rule.agreement_reference if rule else PLAN_REF,

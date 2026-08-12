@@ -1,5 +1,17 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# ADR-006 — pareo de entornos (nunca cruzar DEV↔PROD).
+EN1_ONBOARDING_PROD = "https://appprd.easynodeone.com/register"
+EN1_ONBOARDING_DEV = "https://appdev.easynodeone.com/register"
+
+
+def default_en1_onboarding_url(app_env: str | None = None) -> str:
+    """EN1 register URL for this ESB environment (ADR-006)."""
+    env = (app_env or "dev").strip().lower()
+    if env in {"prod", "production"}:
+        return EN1_ONBOARDING_PROD
+    return EN1_ONBOARDING_DEV
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
@@ -39,16 +51,32 @@ class Settings(BaseSettings):
     auth_cookie_name: str = "esb_session"
     auth_session_days: int = 14
     auth_display_name: str = "Broker ESecureBroker"
+    # Dueño de plataforma (SaaS): ve / entra a todas las orgs. CSV emails y/o usernames.
+    # No rompe aislamiento tenant↔tenant entre corredurías normales (ADR-007).
+    platform_admin_emails: str = ""
+    platform_admin_usernames: str = ""
 
-    # Self-serve SaaS — billing/identidad definitivos en EN1 (ADR-006)
-    # Landing comercial es ESecureBroker; CTAs apuntan a EN1 cuando haya URL.
+    # Self-serve SaaS — UX en ESB; SoR comercial EN1 vía API M2M (ADR-006 Ana).
+    # CTAs de landing → /registro (nunca UI EN1).
     saas_signup_enabled: bool = True
-    saas_onboarding_url: str | None = None  # ej. https://app.example.com/subscribe?product=esecurebroker
+    saas_onboarding_url: str | None = None  # deprecated: no usar para CTAs
     saas_contact_email: str | None = "hola@esecurebroker.etsrv.site"
     public_base_url: str = "https://esecurebroker.etsrv.site"
     stripe_secret_key: str | None = None
     stripe_publishable_key: str | None = None
     stripe_webhook_secret: str | None = None
+
+    # EN1 commerce M2M — solo DEV hasta certificar. Paths del contrato: CODITO (no inventar SoR).
+    en1_commerce_enabled: bool = False
+    en1_api_base_url: str | None = None  # ej. https://appdev.easynodeone.com
+    en1_m2m_token: str | None = None
+
+    def resolved_en1_onboarding_url(self) -> str:
+        """Legacy helper; CTAs ya no usan UI EN1."""
+        explicit = (self.saas_onboarding_url or "").strip()
+        if explicit:
+            return explicit
+        return default_en1_onboarding_url(self.app_env)
 
 
 settings = Settings()

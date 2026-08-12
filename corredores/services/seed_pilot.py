@@ -48,6 +48,10 @@ LINES = [
     ("COMERCIAL", "Multirriesgo comercial", False),
     ("RC", "Responsabilidad civil", False),
     ("INCENDIO", "Incendio y aliadas", False),
+    # Ramos técnicos (Aliado CAR / montaje / equipo)
+    ("CAR", "Todo Riesgo Contratista", False),
+    ("EAR", "Todo Riesgo Montaje", False),
+    ("EQUIPO", "Equipo de contratistas", False),
     ("VIAJE", "Seguro de viaje", False),
     ("TRANSPORTE", "Transporte", False),
     ("VIDA", "Vida individual", False),
@@ -55,12 +59,31 @@ LINES = [
     ("AP", "Accidentes personales", False),
 ]
 
+# Catálogo piloto = Tablas.xlsx · hoja Tabla · columna Aseguradoras (únicos).
 CARRIERS = [
+    ("ACERTA", "ACERTA"),
     ("ANCON", "ANCÓN"),
-    ("SURA", "SURA"),
-    ("FEDPA", "FEDPA"),
     ("ASSA", "ASSA"),
+    ("FEDPA", "FEDPA"),
+    ("IS", "IS"),
     ("MAPFRE", "MAPFRE"),
+    ("SURA", "SURA"),
+    ("VIVIR", "VIVIR"),
+    ("PALIG", "PALIG"),
+    ("REGIONAL", "REGIONAL"),
+    ("ALIADO", "ALIADO"),
+    ("BANESCO", "BANESCO"),
+    ("BUPA", "BUPA"),
+    ("CHUBB", "CHUBB"),
+    ("FLORESTA", "FLORESTA"),
+    ("GENERAL", "GENERAL"),
+    ("GLOBAL", "GLOBAL"),
+    ("MERCANTIL", "MERCANTIL"),
+    ("MULTIBANK", "MULTIBANK"),
+    ("NACIONAL", "NACIONAL"),
+    ("OPTIMA", "OPTIMA"),
+    ("SAGICOR", "SAGICOR"),
+    ("WORLDWIDE", "WORLDWIDE"),
 ]
 
 

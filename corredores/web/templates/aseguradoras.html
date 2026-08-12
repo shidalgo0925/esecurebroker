@@ -5,12 +5,39 @@
 <section class="page-head row-between">
   <div>
     <h1 class="page-title">Aseguradoras</h1>
-    <p class="page-sub">Catálogo de compañías · <b>{{ org_name }}</b>
+    <p class="page-sub">Catálogo editable · <b>{{ org_name }}</b>
       {% if q or activa %} · {{ result_count }} resultado{% if result_count != 1 %}s{% endif %}{% endif %}
     </p>
   </div>
   <a class="btn-secondary" href="/importaciones/catalogos">Importar Tablas.xlsx</a>
 </section>
+
+{% if flash %}<p class="flash-ok">Guardado</p>{% endif %}
+{% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+
+{% if not edit_row %}
+<section class="poliza-panel catalog-editor">
+  <h2 class="poliza-panel-title">Nueva aseguradora</h2>
+  <form class="catalog-form" method="post" action="/aseguradoras">
+    <input type="hidden" name="carrier_id" value="" />
+    <div class="catalog-row">
+      <label class="catalog-field code">Código
+        <input name="code" class="mono" required maxlength="40" placeholder="ALIADO" />
+      </label>
+      <label class="catalog-field name">Nombre
+        <input name="name" required maxlength="120" placeholder="ALIADO SEGUROS" />
+      </label>
+      <label class="check-row">
+        <input type="checkbox" name="active" value="1" checked />
+        <span>Activa</span>
+      </label>
+      <div class="wizard-actions">
+        <button class="btn-primary" type="submit">Agregar</button>
+      </div>
+    </div>
+  </form>
+</section>
+{% endif %}
 
 <form class="filter-bar" method="get" action="/aseguradoras">
   <input type="search" name="q" value="{{ q }}" placeholder="Buscar código o nombre…" />
@@ -25,14 +52,57 @@
 
 <div class="table-card">
   <table class="data-table">
-    <thead><tr><th>Código</th><th>Nombre</th><th>Activa</th></tr></thead>
+    <thead><tr><th>Código</th><th>Nombre</th><th>Activa</th><th></th></tr></thead>
     <tbody>
     {% for c in carriers %}
-      <tr><td class="cli-id">{{ c.code }}</td><td class="cli-name">{{ c.name }}</td><td>{{ 'Sí' if c.active else 'No' }}</td></tr>
+      {% if edit_row and c.id == edit_row.id %}
+      <tr class="catalog-edit-row" id="row-{{ c.id }}">
+        <td colspan="4">
+          <form class="catalog-form" method="post" action="/aseguradoras">
+            <input type="hidden" name="carrier_id" value="{{ c.id }}" />
+            <div class="catalog-row">
+              <label class="catalog-field code">Código
+                <input name="code" class="mono" required maxlength="40" value="{{ c.code }}" autofocus />
+              </label>
+              <label class="catalog-field name">Nombre
+                <input name="name" required maxlength="120" value="{{ c.name }}" />
+              </label>
+              <label class="check-row">
+                <input type="checkbox" name="active" value="1" {% if c.active %}checked{% endif %} />
+                <span>Activa</span>
+              </label>
+              <div class="wizard-actions">
+                <a class="btn-secondary" href="/aseguradoras#row-{{ c.id }}">Cancelar</a>
+                <button class="btn-primary" type="submit">Guardar</button>
+              </div>
+            </div>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr id="row-{{ c.id }}">
+        <td class="cli-id">{{ c.code }}</td>
+        <td class="cli-name">{{ c.name }}</td>
+        <td>{{ 'Sí' if c.active else 'No' }}</td>
+        <td class="cli-action"><a class="open-link" href="/aseguradoras?edit={{ c.id }}#row-{{ c.id }}">Editar</a></td>
+      </tr>
+      {% endif %}
     {% else %}
-      <tr><td colspan="3" class="empty-row">{% if q or activa %}Sin resultados.{% else %}Sin aseguradoras — corre <code>cli seed</code>.{% endif %}</td></tr>
+      <tr><td colspan="4" class="empty-row">{% if q or activa %}Sin resultados.{% else %}Sin aseguradoras — agregá una arriba o importá Tablas.xlsx.{% endif %}</td></tr>
     {% endfor %}
     </tbody>
   </table>
 </div>
+<script>
+(function () {
+  var id = location.hash && location.hash.slice(1);
+  if (!id) return;
+  var el = document.getElementById(id);
+  if (el) {
+    el.scrollIntoView({ block: "center", behavior: "auto" });
+    var input = el.querySelector("input[name=code], input[name=name]");
+    if (input) input.focus({ preventScroll: true });
+  }
+})();
+</script>
 {% endblock %}

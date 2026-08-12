@@ -14,7 +14,7 @@ from datetime import date
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from corredores.config import settings
+from corredores.services.runtime_settings import runtime
 
 DOC_MONTHS = {
     "ENE": 1,
@@ -148,9 +148,10 @@ def draft_from_mapping(data: dict[str, Any], *, source: str) -> PolicyPhotoDraft
 
 
 def extract_with_openai_vision(image_bytes: bytes, *, mime: str = "image/jpeg") -> PolicyPhotoDraft:
-    api_key = (getattr(settings, "openai_api_key", None) or "").strip()
+    cfg = runtime()
+    api_key = (cfg.get("capture.openai_api_key") or "").strip()
     if not api_key:
-        raise RuntimeError("OPENAI_API_KEY no configurada")
+        raise RuntimeError("OpenAI API key no configurada (Mantenimiento → Captura)")
     try:
         from openai import OpenAI
     except ImportError as exc:
@@ -158,7 +159,7 @@ def extract_with_openai_vision(image_bytes: bytes, *, mime: str = "image/jpeg") 
 
     b64 = base64.b64encode(image_bytes).decode("ascii")
     client = OpenAI(api_key=api_key)
-    model = getattr(settings, "openai_vision_model", None) or "gpt-4o-mini"
+    model = cfg.get("capture.openai_vision_model") or "gpt-4o-mini"
     resp = client.chat.completions.create(
         model=model,
         temperature=0,
@@ -219,6 +220,110 @@ def extract_heuristic_from_text(text: str) -> PolicyPhotoDraft:
     return d
 
 
+def extract_text_from_pdf(pdf_bytes: bytes) -> str:
+    """Best-effort text layer extraction (no OCR). Empty if scanned-only."""
+    try:
+        from io import BytesIO
+
+        from pypdf import PdfReader
+    except ImportError:
+        return ""
+    try:
+        reader = PdfReader(BytesIO(pdf_bytes))
+        parts: list[str] = []
+        for page in reader.pages[:8]:
+            parts.append(page.extract_text() or "")
+        return "\n".join(parts).strip()
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def extract_heuristic_from_pdf_bytes(pdf_bytes: bytes) -> PolicyPhotoDraft:
+    """Parse common Panamá policy PDF fields from text layer."""
+    text = extract_text_from_pdf(pdf_bytes)
+    if not text:
+        d = PolicyPhotoDraft(source="manual", confidence=0.0)
+        d.warnings.append("PDF sin texto extraíble (¿escaneado?). Completá a mano o configurá OPENAI_API_KEY.")
+        return d
+    d = extract_heuristic_from_text(text)
+    # Aliado / ramos técnicos CAR
+    if re.search(r"TODO\s+RIESGO\s+PARA\s+CONTRATISTA|RAMOS\s+TECNICOS", text, re.I):
+        d.line_code = "CAR"
+        d.warnings.append("Detectado Todo Riesgo Contratista (CAR).")
+    if re.search(r"ALIADO\s+SEGUROS", text, re.I):
+        d.carrier_name = "ALIADO"
+    m = re.search(r"P[ÓO]LIZA\s*:\s*([0-9]+(?:\s+[0-9]+)*)", text, re.I)
+    if m and not d.policy_number:
+        d.policy_number = "-".join(p for p in m.group(1).split() if p)
+    m = re.search(r"TOTAL\s+A\s+PAGAR\s*.*?([0-9]{1,3}(?:,[0-9]{3})*\.[0-9]{2}|[0-9]+\.[0-9]{2})", text, re.I | re.S)
+    if m:
+        d.annual_premium = m.group(1).replace(",", "")
+    m = re.search(
+        r"(\d{1,2}\s+de\s+[A-ZÁÉÍÓÚ]+(?:\s+de)?\s+\d{4})\s*DESDE:.*?(\d{1,2}\s+de\s+[A-ZÁÉÍÓÚ]+(?:\s+de)?\s+\d{4})\s*HASTA:",
+        text,
+        re.I | re.S,
+    )
+    # Dates often glued: "30 de JULIO de 2026DESDE:"
+    m = re.search(r"(\d{1,2}\s+de\s+[A-ZÁÉÍÓÚ]+\s+de\s+\d{4})\s*DESDE:", text, re.I)
+    if m:
+        d.effective_date = _parse_long_es_date(m.group(1))
+    m = re.search(r"(\d{1,2}\s+de\s+[A-ZÁÉÍÓÚ]+\s+de\s+\d{4})\s*HASTA:", text, re.I)
+    if m:
+        d.expiration_date = _parse_long_es_date(m.group(1))
+    m = re.search(r"C[ÉE]DULA/RUC:\s*([0-9\-]+)", text, re.I)
+    if m:
+        d.national_id = m.group(1).strip()
+    m = re.search(r"([A-Z0-9 .,&\-]+),\s*S\.A\.", text)
+    if m and not d.first_name:
+        # company → put legal name in last_name slot for review UI (party commit uses both)
+        d.first_name = ""
+        d.last_name = m.group(0).strip()
+    if re.search(r"PAGO:\s*CONTADO", text, re.I):
+        d.num_payments = "1"
+        d.payment_form = "CONTADO"
+    d.confidence = max(d.confidence, 0.55)
+    d.source = "pdf_text"
+    d.warnings.append("Extracción desde texto del PDF — revisá antes de confirmar.")
+    return d
+
+
+def _parse_long_es_date(text: str) -> str:
+    """30 de JULIO de 2026 → ISO."""
+    months = {
+        "ENERO": 1,
+        "FEBRERO": 2,
+        "MARZO": 3,
+        "ABRIL": 4,
+        "MAYO": 5,
+        "JUNIO": 6,
+        "JULIO": 7,
+        "AGOSTO": 8,
+        "SEPTIEMBRE": 9,
+        "OCTUBRE": 10,
+        "NOVIEMBRE": 11,
+        "DICIEMBRE": 12,
+    }
+    m = re.match(
+        r"^\s*(\d{1,2})\s+de\s+([A-ZÁÉÍÓÚ]+)\s+de\s+(\d{4})\s*$",
+        (text or "").strip(),
+        re.I,
+    )
+    if not m:
+        return ""
+    day = int(m.group(1))
+    mon = months.get(m.group(2).upper().replace("Á", "A").replace("É", "E"), 0)
+    year = int(m.group(3))
+    if not mon:
+        # JULIO etc without accent issues
+        mon = months.get(m.group(2).upper(), 0)
+    if not mon:
+        return ""
+    try:
+        return date(year, mon, day).isoformat()
+    except ValueError:
+        return ""
+
+
 def extract_policy_photo(
     image_bytes: bytes,
     *,
@@ -226,16 +331,32 @@ def extract_policy_photo(
     mime: str | None = None,
     ocr_text: str | None = None,
 ) -> PolicyPhotoDraft:
-    """Try Vision API, else heuristic text, else empty draft for manual fill."""
+    """Try Vision API, else PDF text / heuristic, else empty draft for manual fill."""
     name = (filename or "").lower()
-    mime = mime or ("image/png" if name.endswith(".png") else "image/jpeg")
+    mime = mime or (
+        "application/pdf"
+        if name.endswith(".pdf")
+        else ("image/png" if name.endswith(".png") else "image/jpeg")
+    )
     warnings: list[str] = []
 
-    if getattr(settings, "openai_api_key", None):
+    has_openai = bool(runtime().get("capture.openai_api_key").strip())
+    if has_openai and not (mime == "application/pdf" or name.endswith(".pdf")):
         try:
             return extract_with_openai_vision(image_bytes, mime=mime)
         except Exception as exc:  # noqa: BLE001 — surface as warning, don't crash capture
             warnings.append(f"Visión IA no disponible ({exc}). Completá a mano.")
+    elif has_openai and (mime == "application/pdf" or name.endswith(".pdf")):
+        # Vision on PDF: try API; if fails, fall through to text layer
+        try:
+            return extract_with_openai_vision(image_bytes, mime="application/pdf")
+        except Exception as exc:  # noqa: BLE001
+            warnings.append(f"Visión IA PDF no disponible ({exc}). Probando texto del PDF.")
+
+    if mime == "application/pdf" or name.endswith(".pdf") or image_bytes[:4] == b"%PDF":
+        draft = extract_heuristic_from_pdf_bytes(image_bytes)
+        draft.warnings = warnings + list(draft.warnings)
+        return draft
 
     if ocr_text and ocr_text.strip():
         draft = extract_heuristic_from_text(ocr_text)
@@ -245,7 +366,7 @@ def extract_policy_photo(
     draft = PolicyPhotoDraft(source="manual", confidence=0.0)
     draft.warnings.extend(warnings)
     draft.warnings.append(
-        "Subí la foto: revisá/completá los datos. Con OPENAI_API_KEY la IA prellena desde la imagen."
+        "Subí la foto: revisá/completá los datos. Configurá OpenAI en Mantenimiento para prellenar desde imagen."
     )
     draft.line_code = "AUTO"
     return draft

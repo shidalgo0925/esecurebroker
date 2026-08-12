@@ -16,20 +16,29 @@
       <div class="auth-login-brand">
         <img src="/static/brand/crest.svg" width="44" height="44" alt="" />
         <span class="auth-wordmark">ESecure<span>Broker</span></span>
+        {% if platform_admin %}
+        <p>Hola {{ username }}. Como <b>dueño de plataforma</b> puedes abrir cualquier correduría.</p>
+        {% else %}
         <p>Hola {{ username }}. Elige la organización con la que vas a trabajar.</p>
+        {% endif %}
       </div>
       <form class="auth-form" method="post" action="/orgs/seleccionar">
         <input type="hidden" name="next" value="{{ next }}" />
         {% for o in orgs %}
         <button type="submit" name="organization_id" value="{{ o.organization_id }}" style="text-align:left">
           {{ o.name }}
-          <span style="display:block;font-size:0.75rem;font-weight:500;opacity:0.75;margin-top:0.2rem">{{ o.role }}</span>
+          <span style="display:block;font-size:0.75rem;font-weight:500;opacity:0.75;margin-top:0.35rem">
+            {{ o.role }}
+            · {{ o.policies }} póliza{% if o.policies != 1 %}s{% endif %}
+            · {{ o.clients }} cliente{% if o.clients != 1 %}s{% endif %}
+            · {{ o.carriers }} cia{% if o.carriers != 1 %}s{% endif %}
+          </span>
         </button>
         {% endfor %}
       </form>
       <a class="auth-back" href="/logout">Salir</a>
     </div>
-    <footer class="auth-foot">Contexto de organización · ADR-007 · sustituible por EN1</footer>
+    <footer class="auth-foot">Contexto de organización · ADR-007 · dueño plataforma ve todas</footer>
   </div>
 </body>
 </html>

@@ -112,6 +112,74 @@ body {
   cursor: pointer;
   flex: 0 0 auto;
 }
+.env-badge {
+  display: inline-flex;
+  align-self: flex-start;
+  margin: 0 6px 10px;
+  padding: 0.2rem 0.55rem;
+  border-radius: 5px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  background: #0f766e;
+  color: #ecfdf8;
+  font-family: var(--font-ui);
+}
+.sidebar-collapsed .env-badge { margin: 0 auto 10px; }
+
+/* DEV theme — teal (prod = navy/brass) para no confundir entornos */
+.env-dev {
+  --ink: #0f3d3a;
+  --sidebar: #0b3d3a;
+  --brass: #2dd4bf;
+  --brass-deep: #0f766e;
+  --brass-tint: #ecfdf8;
+}
+.env-dev .sidebar {
+  background: linear-gradient(180deg, #0f766e 0%, #0b3d3a 42%, #082f2c 100%);
+  border-right-color: rgba(45, 212, 191, 0.22);
+}
+.env-dev .brand-word span { color: #5eead4; }
+.env-dev .nav-link.on {
+  background: rgba(45, 212, 191, 0.16);
+  color: #ecfdf8;
+}
+.env-dev .nav-link.on::before { background: #2dd4bf; }
+.env-dev .nueva-gestion {
+  background: linear-gradient(155deg, #5eead4, #0f766e);
+  color: #042f2e;
+  box-shadow: 0 8px 16px -8px rgba(15, 118, 110, 0.55);
+}
+.env-dev .workspace {
+  position: relative;
+}
+.env-dev .workspace::before {
+  content: "ENTORNO DEV · no es producción · datos aislados";
+  display: block;
+  background: #0f766e;
+  color: #ecfdf8;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.75rem;
+  font-family: var(--font-ui);
+}
+.env-dev .topbar {
+  border-bottom-color: rgba(15, 118, 110, 0.25);
+}
+.env-dev .topbar-title::after {
+  content: " · DEV";
+  color: #0f766e;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.env-dev .main {
+  background:
+    linear-gradient(180deg, rgba(15, 118, 110, 0.06), transparent 120px),
+    var(--bg, #f4f1ea);
+}
 .nueva-gestion {
   background: linear-gradient(155deg, #e0ae54, var(--brass-deep));
   color: #241804;
@@ -211,6 +279,15 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.side-actor a.side-org-link {
+  display: block;
+  text-decoration: none;
+  color: var(--brass-soft);
+}
+.side-actor a.side-org-link:hover {
+  color: #f0e6c8;
+  text-decoration: underline;
 }
 .nav-logout { margin-top: 0.15rem; color: #9aa0bc !important; }
 .nav-logout:hover { color: var(--brass-soft) !important; }
@@ -877,6 +954,7 @@ a { color: var(--brass-deep); }
 }
 .capture-summary .meta { display:block; font-size:0.7rem; letter-spacing:.08em; text-transform:uppercase; color:var(--brass-deep); margin-bottom:0.2rem; }
 .form-error { color:var(--crit); font-weight:600; margin:0.75rem 0 0; }
+.form-ok { color: var(--ok, #1f7a4c); font-weight: 600; margin: 0.75rem 0 0; }
 .soft-rule { border:none; border-top:1px solid var(--rule); margin:2rem 0 1.5rem; max-width:720px; }
 .report-tiles {
   display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:0.85rem;
@@ -1107,3 +1185,83 @@ a.radar-card:hover { border-color: rgba(205,154,52,.45); }
   display: flex; align-items: center; gap: 0.5rem;
   font-size: 0.9rem; color: var(--text); margin: 0.5rem 0 1rem;
 }
+
+/* Catálogo maestro: formulario compacto (aseguradoras / ramos / tasas) */
+.catalog-editor {
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+}
+.catalog-editor .poliza-panel-title {
+  margin-bottom: 0.65rem;
+}
+.catalog-form {
+  margin: 0;
+  max-width: none;
+}
+.catalog-form .catalog-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.65rem 0.85rem;
+}
+.catalog-form .catalog-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  min-width: 0;
+}
+.catalog-form .catalog-field.code { flex: 0 1 9rem; }
+.catalog-form .catalog-field.name { flex: 1 1 16rem; min-width: 12rem; }
+.catalog-form .catalog-field input {
+  font: inherit;
+  font-weight: 500;
+  color: var(--text);
+  border: 1px solid var(--rule);
+  border-radius: 7px;
+  padding: 0.42rem 0.55rem;
+  background: #fff;
+  width: 100%;
+}
+.catalog-form .catalog-field input:focus {
+  outline: 2px solid rgba(205, 154, 52, 0.35);
+  border-color: var(--brass);
+}
+.catalog-form .check-row {
+  margin: 0;
+  padding-bottom: 0.35rem;
+  white-space: nowrap;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+.catalog-form .wizard-actions {
+  margin: 0;
+  margin-left: auto;
+  padding-bottom: 0.1rem;
+}
+.catalog-form.catalog-stack .catalog-row {
+  align-items: stretch;
+}
+.catalog-form.catalog-stack .wizard-actions {
+  margin-left: 0;
+  margin-top: 0.75rem;
+}
+@media (max-width: 720px) {
+  .catalog-form .catalog-row { align-items: stretch; }
+  .catalog-form .catalog-field.code,
+  .catalog-form .catalog-field.name { flex: 1 1 100%; }
+  .catalog-form .wizard-actions {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+.catalog-edit-row > td {
+  background: var(--brass-tint, #f7f1e3);
+  border-top: 1px solid rgba(205, 154, 52, 0.35);
+  border-bottom: 1px solid rgba(205, 154, 52, 0.35);
+  padding: 0.65rem 0.75rem;
+}
+.catalog-edit-row .catalog-form { max-width: none; }
+

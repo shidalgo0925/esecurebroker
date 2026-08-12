@@ -27,6 +27,42 @@ body.land-body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* DEV public site — teal vs prod brass/navy */
+body.land-body.land-env-dev {
+  --ink: #0f3d3a;
+  --ink-2: #0b3d3a;
+  --brass: #14b8a6;
+  --brass-deep: #0f766e;
+  --brass-soft: #5eead4;
+  --paper: #f0fdfa;
+  --paper-2: #ccfbf1;
+  --rule: #99f6e4;
+}
+body.land-body.land-env-dev::before {
+  content: "ENTORNO DEV · esecurebroker-dev · no es producción";
+  display: block;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: #0f766e;
+  color: #ecfdf8;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.4rem 0.75rem;
+}
+body.land-body.land-env-dev .land-header {
+  top: 0;
+  background: rgba(240, 253, 250, 0.94);
+  border-bottom-color: rgba(15, 118, 110, 0.25);
+}
+body.land-body.land-env-dev .land-btn-primary {
+  background: linear-gradient(180deg, #2dd4bf, #0f766e);
+  color: #042f2e;
+}
+
 a { color: inherit; }
 
 /* —— Header —— */
@@ -900,22 +936,17 @@ a { color: inherit; }
     linear-gradient(180deg, rgba(205, 154, 52, 0.1), transparent 40%),
     #fff;
 }
-.land-plan-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.65rem 0.85rem;
-  margin: 0 0 0.45rem;
-  min-height: 1.15rem;
-}
 .land-plan-badge {
-  flex-shrink: 0;
+  position: absolute;
+  top: 0.85rem;
+  right: 0.85rem;
+  z-index: 1;
   margin: 0;
   padding: 0.22rem 0.5rem;
   border-radius: 999px;
   border: 1px solid rgba(140, 101, 30, 0.28);
-  background: rgba(205, 154, 52, 0.12);
-  font-size: 0.65rem;
+  background: rgba(205, 154, 52, 0.14);
+  font-size: 0.62rem;
   font-weight: 650;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -923,21 +954,26 @@ a { color: inherit; }
   white-space: nowrap;
 }
 .land-plan-audience {
-  margin: 0;
-  flex: 1;
-  min-width: 0;
-  font-size: 0.72rem;
+  margin: 0 0 0.55rem;
+  padding-right: 0;
+  font-size: 0.7rem;
   font-weight: 650;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  line-height: 1.35;
+  line-height: 1.4;
   color: var(--brass-deep);
+}
+.land-plan.is-hot .land-plan-audience,
+.land-plan.is-enterprise .land-plan-audience {
+  padding-right: 5.75rem; /* no chocar con badge */
 }
 .land-plan-name {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 1.45rem;
+  font-size: 1.4rem;
   font-weight: 560;
+  line-height: 1.25;
+  color: var(--ink);
 }
 .land-plan-price {
   margin: 0.5rem 0 0.35rem;

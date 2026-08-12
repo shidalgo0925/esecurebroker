@@ -131,6 +131,7 @@
         {% if plan %}{% if plan.confirmed %}Confirmado{% else %}Propuesto{% endif %} · {% endif %}
         {{ installments|length }} cuota{% if installments|length != 1 %}s{% endif %}
         · saldo <b class="mono">${{ open_balance|money }}</b>
+        · <a class="open-link" href="/polizas/{{ policy.id }}/plan-pagos">Editar plan</a>
       </span>
     </div>
     <div class="table-card">

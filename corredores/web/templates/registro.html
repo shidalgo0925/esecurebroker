@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Crear cuenta · ESecureBroker</title>
+  <title>{% if is_dev_env %}[DEV] {% endif %}Crear cuenta · ESecureBroker</title>
   <link rel="icon" href="/static/brand/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/auth.css?v=20260811b" />
+  <link rel="stylesheet" href="/static/auth.css?v=20260812dev1" />
 </head>
-<body class="auth-body">
+<body class="auth-body{% if is_dev_env %} auth-env-dev{% endif %}">
   <div class="auth-stage">
     <div class="auth-login-wrap auth-register-wrap">
       <div class="auth-login-brand">
@@ -20,8 +20,8 @@
         </a>
       </div>
 
-      <h1 class="auth-title">Crea tu cuenta</h1>
-      <p class="auth-lead">Registra tu correduría y activa el plan. Luego entras al expediente.</p>
+      <h1 class="auth-title">Crea tu cuenta{% if is_dev_env %} · DEV{% endif %}</h1>
+      <p class="auth-lead">{% if is_dev_env %}Alta en entorno de desarrollo (datos aislados).{% else %}Registra tu correduría y activa el plan. Luego entras al expediente.{% endif %}</p>
 
       {% if plan %}
       <div class="auth-plan-chip">

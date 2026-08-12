@@ -38,15 +38,22 @@
 
       <form class="auth-form" method="post" action="/checkout">
         <input type="hidden" name="plan" value="{{ plan.code }}" />
-        {% if stripe_ready %}
+        {% if en1_commerce %}
+        <label for="promo_code">Código promocional</label>
+        <input id="promo_code" name="promo_code" type="text" value="{{ promo_code or '' }}" autocomplete="off" placeholder="Ej. ESBDEV100" />
+        <button type="submit">Confirmar suscripción</button>
+        <p class="auth-note">
+          La activación se registra en el sistema comercial (EN1) vía ESecureBroker.
+          Un total $0 con promo válida también genera transacción y entitlement.
+        </p>
+        {% elif stripe_ready %}
         <button type="submit">Pagar con tarjeta</button>
         <p class="auth-note">Serás redirigido a Stripe Checkout. Suscripción mensual en USD.</p>
         {% else %}
         <button type="submit">Confirmar y activar plan</button>
         <p class="auth-note">
-          Modo piloto: sin Stripe en este servidor. Al confirmar se activa la suscripción.
-          Para cobro real, configura <code>STRIPE_SECRET_KEY</code> o
-          <code>SAAS_ONBOARDING_URL</code> (EN1).
+          Modo puente (comercio EN1 aún no habilitado en este servidor).
+          Al confirmar se activa la suscripción local de prueba.
         </p>
         {% endif %}
       </form>

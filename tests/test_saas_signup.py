@@ -29,7 +29,7 @@ def test_landing_shows_plans():
     r = client.get("/")
     assert r.status_code == 200
     assert "ESecure" in r.text
-    assert "Tu correduría, bajo control" in r.text
+    assert "bajo control" in r.text
     assert "Empieza el día sabiendo" in r.text
     assert "Individual" in r.text
     assert "Oficina" in r.text
@@ -38,6 +38,8 @@ def test_landing_shows_plans():
     assert "A medida" in r.text
     assert "Trabajo por mi cuenta" in r.text
     assert "/registro?plan=oficina" in r.text
+    assert "appdev.easynodeone.com" not in r.text
+    assert "appprd.easynodeone.com" not in r.text
     assert "/#contacto" in r.text or "Hablar con ventas" in r.text
 
 

@@ -108,6 +108,7 @@ NAV_GROUPS = [
         "title": "Gestión",
         "links": [
             ("aseguradoras", "Aseguradoras", "/aseguradoras", "building"),
+            ("ramos", "Ramos", "/ramos", "folder"),
             ("comisiones", "Comisiones", "/comisiones", "percent"),
             ("importaciones", "Importaciones", "/importaciones", "file"),
             ("documentos", "Documentos", "/documentos", "file"),
@@ -124,6 +125,7 @@ NAV_GROUPS = [
 NAV_FOOTER = [
     ("reportes", "Reportes", "/reportes", "chart"),
     ("configuracion", "Configuración", "/configuracion", "gear"),
+    ("mantenimiento", "Mantenimiento", "/mantenimiento", "gear"),
     ("ayuda", "Ayuda", "/ayuda", "help"),
 ]
 
@@ -169,10 +171,38 @@ POLIZA_STEPS = [
 def _ctx(request: Request, active: str, **extra):
     actor = current_actor(request)
     collapsed = request.cookies.get("sidebar") == "collapsed"
+    from corredores.web.auth_session import read_session
+    from corredores.services.runtime_settings import runtime
+
+    principal = read_session(request)
+    platform_admin = False
+    can_switch_org = False
+    if principal is not None:
+        cfg = runtime()
+        emails = {
+            p.strip().lower()
+            for p in (cfg.get("platform.admin_emails") or "").split(",")
+            if p.strip()
+        }
+        users = {
+            p.strip().lower()
+            for p in (cfg.get("platform.admin_usernames") or "").split(",")
+            if p.strip()
+        }
+        uname = (principal.username or "").strip().lower()
+        tail = (principal.actor_id or "").split(":", 1)[-1].strip().lower()
+        platform_admin = uname in users or uname in emails or tail in users or tail in emails
+        can_switch_org = True
+    footer = list(NAV_FOOTER)
+    if not platform_admin:
+        footer = [x for x in footer if x[0] != "mantenimiento"]
+    from corredores.config import settings as app_settings
+
+    app_env = (app_settings.app_env or "dev").strip().lower()
     base = {
         "request": request,
         "nav_groups": NAV_GROUPS,
-        "nav_footer": NAV_FOOTER,
+        "nav_footer": footer,
         "nueva_gestion": NUEVA_GESTION,
         "active": active,
         "actor_name": actor.display_name,
@@ -180,9 +210,23 @@ def _ctx(request: Request, active: str, **extra):
         "sidebar_collapsed": collapsed,
         # Default collapsed; stays open across pages until user closes it.
         "nueva_gestion_open": request.cookies.get("nueva_gestion") == "open",
+        "platform_admin": platform_admin,
+        "can_switch_org": can_switch_org,
+        "app_env": app_env,
+        "is_dev_env": app_env in {"dev", "test", "local"},
     }
     base.update(extra)
     return base
+
+
+def _env_flags() -> dict:
+    from corredores.config import settings as app_settings
+
+    app_env = (app_settings.app_env or "dev").strip().lower()
+    return {
+        "app_env": app_env,
+        "is_dev_env": app_env in {"dev", "test", "local"},
+    }
 
 
 def _q(value: str | None) -> str:
@@ -207,7 +251,7 @@ def _coming_soon(request: Request, active: str, title: str, blurb: str):
 def home(request: Request):
     from datetime import datetime, timezone
 
-    from corredores.config import settings
+    from corredores.services.runtime_settings import runtime
     from corredores.services.saas_plans import plans_for_landing, start_href
     from corredores.web.auth_session import read_session
 
@@ -216,16 +260,22 @@ def home(request: Request):
         return RedirectResponse("/hoy", status_code=303)
     if principal is not None:
         return RedirectResponse("/orgs/seleccionar", status_code=303)
+    cfg = runtime()
     return templates.TemplateResponse(
         request,
         "landing.html",
         {
+            **_env_flags(),
             "plans": plans_for_landing(),
             "year": datetime.now(timezone.utc).year,
             "start_href": start_href("oficina"),
             "login_href": "/login",
-            "onboarding_external": bool((settings.saas_onboarding_url or "").strip()),
-            "contact_email": (settings.saas_contact_email or settings.smtp_from or "hola@esecurebroker.etsrv.site"),
+            "onboarding_external": bool(cfg.get("saas.onboarding_url").strip()),
+            "contact_email": (
+                cfg.get("saas.contact_email")
+                or cfg.get("mail.smtp_from")
+                or "hola@esecurebroker.etsrv.site"
+            ),
         },
     )
 
@@ -253,6 +303,7 @@ def planes_page(request: Request):
 @router.get("/registro", response_class=HTMLResponse)
 def registro_get(request: Request, plan: str = Query(default="oficina")):
     from corredores.config import settings
+    from corredores.services.runtime_settings import runtime
     from corredores.services.saas_plans import require_plan
     from corredores.web.auth_session import read_session
 
@@ -265,10 +316,11 @@ def registro_get(request: Request, plan: str = Query(default="oficina")):
         request,
         "registro.html",
         {
+            **_env_flags(),
             "plan": p,
             "error": None,
             "form": {},
-            "signup_enabled": settings.saas_signup_enabled and bool(settings.auth_secret),
+            "signup_enabled": runtime().bool("saas.signup_enabled", True) and bool(settings.auth_secret),
         },
     )
 
@@ -288,14 +340,17 @@ def registro_post(
     from corredores.services.saas_signup import register_broker
     from corredores.web.auth_session import attach_session_cookie
 
+    from corredores.services.runtime_settings import runtime
+
     p = require_plan(plan)
-    if not settings.saas_signup_enabled:
+    if not runtime().bool("saas.signup_enabled", True):
         return templates.TemplateResponse(
             request,
             "registro.html",
             {
+                **_env_flags(),
                 "plan": p,
-                "error": "El registro está deshabilitado en este entorno.",
+                "error": "El registro está deshabilitado (Mantenimiento → SaaS).",
                 "form": {
                     "email": email,
                     "display_name": display_name,
@@ -310,6 +365,7 @@ def registro_post(
             request,
             "registro.html",
             {
+                **_env_flags(),
                 "plan": p,
                 "error": "Falta AUTH_SECRET en el servidor.",
                 "form": {
@@ -335,6 +391,7 @@ def registro_post(
             request,
             "registro.html",
             {
+                **_env_flags(),
                 "plan": p,
                 "error": str(e),
                 "form": {
@@ -371,15 +428,19 @@ def checkout_get(
     if subscription_allows_access(sub) and sub is not None and sub.status == "active":
         return RedirectResponse("/hoy", status_code=303)
     p = require_plan(plan or (sub.plan_code if sub else None))
+    from corredores.services.en1_commercial import en1_commerce_enabled
+
     return templates.TemplateResponse(
         request,
         "checkout.html",
         {
             "plan": p,
             "org_name": org.name,
-            "stripe_ready": stripe_configured(),
+            "stripe_ready": stripe_configured() and not en1_commerce_enabled(),
+            "en1_commerce": en1_commerce_enabled(),
             "canceled": canceled == "1",
             "error": None,
+            "promo_code": "",
         },
     )
 
@@ -388,10 +449,14 @@ def checkout_get(
 def checkout_post(
     request: Request,
     plan: str = Form(default="oficina"),
+    promo_code: str = Form(default=""),
     session: Session = Depends(get_session),
 ):
+    from corredores.services.en1_commercial import en1_commerce_enabled
+    from corredores.services.payments import PaymentService
     from corredores.services.saas_billing import confirm_piloto_payment, start_checkout
     from corredores.services.saas_plans import require_plan
+    from corredores.services.saas_signup import get_subscription
     from corredores.web.auth_session import read_session
 
     principal = read_session(request)
@@ -399,6 +464,35 @@ def checkout_post(
         return RedirectResponse(f"/registro?plan={require_plan(plan).code}", status_code=303)
     org = resolve_org(session, request)
     p = require_plan(plan)
+
+    if en1_commerce_enabled():
+        sub = get_subscription(session, org.id)
+        if sub is None:
+            return RedirectResponse(f"/registro?plan={p.code}", status_code=303)
+        result = PaymentService().process_promo_activation(
+            session,
+            organization=org,
+            local_subscription=sub,
+            promo_code=promo_code,
+        )
+        if not result.ok:
+            return templates.TemplateResponse(
+                request,
+                "checkout.html",
+                {
+                    "plan": p,
+                    "org_name": org.name,
+                    "stripe_ready": False,
+                    "en1_commerce": True,
+                    "canceled": False,
+                    "error": result.user_message
+                    or "No pudimos completar la activación de tu cuenta.",
+                    "promo_code": promo_code,
+                },
+                status_code=400,
+            )
+        return RedirectResponse("/checkout/success", status_code=303)
+
     kind, target = start_checkout(
         session,
         organization_id=org.id,
@@ -407,7 +501,7 @@ def checkout_post(
     )
     if kind == "redirect":
         return RedirectResponse(target, status_code=303)
-    # Piloto: activar de inmediato
+    # Puente piloto (solo si comercio EN1 deshabilitado — no es SoR definitivo)
     confirm_piloto_payment(session, org.id, p.code)
     return RedirectResponse("/checkout/success", status_code=303)
 
@@ -455,19 +549,18 @@ def checkout_success(
 
 @router.post("/webhooks/stripe")
 async def stripe_webhook(request: Request, session: Session = Depends(get_session)):
-    from corredores.config import settings
+    from corredores.services.runtime_settings import runtime
     from corredores.services.saas_billing import activate_from_stripe_session
 
-    if not (settings.stripe_webhook_secret or "").strip():
-        raise HTTPException(503, "webhook no configurado")
+    whsec = runtime().get("saas.stripe_webhook_secret").strip()
+    if not whsec:
+        raise HTTPException(503, "webhook no configurado (Mantenimiento)")
     import stripe
 
     payload = await request.body()
     sig = request.headers.get("stripe-signature", "")
     try:
-        event = stripe.Webhook.construct_event(
-            payload, sig, settings.stripe_webhook_secret
-        )
+        event = stripe.Webhook.construct_event(payload, sig, whsec)
     except Exception as e:
         raise HTTPException(400, f"webhook inválido: {e}") from e
     if event["type"] == "checkout.session.completed":
@@ -500,6 +593,7 @@ def login_get(request: Request, next: str = Query(default=""), error: str = Quer
         request,
         "login.html",
         {
+            **_env_flags(),
             "next": next_path,
             "next_encoded": encode_next(next_path),
             "error": err,
@@ -542,8 +636,11 @@ def login_post(
             f"/login?error=creds&next={encode_next(dest)}", status_code=303
         )
     subject = actor_id_for_username(cred.username)
+    from corredores.services.tenant import is_platform_admin, list_accessible_organizations
+
     memberships = list_memberships(session, subject)
-    if not memberships:
+    admin = is_platform_admin(session, subject, username=cred.username)
+    if not memberships and not admin:
         # Piloto convenience: single org → auto-bind (ADR-007 migration path)
         orgs = session.query(Organization).filter_by(active=True).order_by(Organization.created_at).all()
         if len(orgs) == 1:
@@ -554,18 +651,19 @@ def login_post(
                 display_name=cred.display_name or settings.auth_display_name,
             )
             memberships = list_memberships(session, subject)
-    if not memberships:
+    accessible = list_accessible_organizations(session, subject, username=cred.username)
+    if not accessible:
         return RedirectResponse(
             f"/login?error=nomembership&next={encode_next(dest)}", status_code=303
         )
-    if len(memberships) == 1:
-        org_id = memberships[0].organization_id
+    if len(accessible) == 1:
+        org_id = accessible[0]["organization_id"]
         from corredores.services.saas_signup import get_subscription, subscription_allows_access
 
         sub = get_subscription(session, org_id)
-        if not subscription_allows_access(sub):
+        if not subscription_allows_access(sub) and not admin:
             response = RedirectResponse(
-                f"/checkout?plan={(sub.plan_code if sub else 'profesional')}",
+                f"/checkout?plan={(sub.plan_code if sub else 'oficina')}",
                 status_code=303,
             )
             attach_session_cookie(response, cred.username, org_id)
@@ -573,6 +671,7 @@ def login_post(
         response = RedirectResponse(dest, status_code=303)
         attach_session_cookie(response, cred.username, org_id)
         return response
+    # Multi-org o dueño de plataforma → elegir (lista ordenada por cartera)
     response = RedirectResponse(
         f"/orgs/seleccionar?next={encode_next(dest)}", status_code=303
     )
@@ -586,28 +685,23 @@ def orgs_seleccionar(
     next: str = Query(default="/hoy"),
     session: Session = Depends(get_session),
 ):
-    from corredores.domain.models import Organization
-    from corredores.services.tenant import list_memberships
-    from corredores.web.auth_session import encode_next, read_session, safe_next_path
+    from corredores.services.tenant import is_platform_admin, list_accessible_organizations
+    from corredores.web.auth_session import attach_session_cookie, encode_next, read_session, safe_next_path
 
     principal = read_session(request)
     if principal is None:
         return RedirectResponse("/login", status_code=303)
-    memberships = list_memberships(session, principal.actor_id)
-    if not memberships:
+    rows = list_accessible_organizations(
+        session, principal.actor_id, username=principal.username
+    )
+    if not rows:
         return RedirectResponse("/login?error=nomembership", status_code=303)
-    if len(memberships) == 1:
-        from corredores.web.auth_session import attach_session_cookie
-
+    admin = is_platform_admin(session, principal.actor_id, username=principal.username)
+    if len(rows) == 1 and not admin:
         dest = safe_next_path(next)
         response = RedirectResponse(dest, status_code=303)
-        attach_session_cookie(response, principal.username, memberships[0].organization_id)
+        attach_session_cookie(response, principal.username, rows[0]["organization_id"])
         return response
-    rows = []
-    for m in memberships:
-        org = session.get(Organization, m.organization_id)
-        if org and org.active:
-            rows.append({"organization_id": org.id, "name": org.name, "role": m.role_code})
     return templates.TemplateResponse(
         request,
         "org_select.html",
@@ -616,6 +710,7 @@ def orgs_seleccionar(
             "next": safe_next_path(next),
             "next_encoded": encode_next(safe_next_path(next)),
             "username": principal.username,
+            "platform_admin": admin,
         },
     )
 
@@ -627,13 +722,23 @@ def orgs_seleccionar_post(
     next: str = Form(default="/hoy"),
     session: Session = Depends(get_session),
 ):
-    from corredores.services.tenant import assert_membership
+    from corredores.services.tenant import assert_membership, ensure_membership, is_platform_admin
     from corredores.web.auth_session import attach_session_cookie, read_session, safe_next_path
 
     principal = read_session(request)
     if principal is None:
         return RedirectResponse("/login", status_code=303)
-    assert_membership(session, principal.actor_id, organization_id)
+    assert_membership(
+        session, principal.actor_id, organization_id, username=principal.username
+    )
+    if is_platform_admin(session, principal.actor_id, username=principal.username):
+        ensure_membership(
+            session,
+            subject_id=principal.actor_id,
+            organization_id=organization_id,
+            display_name=principal.username,
+            role_code="PLATFORM",
+        )
     dest = safe_next_path(next)
     response = RedirectResponse(dest, status_code=303)
     attach_session_cookie(response, principal.username, organization_id)
@@ -1175,7 +1280,7 @@ def _capture_stage_dir() -> Path:
 
 @router.get("/captura/poliza-foto", response_class=HTMLResponse)
 def captura_foto_get(request: Request):
-    from corredores.config import settings as cfg
+    from corredores.services.runtime_settings import runtime
 
     return templates.TemplateResponse(
         request,
@@ -1183,7 +1288,7 @@ def captura_foto_get(request: Request):
         _ctx(
             request,
             "polizas",
-            vision_ready=bool(getattr(cfg, "openai_api_key", None)),
+            vision_ready=bool(runtime().get("capture.openai_api_key").strip()),
             error=None,
         ),
     )
@@ -1198,15 +1303,16 @@ async def captura_foto_post(
 ):
     import uuid
 
-    from corredores.config import settings as cfg
     from corredores.services.policy_photo_capture import extract_policy_photo
     from corredores.services.policy_photo_commit import (
         commit_policy_from_draft,
         draft_ready_for_one_click,
     )
+    from corredores.services.runtime_settings import runtime
 
     org = resolve_org(session)
     actor = current_actor(request)
+    vision_ready = bool(runtime().get("capture.openai_api_key").strip())
     content = await file.read()
     if not content:
         return templates.TemplateResponse(
@@ -1215,7 +1321,7 @@ async def captura_foto_post(
             _ctx(
                 request,
                 "polizas",
-                vision_ready=bool(getattr(cfg, "openai_api_key", None)),
+                vision_ready=vision_ready,
                 error="Archivo vacío",
             ),
             status_code=400,
@@ -1227,7 +1333,7 @@ async def captura_foto_post(
             _ctx(
                 request,
                 "polizas",
-                vision_ready=bool(getattr(cfg, "openai_api_key", None)),
+                vision_ready=vision_ready,
                 error="Archivo demasiado grande (máx. 12 MB)",
             ),
             status_code=400,
@@ -1853,6 +1959,118 @@ def poliza_nueva_post(
     session.flush()
     materialize_portfolio(session, organization_id=org.id, actor_id=actor.actor_id)
     return RedirectResponse(f"/polizas/{policy.id}", status_code=303)
+
+
+@router.get("/polizas/{policy_id}/plan-pagos", response_class=HTMLResponse)
+def poliza_plan_pagos_get(
+    request: Request,
+    policy_id: str,
+    session: Session = Depends(get_session),
+    error: str = Query(default=""),
+    ok: str = Query(default=""),
+):
+    from corredores.services.payment_plan_edit import build_plan_edit_view
+
+    org = resolve_org(session)
+    try:
+        view = build_plan_edit_view(session, org.id, policy_id)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    first_due = (
+        view.effective_date.isoformat()
+        if view.effective_date
+        else date.today().isoformat()
+    )
+    if view.installments:
+        first_due = view.installments[0]["due_date"]
+    return templates.TemplateResponse(
+        request,
+        "plan_pagos_editar.html",
+        _ctx(
+            request,
+            "polizas",
+            org_name=org.name,
+            view=view,
+            regen_count=max(1, len(view.installments) or 3),
+            first_due=first_due,
+            error=error or None,
+            ok=ok or None,
+        ),
+    )
+
+
+@router.post("/polizas/{policy_id}/plan-pagos/regenerar")
+def poliza_plan_pagos_regenerar(
+    request: Request,
+    policy_id: str,
+    count: int = Form(...),
+    first_due: str = Form(...),
+    frequency_months: int = Form(1),
+    session: Session = Depends(get_session),
+):
+    from urllib.parse import quote
+
+    from corredores.services.payment_plan_edit import regenerate_payment_plan
+
+    org = resolve_org(session)
+    actor = current_actor(request)
+    try:
+        regenerate_payment_plan(
+            session,
+            organization_id=org.id,
+            policy_id=policy_id,
+            count=int(count),
+            first_due=date.fromisoformat(first_due),
+            frequency_months=int(frequency_months or 1),
+            actor_id=actor.actor_id,
+        )
+    except (ValueError, TypeError) as exc:
+        return RedirectResponse(
+            f"/polizas/{policy_id}/plan-pagos?error={quote(str(exc))}",
+            status_code=303,
+        )
+    return RedirectResponse(
+        f"/polizas/{policy_id}/plan-pagos?ok={quote('Plan regenerado')}",
+        status_code=303,
+    )
+
+
+@router.post("/polizas/{policy_id}/plan-pagos")
+async def poliza_plan_pagos_post(
+    request: Request,
+    policy_id: str,
+    session: Session = Depends(get_session),
+):
+    from urllib.parse import quote
+
+    from corredores.services.payment_plan_edit import update_open_installments
+
+    org = resolve_org(session)
+    actor = current_actor(request)
+    form = await request.form()
+    ids = form.getlist("inst_id")
+    updates = []
+    for iid in ids:
+        due = form.get(f"due_{iid}")
+        amt = form.get(f"amt_{iid}")
+        updates.append({"id": iid, "due_date": due, "amount": amt})
+    try:
+        update_open_installments(
+            session,
+            organization_id=org.id,
+            policy_id=policy_id,
+            updates=updates,
+            actor_id=actor.actor_id,
+        )
+    except ValueError as exc:
+        return RedirectResponse(
+            f"/polizas/{policy_id}/plan-pagos?error={quote(str(exc))}",
+            status_code=303,
+        )
+    return RedirectResponse(
+        f"/polizas/{policy_id}/plan-pagos?ok={quote('Cuotas actualizadas')}",
+        status_code=303,
+    )
 
 
 @router.get("/polizas/{policy_id}", response_class=HTMLResponse)
@@ -2745,10 +2963,12 @@ def aseguradoras(
     activa: str = Query(default=""),
     session: Session = Depends(get_session),
 ):
+    from corredores.services.catalog_admin import list_carriers
+
     org = resolve_org(session)
     needle = _q(q)
     activa_n = _q(activa).lower()
-    rows = session.query(Carrier).filter_by(organization_id=org.id).order_by(Carrier.name).all()
+    rows = list_carriers(session, org.id)
     filtered = []
     for c in rows:
         if activa_n == "si" and not c.active:
@@ -2758,6 +2978,10 @@ def aseguradoras(
         if not _match(f"{c.code} {c.name}", needle):
             continue
         filtered.append(c)
+    edit_id = request.query_params.get("edit") or ""
+    edit_row = next((c for c in rows if c.id == edit_id), None)
+    if edit_row is not None and all(c.id != edit_row.id for c in filtered):
+        filtered = [edit_row, *filtered]
     return templates.TemplateResponse(
         request,
         "aseguradoras.html",
@@ -2769,12 +2993,103 @@ def aseguradoras(
             q=needle,
             activa=activa_n,
             result_count=len(filtered),
+            flash=request.query_params.get("ok"),
+            error=request.query_params.get("error"),
+            edit_id=edit_id,
+            edit_row=edit_row,
         ),
     )
 
 
+@router.post("/aseguradoras")
+def aseguradoras_post(
+    request: Request,
+    code: str = Form(...),
+    name: str = Form(...),
+    carrier_id: str = Form(""),
+    active: str = Form(""),
+    session: Session = Depends(get_session),
+):
+    from urllib.parse import quote
+
+    from corredores.services.catalog_admin import upsert_carrier
+
+    org = resolve_org(session)
+    actor = current_actor(request)
+    try:
+        row = upsert_carrier(
+            session,
+            organization_id=org.id,
+            code=code,
+            name=name,
+            active=active.strip().lower() in {"1", "true", "on", "yes", "si"},
+            carrier_id=carrier_id.strip() or None,
+            actor_id=actor.actor_id,
+        )
+    except ValueError as exc:
+        return RedirectResponse(
+            f"/aseguradoras?error={quote(str(exc))}", status_code=303
+        )
+    return RedirectResponse(f"/aseguradoras?ok=saved#row-{row.id}", status_code=303)
+
+
+@router.get("/ramos", response_class=HTMLResponse)
+def ramos(request: Request, session: Session = Depends(get_session)):
+    from corredores.services.catalog_admin import list_lines
+
+    org = resolve_org(session)
+    lines = list_lines(session)
+    edit_id = request.query_params.get("edit") or ""
+    edit_row = next((l for l in lines if l.id == edit_id), None)
+    return templates.TemplateResponse(
+        request,
+        "ramos.html",
+        _ctx(
+            request,
+            "ramos",
+            org_name=org.name,
+            lines=lines,
+            flash=request.query_params.get("ok"),
+            error=request.query_params.get("error"),
+            edit_id=edit_id,
+            edit_row=edit_row,
+        ),
+    )
+
+
+@router.post("/ramos")
+def ramos_post(
+    request: Request,
+    code: str = Form(...),
+    name: str = Form(...),
+    line_id: str = Form(""),
+    operational: str = Form(""),
+    session: Session = Depends(get_session),
+):
+    from urllib.parse import quote
+
+    from corredores.services.catalog_admin import upsert_line
+
+    org = resolve_org(session)
+    actor = current_actor(request)
+    try:
+        row = upsert_line(
+            session,
+            organization_id=org.id,
+            code=code,
+            name=name,
+            operational_in_p0=operational.strip().lower() in {"1", "true", "on", "yes", "si"},
+            line_id=line_id.strip() or None,
+            actor_id=actor.actor_id,
+        )
+    except ValueError as exc:
+        return RedirectResponse(f"/ramos?error={quote(str(exc))}", status_code=303)
+    return RedirectResponse(f"/ramos?ok=saved#row-{row.id}", status_code=303)
+
+
 @router.get("/comisiones", response_class=HTMLResponse)
 def comisiones(request: Request, session: Session = Depends(get_session)):
+    from corredores.services.catalog_admin import get_split_for_edit, list_line_commission_rates
     from corredores.services.commission_plan import (
         build_commission_plan_view,
         list_applied_commissions,
@@ -2786,8 +3101,74 @@ def comisiones(request: Request, session: Session = Depends(get_session)):
     return templates.TemplateResponse(
         request,
         "comisiones.html",
-        _ctx(request, "comisiones", org_name=org.name, plan=plan, applied=applied),
+        _ctx(
+            request,
+            "comisiones",
+            org_name=org.name,
+            plan=plan,
+            applied=applied,
+            rate_rows=list_line_commission_rates(session, org.id),
+            split_edit=get_split_for_edit(session, org.id),
+            flash=request.query_params.get("ok"),
+            error=request.query_params.get("error"),
+        ),
     )
+
+
+@router.post("/comisiones/tasas")
+async def comisiones_tasas_post(request: Request, session: Session = Depends(get_session)):
+    from urllib.parse import quote
+
+    from corredores.services.catalog_admin import save_all_line_rates
+
+    org = resolve_org(session)
+    actor = current_actor(request)
+    form = await request.form()
+    rates = {}
+    for key in form.keys():
+        if key.startswith("rate__"):
+            rates[key[6:]] = str(form.get(key) or "")
+    try:
+        n = save_all_line_rates(
+            session, organization_id=org.id, rates=rates, actor_id=actor.actor_id
+        )
+    except ValueError as exc:
+        return RedirectResponse(f"/comisiones?error={quote(str(exc))}", status_code=303)
+    return RedirectResponse(
+        f"/comisiones?ok={quote(f'{n} tasa(s) guardadas')}", status_code=303
+    )
+
+
+@router.post("/comisiones/reparto")
+def comisiones_reparto_post(
+    request: Request,
+    broker_pct: str = Form(...),
+    executive_pct: str = Form(...),
+    office_pct: str = Form(...),
+    referral_pct: str = Form(...),
+    name: str = Form(""),
+    session: Session = Depends(get_session),
+):
+    from urllib.parse import quote
+
+    from corredores.services.catalog_admin import save_split_shares
+
+    org = resolve_org(session)
+    actor = current_actor(request)
+    try:
+        save_split_shares(
+            session,
+            organization_id=org.id,
+            broker_pct=broker_pct,
+            executive_pct=executive_pct,
+            office_pct=office_pct,
+            referral_pct=referral_pct,
+            name=name or None,
+            actor_id=actor.actor_id,
+        )
+    except ValueError as exc:
+        return RedirectResponse(f"/comisiones?error={quote(str(exc))}", status_code=303)
+    return RedirectResponse("/comisiones?ok=reparto%20guardado", status_code=303)
 
 
 @router.get("/importaciones", response_class=HTMLResponse)
@@ -3086,6 +3467,7 @@ def reportes_morosidad_csv(
 @router.get("/configuracion", response_class=HTMLResponse)
 def configuracion(request: Request, session: Session = Depends(get_session)):
     from corredores.services.mail import mail_status
+    from corredores.services.runtime_settings import runtime
     from corredores.services.statement_delivery import recent_deliveries
 
     org = resolve_org(session)
@@ -3103,6 +3485,15 @@ def configuracion(request: Request, session: Session = Depends(get_session)):
                 " ".join(x for x in [p.first_name or "", p.last_name or ""] if x).strip()
                 or p.id
             )
+    mail = mail_status()
+    cfg = runtime(session)
+    setup = {
+        "mail_ok": mail["configured"],
+        "auto_ok": bool(mail["auto_enabled"] and mail["configured"]),
+        "openai_ok": bool(cfg.get("capture.openai_api_key").strip()),
+        "stripe_ok": bool(cfg.get("saas.stripe_secret_key").strip()),
+        "onboarding_ok": bool(cfg.get("saas.onboarding_url").strip()),
+    }
     return templates.TemplateResponse(
         request,
         "configuracion.html",
@@ -3110,7 +3501,7 @@ def configuracion(request: Request, session: Session = Depends(get_session)):
             request,
             "configuracion",
             org_name=org.name,
-            mail=mail_status(),
+            mail=mail,
             deliveries=deliveries,
             party_names=party_names,
             flash=request.query_params.get("ok"),
@@ -3119,25 +3510,30 @@ def configuracion(request: Request, session: Session = Depends(get_session)):
             auto_sent=request.query_params.get("sent", "0"),
             auto_skipped=request.query_params.get("skipped", "0"),
             auto_failed=request.query_params.get("failed", "0"),
+            auto_outcomes=None,
+            setup=setup,
         ),
     )
 
 
 @router.post("/configuracion/estados-auto")
 def configuracion_estados_auto(
+    request: Request,
     dry_run: str = Form("1"),
     session: Session = Depends(get_session),
 ):
-    from corredores.config import settings
-    from corredores.services.mail import mail_configured
-    from corredores.services.statement_delivery import run_auto_statement_send
     from urllib.parse import quote
+
+    from corredores.services.mail import mail_configured, mail_status
+    from corredores.services.runtime_settings import runtime
+    from corredores.services.statement_delivery import recent_deliveries, run_auto_statement_send
 
     org = resolve_org(session)
     is_dry = dry_run.strip() not in {"0", "false", "no"}
-    if not is_dry and (not settings.statement_auto_enabled or not mail_configured()):
+    cfg = runtime(session)
+    if not is_dry and (not cfg.bool("statements.auto_enabled") or not mail_configured()):
         detail = quote(
-            "Activa STATEMENT_AUTO_ENABLED y SMTP (MAIL_ENABLED + SMTP_*)",
+            "Activa correo y estados auto en Mantenimiento",
             safe="",
         )
         return RedirectResponse(
@@ -3146,12 +3542,109 @@ def configuracion_estados_auto(
     report = run_auto_statement_send(session, org.id, dry_run=is_dry)
     if not is_dry:
         session.commit()
-    dry_q = "1" if is_dry else "0"
+
+    # Dry-run: mostrar detalle en la misma pantalla (sin perder outcomes).
+    if is_dry:
+        deliveries = recent_deliveries(session, org.id, limit=40)
+        party_ids = {d.party_id for d in deliveries}
+        parties = (
+            session.query(Party).filter(Party.id.in_(party_ids)).all() if party_ids else []
+        )
+        party_names = {}
+        for p in parties:
+            if getattr(p, "party_type", None) == "ORGANIZATION":
+                party_names[p.id] = p.legal_name or p.trade_name or p.id
+            else:
+                party_names[p.id] = (
+                    " ".join(x for x in [p.first_name or "", p.last_name or ""] if x).strip()
+                    or p.id
+                )
+        return templates.TemplateResponse(
+            request,
+            "configuracion.html",
+            _ctx(
+                request,
+                "configuracion",
+                org_name=org.name,
+                mail=mail_status(),
+                deliveries=deliveries,
+                party_names=party_names,
+                flash="auto_ok",
+                flash_detail=None,
+                dry_run=True,
+                auto_sent=str(report.sent),
+                auto_skipped=str(report.skipped),
+                auto_failed=str(report.failed),
+                auto_outcomes=report.outcomes,
+                setup=None,
+            ),
+        )
+
     return RedirectResponse(
-        f"/configuracion?ok=auto_ok&dry_run={dry_q}"
+        f"/configuracion?ok=auto_ok&dry_run=0"
         f"&sent={report.sent}&skipped={report.skipped}&failed={report.failed}",
         status_code=303,
     )
+
+
+def _require_platform_admin(request: Request, session: Session):
+    from corredores.services.tenant import is_platform_admin
+    from corredores.web.auth_session import read_session
+
+    principal = read_session(request)
+    if principal is None:
+        raise HTTPException(401, "sesión requerida")
+    if not is_platform_admin(session, principal.actor_id, username=principal.username):
+        raise HTTPException(403, "solo dueño de plataforma")
+    return principal
+
+
+@router.get("/mantenimiento", response_class=HTMLResponse)
+def mantenimiento_get(request: Request, session: Session = Depends(get_session)):
+    from corredores.services.runtime_settings import grouped_settings_for_ui
+
+    _require_platform_admin(request, session)
+    groups = grouped_settings_for_ui(session)
+    return templates.TemplateResponse(
+        request,
+        "mantenimiento.html",
+        _ctx(
+            request,
+            "mantenimiento",
+            org_name="Plataforma",
+            groups=groups,
+            flash=request.query_params.get("ok"),
+            flash_detail=request.query_params.get("detail"),
+            error=request.query_params.get("error"),
+        ),
+    )
+
+
+@router.post("/mantenimiento")
+async def mantenimiento_post(request: Request, session: Session = Depends(get_session)):
+    from urllib.parse import quote
+
+    from corredores.services.runtime_settings import set_settings
+
+    principal = _require_platform_admin(request, session)
+    form = await request.form()
+    updates: dict[str, str] = {}
+    for key in form.keys():
+        if key.startswith("s__"):
+            updates[key[3:]] = str(form.get(key) or "")
+    # unchecked bools don't appear — force false for known bool keys present as hidden markers
+    for key in form.keys():
+        if key.startswith("bool__"):
+            real = key[6:]
+            updates[real] = "true" if form.get(f"s__{real}") in {"on", "true", "1"} else "false"
+    try:
+        changed = set_settings(session, updates, actor_id=principal.actor_id)
+    except ValueError as exc:
+        return RedirectResponse(
+            f"/mantenimiento?error={quote(str(exc))}", status_code=303
+        )
+    detail = quote(f"{len(changed)} cambio(s)", safe="")
+    return RedirectResponse(f"/mantenimiento?ok=saved&detail={detail}", status_code=303)
 
 
 @router.post("/nba/{rec_id}/decide")

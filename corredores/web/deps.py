@@ -73,7 +73,9 @@ def resolve_org(session: Session, request: Request | None = None) -> Organizatio
         org_id = principal.organization_id
         if not org_id:
             raise HTTPException(403, "organización activa no definida")
-        assert_membership(session, principal.actor_id, org_id)
+        assert_membership(
+            session, principal.actor_id, org_id, username=principal.username
+        )
         org = get_organization(session, org_id)
         if org is None or not org.active:
             raise HTTPException(403, "organización no disponible")

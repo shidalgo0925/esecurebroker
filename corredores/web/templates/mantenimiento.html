@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Mantenimiento · ESecureBroker{% endblock %}
+{% block topbar %}Plataforma · Mantenimiento{% endblock %}
+{% block content %}
+<section class="page-head row-between">
+  <div>
+    <h1 class="page-title">Mantenimiento</h1>
+    <p class="page-sub">
+      Configuración operativa en base de datos — sin editar código ni <span class="mono">.env</span>.
+      Solo dueños de plataforma.
+    </p>
+  </div>
+</section>
+
+{% if flash == 'saved' %}
+<p class="flash-ok">Guardado · {{ flash_detail or 'ok' }}</p>
+{% endif %}
+{% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+
+<form method="post" action="/mantenimiento" class="capture-form">
+  {% for g in groups %}
+  <section class="poliza-panel" style="margin-bottom:1.25rem">
+    <h2 class="poliza-panel-title">{{ g.title }}</h2>
+    <div class="table-card" style="padding:0.5rem 1rem 1rem">
+      {% for item in g.items %}
+      <div style="margin-top:0.85rem;padding-top:0.75rem;border-top:1px solid var(--line,#e6e9f0)">
+        <label style="display:block;font-weight:600">
+          {{ item.label }}
+          {% if item.is_secret %}<span class="meta">· secreto</span>{% endif %}
+        </label>
+        {% if item.help_text %}<p class="meta" style="margin:0.2rem 0 0.45rem">{{ item.help_text }}</p>{% endif %}
+
+        {% if item.value_type == 'bool' %}
+          <input type="hidden" name="bool__{{ item.key }}" value="1" />
+          <label class="check-row" style="margin:0">
+            <input type="checkbox" name="s__{{ item.key }}" value="true" {% if item.value in ['true','1','yes','on'] %}checked{% endif %} />
+            <span>Activo</span>
+          </label>
+        {% elif item.is_secret %}
+          <input
+            type="password"
+            name="s__{{ item.key }}"
+            value=""
+            autocomplete="new-password"
+            placeholder="{% if item.value %}•••• (dejar vacío para no cambiar){% else %}pegá el valor{% endif %}"
+            style="width:100%;max-width:36rem"
+          />
+          {% if item.value %}<p class="meta" style="margin:0.25rem 0 0">Actual: {{ item.display }}</p>{% endif %}
+        {% else %}
+          <input
+            type="{% if item.value_type == 'int' %}number{% else %}text{% endif %}"
+            name="s__{{ item.key }}"
+            value="{{ item.value }}"
+            style="width:100%;max-width:36rem"
+          />
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endfor %}
+
+  <div class="wizard-actions">
+    <a class="btn-secondary" href="/configuracion">Configuración org</a>
+    <button class="btn-primary" type="submit">Guardar mantenimiento</button>
+  </div>
+</form>
+
+<p class="hint" style="margin-top:1.25rem;max-width:42rem">
+  Bootstrap mínimo que sigue en servidor: <span class="mono">DATABASE_URL</span> y
+  <span class="mono">AUTH_SECRET</span> (arranque/cookie). Todo lo demás se edita aquí.
+</p>
+{% endblock %}

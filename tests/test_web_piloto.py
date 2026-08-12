@@ -79,6 +79,8 @@ def test_piloto_surfaces_ok():
         "/reclamos",
         "/oportunidades",
         "/aseguradoras",
+        "/ramos",
+        "/comisiones",
         "/reportes",
         "/ayuda",
     ):

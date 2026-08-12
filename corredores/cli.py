@@ -10,17 +10,50 @@ from corredores.db import Base, engine
 from corredores.domain import models as _models  # noqa: F401
 
 
+def _redact_db_url(url: str) -> str:
+    """Hide password in DATABASE_URL for doctor output."""
+    try:
+        from urllib.parse import urlparse, urlunparse
+
+        p = urlparse(url)
+        if p.password is None:
+            return url
+        netloc = p.netloc.replace(f":{p.password}@", ":***@")
+        return urlunparse(p._replace(netloc=netloc))
+    except Exception:  # noqa: BLE001
+        return "<redacted>"
+
+
 def doctor() -> int:
+    from corredores.services.mail import mail_status
+
     print("ESecureBroker doctor")
     print(f"  version:     {__import__('corredores').__version__}")
     print(f"  app_env:     {settings.app_env}")
-    print(f"  database:    {settings.database_url}")
+    print(f"  database:    {_redact_db_url(settings.database_url)}")
     Path("/opt/corredores/var").mkdir(parents=True, exist_ok=True)
     # touch metadata
     tables = sorted(Base.metadata.tables.keys())
     print(f"  orm_tables:  {len(tables)}")
     for t in tables:
         print(f"    - {t}")
+    from corredores.services.runtime_settings import runtime
+
+    ms = mail_status()
+    cfg = runtime()
+    print("  mail (DB):")
+    print(f"    enabled:     {ms['mail_enabled']}")
+    print(f"    configured:  {ms['configured']}")
+    print(f"    smtp:        {ms['smtp_host'] or '—'}:{ms['smtp_port']}")
+    print(f"    from:        {ms['smtp_from'] or '—'}")
+    print(f"    auto_stmt:   {ms['auto_enabled']} (min_days={ms['auto_min_days']}, cooldown={ms['auto_cooldown_days']}d)")
+    print("  capture (DB):")
+    print(f"    openai_key:  {bool(cfg.get('capture.openai_api_key').strip())}")
+    print(f"    vision_model:{cfg.get('capture.openai_vision_model')}")
+    print("  saas (DB):")
+    print(f"    onboarding:  {bool(cfg.get('saas.onboarding_url').strip())}")
+    print(f"    stripe:      {bool(cfg.get('saas.stripe_secret_key').strip())}")
+    print(f"    platform:    emails={bool(cfg.get('platform.admin_emails').strip())} users={bool(cfg.get('platform.admin_usernames').strip())}")
     return 0
 
 
@@ -220,7 +253,10 @@ def import_excel(argv: list[str]) -> int:
 
 
 def send_statements(argv: list[str]) -> int:
-    """Usage: send-statements [--dry-run] [--org-id ID]"""
+    """Usage: send-statements [--dry-run] [--org-id ID]
+
+    Sin --org-id: recorre todas las organizaciones activas (timer diario).
+    """
     import json
 
     from corredores.db import SessionLocal
@@ -244,17 +280,40 @@ def send_statements(argv: list[str]) -> int:
 
     with SessionLocal() as session:
         if org_id:
-            org = session.get(Organization, org_id)
+            orgs = [session.get(Organization, org_id)]
+            orgs = [o for o in orgs if o is not None]
         else:
-            org = session.query(Organization).order_by(Organization.created_at.asc()).first()
-        if org is None:
+            orgs = (
+                session.query(Organization)
+                .filter_by(active=True)
+                .order_by(Organization.name.asc())
+                .all()
+            )
+        if not orgs:
             print(json.dumps({"ok": False, "error": "no organization"}, indent=2))
             return 1
-        report = run_auto_statement_send(session, org.id, dry_run=dry_run)
+        combined = {
+            "ok": True,
+            "dry_run": dry_run,
+            "organizations": [],
+            "sent": 0,
+            "skipped": 0,
+            "failed": 0,
+            "candidates": 0,
+        }
+        for org in orgs:
+            report = run_auto_statement_send(session, org.id, dry_run=dry_run)
+            combined["organizations"].append(
+                {"organization_id": org.id, "name": org.name, **report.as_dict()}
+            )
+            combined["sent"] += report.sent
+            combined["skipped"] += report.skipped
+            combined["failed"] += report.failed
+            combined["candidates"] += report.candidates
         if not dry_run:
             session.commit()
-    print(json.dumps({"ok": True, **report.as_dict()}, indent=2, ensure_ascii=False))
-    return 0 if report.failed == 0 else 2
+    print(json.dumps(combined, indent=2, ensure_ascii=False))
+    return 0 if combined["failed"] == 0 else 2
 
 
 def serve(argv: list[str] | None = None) -> int:

@@ -5,9 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from corredores.config import settings
-
-
 @dataclass(frozen=True)
 class SaasPlan:
     code: str
@@ -44,7 +41,7 @@ PLANS: dict[str, SaasPlan] = {
         code="oficina",
         name="Oficina",
         price_monthly_usd=99,
-        audience="Trabajo con mi equipo",
+        audience="Con mi equipo",
         seats_included=15,
         tagline="Correduría pequeña/mediana: el equipo interno sobre la misma cartera.",
         features=(
@@ -77,7 +74,7 @@ PLANS: dict[str, SaasPlan] = {
         code="enterprise",
         name="Enterprise",
         price_monthly_usd=None,
-        audience="Grupo o operación a escala",
+        audience="Operación a escala",
         seats_included=None,
         tagline="Redes grandes, multi-organización, SLA y acompañamiento dedicado.",
         features=(
@@ -126,15 +123,11 @@ def require_plan(code: str | None) -> SaasPlan:
 
 
 def start_href(plan_code: str | None = None) -> str:
-    """CTA de alta: URL EN1 si está configurada; si no, registro piloto local."""
+    """CTA de alta — 100% UX ESB (ADR-006 Ana). Nunca redirige a UI EN1."""
     code = _canonical_code(plan_code)
     plan = PLANS[code]
     if plan.contact_sales:
         return "/#contacto"
-    base = (settings.saas_onboarding_url or "").strip()
-    if base:
-        sep = "&" if "?" in base else "?"
-        return f"{base}{sep}plan={code}&product=esecurebroker"
     return f"/registro?plan={code}"
 
 

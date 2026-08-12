@@ -5,78 +5,77 @@
 <section class="page-head">
   <h1 class="page-title">Comisiones</h1>
   <p class="page-sub">
-    Capas · <b>{{ plan.organization_name }}</b> ·
-    aseguradoras <b>{{ plan.agreement_reference }}</b> ·
-    referidos <b>{{ plan.referral_plan.reference }}</b>
+    Editable · <b>{{ plan.organization_name }}</b> ·
+    convenio <b>{{ plan.agreement_reference }}</b>
   </p>
 </section>
 
-<section>
-  <h2 class="section-title">1 · Plan referidos (reparto con referido + ejecutivo)</h2>
-  <p class="page-sub">{{ plan.referral_plan.rule }}</p>
+{% if flash %}<p class="flash-ok">{{ flash }}</p>{% endif %}
+{% if error %}<p class="form-error">{{ error }}</p>{% endif %}
 
-  <div class="capture-summary">
-    <div><span class="meta">Agente</span><strong class="mono">{{ plan.referral_plan.broker_pct }}</strong></div>
-    <div><span class="meta">Ejecutivo</span><strong class="mono">{{ plan.referral_plan.executive_pct }}</strong></div>
-    <div><span class="meta">Oficina</span><strong class="mono">{{ plan.referral_plan.office_pct }}</strong></div>
-    <div><span class="meta">Referido</span><strong class="mono">{{ plan.referral_plan.referral_pct }}</strong></div>
-  </div>
-
-  <div class="table-card">
-    <table class="data-table">
-      <thead>
-        <tr><th>Rol</th><th>Share</th><th>Significado</th></tr>
-      </thead>
-      <tbody>
-      {% for r in plan.roles %}
-        <tr>
-          <td class="cli-name">{{ r.role }}</td>
-          <td class="mono"><b>{{ r.share_pct }}</b></td>
-          <td>{{ r.meaning }}</td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
-
-  <p class="meta" style="margin-top:0.85rem">
-    Vigente: <b>{{ plan.split_name }}</b> ·
-    sin referido: {{ plan.referral_plan.exec_reference }} ·
-    solo agente/oficina: {{ plan.referral_plan.solo_reference }}.
-  </p>
-  <p class="meta">
-    Devengado en cartera: agente <b class="mono">${{ plan.broker_total|money }}</b> ·
+<section class="poliza-panel catalog-editor">
+  <h2 class="poliza-panel-title">1 · Reparto interno</h2>
+  <p class="page-sub" style="margin:0 0 0.65rem">% de la comisión Cia por rol · debe sumar 100%</p>
+  <form class="catalog-form catalog-stack" method="post" action="/comisiones/reparto">
+    <div class="catalog-row">
+      <label class="catalog-field code">Agente %
+        <input name="broker_pct" class="mono" value="{{ split_edit.broker_pct }}" required />
+      </label>
+      <label class="catalog-field code">Ejecutivo %
+        <input name="executive_pct" class="mono" value="{{ split_edit.executive_pct }}" required />
+      </label>
+      <label class="catalog-field code">Oficina %
+        <input name="office_pct" class="mono" value="{{ split_edit.office_pct }}" required />
+      </label>
+      <label class="catalog-field code">Referido %
+        <input name="referral_pct" class="mono" value="{{ split_edit.referral_pct }}" required />
+      </label>
+      <label class="catalog-field name">Nombre del plan
+        <input name="name" value="{{ split_edit.name }}" />
+      </label>
+      <div class="wizard-actions">
+        <button class="btn-primary" type="submit">Guardar reparto</button>
+      </div>
+    </div>
+  </form>
+  <p class="meta" style="margin-top:0.65rem">
+    Devengado: agente <b class="mono">${{ plan.broker_total|money }}</b> ·
     ejecutivo <b class="mono">${{ plan.executive_total|money }}</b> ·
     oficina <b class="mono">${{ plan.office_total|money }}</b> ·
     referido <b class="mono">${{ plan.referral_total|money }}</b>
-    (de ${{ plan.applied_total|money }} comisión Cia · {{ plan.applied_count }} pólizas).
+    (de ${{ plan.applied_total|money }} · {{ plan.applied_count }} pólizas).
   </p>
 </section>
 
 <section style="margin-top:2rem">
-  <h2 class="section-title">2 · Plan aseguradoras (% Cia por ramo)</h2>
-  <p class="page-sub">
-    Qué % paga la compañía sobre la prima · vigente para
-    {% for c in plan.carriers %}{{ c.name }}{% if not loop.last %} · {% endif %}{% endfor %}.
-  </p>
-
-  <div class="table-card">
-    <table class="data-table">
-      <thead>
-        <tr><th>Ramo</th><th>Descripción</th><th>Tasa Cia</th><th>Base</th></tr>
-      </thead>
-      <tbody>
-      {% for r in plan.line_rates %}
-        <tr>
-          <td class="cli-id">{{ r.code }}</td>
-          <td class="cli-name">{{ r.label }}</td>
-          <td class="mono"><b>{{ r.rate_pct }}</b></td>
-          <td class="mono">{{ r.base }}</td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
+  <h2 class="section-title">2 · % Cia por ramo (editable)</h2>
+  <p class="page-sub">Qué % paga la compañía sobre la prima anual. Ramos en <a href="/ramos">Gestión → Ramos</a>.</p>
+  <form method="post" action="/comisiones/tasas">
+    <div class="table-card">
+      <table class="data-table">
+        <thead>
+          <tr><th>Ramo</th><th>Descripción</th><th>Tasa Cia %</th><th>En DB</th></tr>
+        </thead>
+        <tbody>
+        {% for r in rate_rows %}
+          <tr>
+            <td class="cli-id">{{ r.code }}</td>
+            <td class="cli-name">{{ r.name }}</td>
+            <td>
+              <input name="rate__{{ r.line_id }}" class="mono" value="{{ r.rate_pct }}" style="width:5.5rem" />
+            </td>
+            <td>{% if r.has_rule %}<span class="kind-pill">sí</span>{% else %}<span class="meta">default</span>{% endif %}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4" class="empty-row">Sin ramos — creá en <a href="/ramos">Ramos</a>.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="wizard-actions" style="margin:0.75rem 0 0">
+      <button class="btn-primary" type="submit">Guardar tasas</button>
+    </div>
+  </form>
 </section>
 
 <section style="margin-top:2rem">
@@ -101,23 +100,19 @@
   <div class="table-card">
     <table class="data-table">
       <thead>
-        <tr><th>Póliza</th><th>Base</th><th>Tasa</th><th>Cia</th><th>Agente</th><th>Ejecutivo</th><th>Oficina</th><th>Referido</th><th></th></tr>
+        <tr><th>Póliza</th><th>Base</th><th>Tasa</th><th>Cia</th><th></th></tr>
       </thead>
       <tbody>
-      {% for c in applied %}
+      {% for a in applied %}
         <tr>
-          <td class="cli-id"><a href="/polizas/{{ c.policy_id }}">{{ c.policy_number }}</a></td>
-          <td class="mono">${{ c.base_amount|money }}</td>
-          <td class="mono">{{ '%.0f'|format(c.rate * 100) }}%</td>
-          <td class="mono">${{ c.calculated_amount|money }}</td>
-          <td class="mono">{% if c.broker_amount is not none %}${{ c.broker_amount|money }}{% else %}—{% endif %}</td>
-          <td class="mono">{% if c.executive_amount is not none %}${{ c.executive_amount|money }}{% else %}—{% endif %}</td>
-          <td class="mono">{% if c.office_amount is not none %}${{ c.office_amount|money }}{% else %}—{% endif %}</td>
-          <td class="mono">{% if c.referral_amount is not none %}${{ c.referral_amount|money }}{% else %}—{% endif %}</td>
-          <td class="meta">{{ c.calculated_at }}</td>
+          <td class="mono"><a href="/polizas/{{ a.policy_id }}">{{ a.policy_number or a.policy_id[:8] }}</a></td>
+          <td class="mono">${{ a.base_amount|money }}</td>
+          <td class="mono">{{ '%.0f'|format(a.rate * 100) }}%</td>
+          <td class="mono"><b>${{ a.calculated_amount|money }}</b></td>
+          <td class="cli-action"><a class="open-link" href="/polizas/{{ a.policy_id }}">Ver</a></td>
         </tr>
       {% else %}
-        <tr><td colspan="9" class="empty-row">Aún no hay comisiones calculadas.</td></tr>
+        <tr><td colspan="5" class="empty-row">Aún no hay comisiones calculadas en cartera.</td></tr>
       {% endfor %}
       </tbody>
     </table>

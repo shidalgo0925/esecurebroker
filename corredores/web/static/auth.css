@@ -22,6 +22,30 @@ body.auth-body {
   -webkit-font-smoothing: antialiased;
 }
 
+body.auth-body.auth-env-dev .auth-stage {
+  background:
+    radial-gradient(ellipse 90% 70% at 12% 18%, rgba(45, 212, 191, 0.22), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 88% 82%, rgba(15, 118, 110, 0.55), transparent 50%),
+    linear-gradient(165deg, #042f2e 0%, #0b3d3a 42%, #0f766e 100%);
+}
+body.auth-body.auth-env-dev::before {
+  content: "ENTORNO DEV · no es producción";
+  display: block;
+  background: #14b8a6;
+  color: #042f2e;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.4rem 0.75rem;
+  position: relative;
+  z-index: 20;
+}
+body.auth-body.auth-env-dev .auth-wordmark span {
+  color: #5eead4;
+}
+
 .auth-stage {
   position: relative;
   min-height: 100vh;

@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ESecureBroker — tu correduría, bajo control</title>
+  <title>{% if is_dev_env %}[DEV] {% endif %}ESecureBroker — tu correduría, bajo control</title>
   <meta name="description" content="ESecureBroker está diseñado para la administración de pólizas, cobranza de primas, comisiones, cotizaciones, CRM, renovaciones, reportes y la operación diaria del corredor de seguros." />
   <link rel="icon" href="/static/brand/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=Inter:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;1,6..72,500&display=swap" rel="stylesheet" />
   {# Nombre sin "landing" — algunos adblockers bloquean */landing.css #}
-  <link rel="stylesheet" type="text/css" href="/static/esb-public.css?v=20260811j" />
+  <link rel="stylesheet" type="text/css" href="/static/esb-public.css?v=20260812dev1" />
   <style>
     /* Fallback mínimo si el CSS externo falla */
     body.land-body{margin:0;font-family:Inter,Segoe UI,system-ui,sans-serif;color:#141b30;background:#fbfaf6}
@@ -36,7 +36,7 @@
     .mock-body{padding:1rem;background:#fbfaf6}
   </style>
 </head>
-<body class="land-body">
+<body class="land-body{% if is_dev_env %} land-env-dev{% endif %}">
   <header class="land-header">
     <a class="land-brand" href="/">
       <img src="/static/brand/crest.svg?v=20260811b" width="36" height="36" alt="" />
@@ -479,11 +479,9 @@
       <div class="land-plans land-plans-4">
         {% for plan in plans %}
         <a class="land-plan{% if plan.highlighted %} is-hot{% endif %}{% if plan.contact_sales %} is-enterprise{% endif %}" href="{{ plan.register_href }}">
-          <div class="land-plan-top">
-            <p class="land-plan-audience">{{ plan.audience }}</p>
-            {% if plan.highlighted %}<span class="land-plan-badge">Recomendado</span>{% endif %}
-            {% if plan.contact_sales %}<span class="land-plan-badge">A medida</span>{% endif %}
-          </div>
+          {% if plan.highlighted %}<span class="land-plan-badge">Recomendado</span>{% endif %}
+          {% if plan.contact_sales %}<span class="land-plan-badge">A medida</span>{% endif %}
+          <p class="land-plan-audience">{{ plan.audience }}</p>
           <h3 class="land-plan-name">{{ plan.name }}</h3>
           <p class="land-plan-price">{{ plan.price_label }}{% if plan.price_suffix %}<span>{{ plan.price_suffix }}</span>{% endif %}</p>
           <p class="land-plan-tag">{{ plan.tagline }}</p>

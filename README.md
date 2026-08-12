@@ -5,11 +5,39 @@ Producto comercial **ESecureBroker** (corredores de seguros), asociado a EN1, **
 | Dimensión | Valor |
 |-----------|--------|
 | **Nombre** | **ESecureBroker** |
-| **Path** | `/opt/corredores` |
 | **Fase** | P0 — Dominio AUTO end-to-end |
-| **DB** | Propia — Postgres `corredores` (ver OPS wiki); SQLite solo fallback local |
-| **Tests DB** | `corredores_test` (aislado; `drop_all` nunca toca app DB) |
 | **EN1** | Solo abstracciones (`Actor`, `OrganizationContext`, `EntitlementChecker`) hasta ADR-006 |
+
+## Entornos (prod / dev)
+
+| | **PROD** | **DEV** |
+|---|---|---|
+| Path | `/opt/corredores` | `/opt/corredores-dev` |
+| Host | https://esecurebroker.etsrv.site | https://esecurebroker-dev.etsrv.site |
+| Puerto local | `127.0.0.1:8091` | `127.0.0.1:8092` |
+| Systemd | `esecurebroker.service` | `esecurebroker-dev.service` |
+| `APP_ENV` | `prod` | `dev` |
+| DB | Postgres `corredores` | Postgres `corredores_dev` |
+| Cookie | `esb_session` | `esb_session_dev` |
+| Statements timer | `esecurebroker-statements.timer` | **no** (evitar mails reales) |
+| Alta / checkout (UX) | `/registro` → `/checkout` (ESB) | `/registro` → `/checkout` (ESB) |
+| SoR comercial | EN1 PROD vía API M2M (futuro) | EN1 DEV vía API M2M (`saas.en1_*`) |
+
+ADR-006 Ana: el usuario **nunca** ve UI EN1. CTAs locales. Comercio M2M off hasta contrato CODITO (`EN1_COMMERCE_ENABLED`).  
+Sin simular EN1: si la API no está, esa parte falla cerrada (puente piloto solo con flag off).
+
+Flujo de trabajo: desarrollar y probar en `/opt/corredores-dev` → commit/push → `git pull` en `/opt/corredores` → `sudo systemctl restart esecurebroker`.
+
+TLS DEV (tras crear DNS en Cloudflare A `esecurebroker-dev` → `86.48.20.243`, proxy naranja OK):
+
+```bash
+sudo bash /opt/corredores/deploy/enable_dev_tls.sh
+```
+
+**Importante:** usar un solo nivel bajo `etsrv.site` (`esecurebroker-dev.etsrv.site`).  
+`dev.esecurebroker.etsrv.site` es subdominio anidado: Cloudflare Universal SSL (gratis) **no** emite cert de borde para `*.*.etsrv.site`.
+
+Mientras no exista el DNS, DEV responde en `http://127.0.0.1:8092`.
 
 ## Flujo a certificar
 
