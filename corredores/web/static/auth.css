@@ -437,6 +437,33 @@ body.auth-body.auth-env-dev .auth-wordmark span {
   border-color: rgba(201, 162, 39, 0.45);
   color: var(--brass-soft);
 }
+.auth-select {
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0 0 0.85rem;
+  padding: 0.75rem 2.4rem 0.75rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(45deg, transparent 50%, var(--brass-soft) 50%) calc(100% - 1.15rem) calc(50% - 0.2rem) / 0.45rem 0.45rem no-repeat,
+    linear-gradient(135deg, var(--brass-soft) 50%, transparent 50%) calc(100% - 0.8rem) calc(50% - 0.2rem) / 0.45rem 0.45rem no-repeat,
+    rgba(255, 255, 255, 0.04);
+  color: #f4f5f9;
+  font: inherit;
+  font-size: 0.95rem;
+  line-height: 1.3;
+  cursor: pointer;
+}
+.auth-select:focus {
+  outline: none;
+  border-color: rgba(201, 162, 39, 0.55);
+  box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.15);
+}
+.auth-select option {
+  color: #111;
+  background: #fff;
+}
 
 @keyframes auth-rise {
   from { opacity: 0; transform: translateY(12px); }

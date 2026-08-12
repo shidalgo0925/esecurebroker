@@ -444,11 +444,7 @@ def checkout_get(
         session.add(sub)
         session.commit()
 
-    alt_plans = [
-        pl
-        for pl in plans_for_landing()
-        if not pl["contact_sales"] and pl["code"] != p.code
-    ]
+    plan_options = [pl for pl in plans_for_landing() if not pl["contact_sales"]]
     return templates.TemplateResponse(
         request,
         "checkout.html",
@@ -460,7 +456,7 @@ def checkout_get(
             "canceled": canceled == "1",
             "error": None,
             "promo_code": "",
-            "alt_plans": alt_plans,
+            "plan_options": plan_options,
         },
     )
 
@@ -502,11 +498,7 @@ def checkout_post(
         if not result.ok:
             from corredores.services.saas_plans import plans_for_landing
 
-            alt_plans = [
-                pl
-                for pl in plans_for_landing()
-                if not pl["contact_sales"] and pl["code"] != p.code
-            ]
+            plan_options = [pl for pl in plans_for_landing() if not pl["contact_sales"]]
             return templates.TemplateResponse(
                 request,
                 "checkout.html",
@@ -519,7 +511,7 @@ def checkout_post(
                     "error": result.user_message
                     or "No pudimos completar la activación de tu cuenta.",
                     "promo_code": promo_code,
-                    "alt_plans": alt_plans,
+                    "plan_options": plan_options,
                 },
                 status_code=400,
             )

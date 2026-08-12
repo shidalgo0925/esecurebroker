@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/auth.css?v=20260812plan1" />
+  <link rel="stylesheet" href="/static/auth.css?v=20260812plan2" />
 </head>
 <body class="auth-body">
   <div class="auth-stage">
@@ -37,7 +37,23 @@
       </div>
 
       <form class="auth-form" method="post" action="/checkout">
+        {% if plan_options %}
+        <label for="plan">Plan</label>
+        <select
+          id="plan"
+          name="plan"
+          class="auth-select"
+          onchange="if (this.value) window.location = '/checkout?plan=' + encodeURIComponent(this.value);"
+        >
+          {% for pl in plan_options %}
+          <option value="{{ pl.code }}"{% if pl.code == plan.code %} selected{% endif %}>
+            {{ pl.name }} · {{ pl.price_label }}{% if pl.price_suffix %}{{ pl.price_suffix }}{% endif %}
+          </option>
+          {% endfor %}
+        </select>
+        {% else %}
         <input type="hidden" name="plan" value="{{ plan.code }}" />
+        {% endif %}
         {% if en1_commerce %}
         <label for="promo_code">Código promocional</label>
         <input id="promo_code" name="promo_code" type="text" value="{{ promo_code or '' }}" autocomplete="off" placeholder="Ej. ESBDEV100" />
@@ -58,19 +74,7 @@
         {% endif %}
       </form>
 
-      {% if alt_plans %}
-      <div class="auth-plan-switch">
-        <p class="auth-note">Cambiar de plan</p>
-        <ul class="auth-plan-switch-list">
-          {% for pl in alt_plans %}
-          <li>
-            <a href="/checkout?plan={{ pl.code }}">{{ pl.name }} · {{ pl.price_label }}{% if pl.price_suffix %}{{ pl.price_suffix }}{% endif %}</a>
-          </li>
-          {% endfor %}
-        </ul>
-      </div>
-      {% endif %}
-      <a class="auth-back" href="/#precios">Ver todos los planes</a>
+      <a class="auth-back" href="/#precios">Ver detalle de planes</a>
     </div>
     <footer class="auth-foot">Suscripción ESecureBroker</footer>
   </div>

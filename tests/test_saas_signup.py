@@ -138,8 +138,10 @@ def test_pending_user_can_change_plan_from_checkout():
     switch = client.get("/checkout?plan=individual", follow_redirects=False)
     assert switch.status_code == 200
     assert "Individual" in switch.text
-    assert 'name="plan" value="individual"' in switch.text
-    assert "/checkout?plan=oficina" in switch.text  # alt switcher
+    assert 'name="plan"' in switch.text or 'id="plan"' in switch.text
+    assert 'value="individual"' in switch.text
+    assert 'value="oficina"' in switch.text
+    assert "<select" in switch.text
 
     with db.SessionLocal() as session:
         sub = (
