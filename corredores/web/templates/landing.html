@@ -4,13 +4,13 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{% if is_dev_env %}[DEV] {% endif %}ESecureBroker — tu correduría, bajo control</title>
-  <meta name="description" content="ESecureBroker: pólizas, cobranza, dashboard de cartera, reportes PDF con la marca de tu correduría, comisiones, cotizaciones, oportunidades y la operación diaria del corredor de seguros." />
+  <meta name="description" content="ESecureBroker: operación de correduría en la web y ESecureBroker GO en Android — pólizas, cobranza, cartera, cliente 360° y prioridades del día, con el mismo sistema de verdad." />
   <link rel="icon" href="/static/brand/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=Inter:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;1,6..72,500&display=swap" rel="stylesheet" />
   {# Nombre sin "landing" — algunos adblockers bloquean */landing.css #}
-  <link rel="stylesheet" type="text/css" href="/static/esb-public.css?v=20260813dev2" />
+  <link rel="stylesheet" type="text/css" href="/static/esb-public.css?v=20260813go1" />
   <style>
     /* Fallback mínimo si el CSS externo falla */
     body.land-body{margin:0;font-family:Inter,Segoe UI,system-ui,sans-serif;color:#141b30;background:#fbfaf6}
@@ -45,6 +45,7 @@
     <nav class="land-nav-main" aria-label="Principal">
       <a href="/">Inicio</a>
       <a href="#producto">Producto</a>
+      <a href="#go">GO</a>
       <a href="#portales">Portales</a>
       <a href="#capacidades">Capacidades</a>
       <a href="#integraciones">Integraciones</a>
@@ -73,13 +74,12 @@
       <p class="land-eyebrow">EasyTech · Plataformas</p>
       <p class="land-hero-line">Tu correduría, <em>bajo control</em>.</p>
       <p class="land-hero-support">
-        Diseñado para la administración de pólizas, cobranza, dashboard de cartera,
-        reportes con la identidad de tu correduría, comisiones, cotizaciones, oportunidades
-        y la operación diaria del equipo.
+        Operación completa en la web — y ESecureBroker GO en el teléfono del corredor:
+        prioridades, clientes, cartera y captura, sobre el mismo expediente.
       </p>
       <div class="land-hero-actions">
         <a class="land-btn-primary land-btn-lg" href="{{ start_href }}">Registrarse</a>
-        <a class="land-btn-text" href="#capacidades">Explorar capacidades</a>
+        <a class="land-btn-text" href="#go">Conocer ESB GO</a>
       </div>
     </div>
 
@@ -140,6 +140,10 @@
         <span>Prioridades cada mañana</span>
       </div>
       <div>
+        <strong>ESB GO</strong>
+        <span>Companion Android · Flutter</span>
+      </div>
+      <div>
         <strong>1 org / correduría</strong>
         <span>Datos separados por equipo</span>
       </div>
@@ -147,6 +151,71 @@
         <strong>Cartera viva</strong>
         <span>Pólizas · cobranza · renovaciones</span>
       </div>
+    </div>
+  </section>
+
+  {# —— ESecureBroker GO —— #}
+  <section class="land-band land-band-go" id="go" aria-label="ESecureBroker GO">
+    <div class="land-band-inner land-split land-go-split">
+      <div class="land-go-copy">
+        <p class="land-eyebrow">ESecureBroker GO</p>
+        <h2 class="land-h2">El corredor fuera de oficina, con el expediente en la mano.</h2>
+        <p class="land-p">
+          ESB GO es la app móvil companion de ESecureBroker — no un WebView ni otra base de datos.
+          Responde una sola pregunta: <em>¿qué necesita hacer el corredor ahora desde su teléfono?</em>
+        </p>
+        <ul class="land-check">
+          <li>Hoy — dinero del día y lo que requiere atención</li>
+          <li>Clientes — búsqueda y ficha 360° móvil</li>
+          <li>Cartera — pólizas según permisos y portfolio</li>
+          <li>+ — acción rápida: captura y seguimiento</li>
+          <li>Más — funciones secundarias, sin simular lo pendiente</li>
+        </ul>
+        <p class="land-p land-go-arch">
+          <span class="land-go-flow">GO → Mobile API → ESecureBroker</span>
+          <span class="land-go-note">Mismo System of Record. Android / Flutter.</span>
+        </p>
+        <div class="land-hero-actions">
+          <a class="land-btn-primary" href="#contacto">Solicitar acceso GO</a>
+          <a class="land-btn-text" href="{{ start_href }}">Empezar en la web</a>
+        </div>
+      </div>
+
+      <aside class="land-phone" aria-label="Vista previa de ESecureBroker GO">
+        <div class="land-phone-frame">
+          <div class="land-phone-notch" aria-hidden="true"></div>
+          <div class="land-phone-screen">
+            <header class="go-top">
+              <span class="go-org">ERA · Oficina</span>
+              <span class="go-badge">GO</span>
+            </header>
+            <p class="go-kicker">Hoy</p>
+            <h3 class="go-title">¿Qué necesita tu atención?</h3>
+            <div class="go-money">
+              <div><strong>$2,480</strong><span>Vencido</span></div>
+              <div><strong>$1,150</strong><span>Hoy</span></div>
+              <div><strong>3</strong><span>Renov.</span></div>
+            </div>
+            <div class="go-card">
+              <span class="go-pill">Cobro</span>
+              <p class="go-subject">María Delgado</p>
+              <p class="go-meta">AUTO-10482 · $420.00</p>
+            </div>
+            <div class="go-card soft">
+              <span class="go-pill warn">Renovación</span>
+              <p class="go-subject">Transportes Ríos</p>
+              <p class="go-meta">FLOTA-2201 · 12 días</p>
+            </div>
+            <nav class="go-tabbar" aria-label="Navegación GO">
+              <span class="is-on">Hoy</span>
+              <span>Clientes</span>
+              <span class="go-fab" aria-hidden="true">+</span>
+              <span>Cartera</span>
+              <span>Más</span>
+            </nav>
+          </div>
+        </div>
+      </aside>
     </div>
   </section>
 
@@ -199,11 +268,28 @@
       <p class="land-eyebrow">Portales</p>
       <h2 class="land-h2">Todo lo que necesitas para operar seguros.</h2>
       <p class="land-p land-p-narrow">
-        Un solo producto con áreas claras: Hoy, cartera, cobranza, cotizaciones, oportunidades,
-        dashboard y reportes PDF — sin cambiar de herramienta.
+        Web para la operación completa de la correduría. GO para acción, consulta y captura
+        en campo — mismo expediente, sin duplicar sistemas.
       </p>
 
       <div class="land-portals">
+        <article class="land-portal land-portal-go">
+          <div class="land-portal-visual land-portal-visual-go" aria-hidden="true">
+            <div class="land-portal-go-mark">
+              <span>ESB</span>
+              <strong>GO</strong>
+            </div>
+          </div>
+          <div class="land-portal-body">
+            <h3>ESecureBroker GO</h3>
+            <p>
+              Companion Android para el corredor/productor: Hoy, clientes, cartera asignada
+              y captura móvil — sin WebView y sin otra base de datos.
+            </p>
+            <a class="land-portal-cta" href="#go">Ver GO</a>
+          </div>
+        </article>
+
         <article class="land-portal">
           <div class="land-portal-visual">
             <img src="/static/img/portal-hoy.jpg?v=20260811j" width="900" height="675" alt="" loading="lazy" decoding="async" />
@@ -307,9 +393,9 @@
           <h3>Operación del corredor</h3>
           <p>
             Impulsa tu correduría con una plataforma pensada para interactuar con clientes,
-            pólizas y socios del negocio asegurador — sin hojas sueltas ni herramientas dispersas.
+            pólizas y socios del negocio asegurador — en oficina (web) y en campo (GO).
           </p>
-          <a href="#portales">Saber más</a>
+          <a href="#go">Saber más</a>
         </article>
         <article class="land-cap">
           <h3>Cotiza y da seguimiento a pólizas</h3>
@@ -437,6 +523,8 @@
         <li aria-hidden="true">→</li>
         <li><span>Cobranza</span></li>
         <li aria-hidden="true">→</li>
+        <li><span>GO</span></li>
+        <li aria-hidden="true">→</li>
         <li><span>Renovación</span></li>
       </ol>
     </div>
@@ -468,6 +556,7 @@
           <div class="land-org-row"><strong>Identidad / marca</strong><span>Logo en reportes PDF</span></div>
           <div class="land-org-row"><strong>Cartera y cobranza</strong><span>Datos separados</span></div>
           <div class="land-org-row"><strong>Integraciones</strong><span>Aseguradoras · Excel</span></div>
+          <div class="land-org-row"><strong>ESB GO</strong><span>Companion Android</span></div>
         </div>
       </div>
     </div>
@@ -535,6 +624,15 @@
           Pólizas, cobranza, dashboard de cartera, comisiones, cotizaciones, oportunidades,
           renovaciones, reclamos, importaciones Excel, metas con aseguradoras y
           reportes PDF con la identidad de tu correduría — centrados en la vista Hoy.
+          Incluye ESecureBroker GO como companion móvil del mismo expediente.
+        </p>
+      </details>
+      <details>
+        <summary>¿Qué es ESecureBroker GO?</summary>
+        <p>
+          La app Android companion para el corredor/productor en campo: Hoy, clientes,
+          cartera y captura. No es un WebView ni otro sistema — habla con la Mobile API
+          de ESecureBroker y usa el mismo System of Record.
         </p>
       </details>
       <details>
@@ -559,6 +657,7 @@
       </div>
       <nav class="land-footer-nav" aria-label="Pie">
         <a href="/">Inicio</a>
+        <a href="#go">GO</a>
         <a href="#portales">Portales</a>
         <a href="#integraciones">Integraciones</a>
         <a href="#nosotros">Nosotros</a>

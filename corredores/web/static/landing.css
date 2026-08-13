@@ -174,10 +174,10 @@ a { color: inherit; }
   background: #fff;
 }
 .land-stats-inner {
-  max-width: 68rem;
+  max-width: 72rem;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 1rem;
   padding: 1.35rem clamp(1.1rem, 3vw, 2.5rem);
 }
@@ -1165,6 +1165,228 @@ a { color: inherit; }
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* —— ESB GO —— */
+.land-band-go {
+  background:
+    radial-gradient(ellipse 50% 60% at 92% 20%, rgba(205, 154, 52, 0.14), transparent 55%),
+    linear-gradient(180deg, #f3f1ea 0%, #fbfaf6 48%, #efece3 100%);
+}
+.land-go-split {
+  align-items: center;
+  gap: clamp(2rem, 5vw, 3.5rem);
+}
+.land-go-copy .land-check { margin-bottom: 1.25rem; }
+.land-go-arch {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0 0 1.35rem;
+}
+.land-go-flow {
+  display: inline-flex;
+  align-self: flex-start;
+  font-family: var(--font-mono, "IBM Plex Mono", ui-monospace, monospace);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+  background: rgba(20, 27, 48, 0.06);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 0.45rem 0.7rem;
+}
+.land-go-note {
+  font-size: 0.88rem;
+  color: var(--muted-ink);
+}
+
+.land-phone {
+  display: flex;
+  justify-content: center;
+  animation: land-rise 0.75s ease-out 0.12s both;
+}
+.land-phone-frame {
+  width: min(100%, 288px);
+  border-radius: 2rem;
+  padding: 0.55rem;
+  background: linear-gradient(160deg, #2a334f 0%, #141b30 55%, #0f1424 100%);
+  box-shadow:
+    0 28px 50px rgba(20, 27, 48, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+.land-phone-notch {
+  width: 38%;
+  height: 0.55rem;
+  margin: 0.15rem auto 0.45rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+}
+.land-phone-screen {
+  position: relative;
+  border-radius: 1.45rem;
+  background: #fbfaf6;
+  padding: 0.85rem 0.85rem 3.6rem;
+  min-height: 30rem;
+  overflow: hidden;
+}
+.go-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.85rem;
+}
+.go-org {
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(20, 27, 48, 0.55);
+}
+.go-badge {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #1a1408;
+  background: linear-gradient(180deg, #cd9a34, #8c651e);
+  border-radius: 999px;
+  padding: 0.22rem 0.55rem;
+}
+.go-kicker {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--brass-deep);
+}
+.go-title {
+  margin: 0.25rem 0 0.85rem;
+  font-family: var(--font-display);
+  font-size: 1.28rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--ink);
+}
+.go-money {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+.go-money div {
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 0.45rem 0.35rem;
+  text-align: center;
+}
+.go-money strong {
+  display: block;
+  font-family: var(--font-mono, "IBM Plex Mono", ui-monospace, monospace);
+  font-size: 0.82rem;
+  color: var(--ink);
+}
+.go-money span {
+  font-size: 0.62rem;
+  color: var(--muted-ink);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.go-card {
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-left: 3px solid #b45309;
+  border-radius: 8px;
+  padding: 0.65rem 0.7rem;
+  margin-bottom: 0.5rem;
+}
+.go-card.soft { border-left-color: var(--brass); }
+.go-pill {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9a3412;
+  margin-bottom: 0.2rem;
+}
+.go-pill.warn { color: var(--brass-deep); }
+.go-subject {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 650;
+  color: var(--ink);
+}
+.go-meta {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  color: var(--muted-ink);
+}
+.go-tabbar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  align-items: end;
+  gap: 0.15rem;
+  padding: 0.45rem 0.35rem 0.55rem;
+  background: rgba(255, 255, 255, 0.96);
+  border-top: 1px solid var(--rule);
+  font-size: 0.58rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-align: center;
+  color: rgba(20, 27, 48, 0.45);
+}
+.go-tabbar .is-on { color: var(--ink); }
+.go-fab {
+  width: 2.15rem;
+  height: 2.15rem;
+  margin: -1.05rem auto 0;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #cd9a34, #8c651e);
+  color: #1a1408;
+  font-size: 1.25rem;
+  font-weight: 700;
+  box-shadow: 0 8px 16px rgba(140, 101, 30, 0.35);
+}
+
+.land-portal-visual-go {
+  display: grid;
+  place-items: center;
+  min-height: 12rem;
+  background:
+    radial-gradient(ellipse 70% 80% at 30% 20%, rgba(205, 154, 52, 0.35), transparent 55%),
+    linear-gradient(160deg, #1c2544 0%, #141b30 100%);
+}
+.land-portal-go-mark {
+  text-align: center;
+  color: #f4f5f9;
+}
+.land-portal-go-mark span {
+  display: block;
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(244, 245, 249, 0.55);
+  margin-bottom: 0.25rem;
+}
+.land-portal-go-mark strong {
+  font-family: var(--font-display);
+  font-size: 2.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  background: linear-gradient(180deg, #f0d078 0%, #cd9a34 50%, #8c651e 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
 @media (max-width: 980px) {
   .land-nav-main { display: none; }
   .land-hero {
@@ -1191,15 +1413,17 @@ a { color: inherit; }
   .land-about-grid,
   .land-plans,
   .land-plans-4 { grid-template-columns: 1fr; }
-  .land-stats-inner { grid-template-columns: 1fr; }
+  .land-stats-inner { grid-template-columns: repeat(2, 1fr); }
   .land-pillars { grid-template-columns: 1fr 1fr; }
   .land-h2 { max-width: none; }
+  .land-phone { order: -1; }
 }
 
 @media (max-width: 560px) {
   .land-btn-ghost { display: none; }
   .land-pillars { grid-template-columns: 1fr; }
   .mock-money { grid-template-columns: 1fr; }
+  .land-stats-inner { grid-template-columns: 1fr; }
   .land-footer-top,
   .land-footer-mid { flex-direction: column; align-items: flex-start; }
 }
