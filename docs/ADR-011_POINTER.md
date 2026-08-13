@@ -1,6 +1,6 @@
 # ADR-011 — pointer (DEV)
 
-**Estado:** ACCEPTED / GO F1  
+**Estado:** ACCEPTED / GO F1–F4  
 **Ámbito:** `/opt/corredores-dev` · **PROD: NO TOCAR**
 
 Canónico (este repo):
@@ -9,4 +9,7 @@ Canónico (este repo):
 
 F1–F3 entregados en DEV (`/api/crm/v1`).
 
-Siguiente: F4 Pipeline Web / Kanban — requiere GO explícito.
+**F4 DONE (2026-08-13):** Pipeline Web / Kanban en `/crm` (+ prospectos / oportunidades HTML).  
+Solo DEV — no push / no PROD sin GO.
+
+Siguiente: F5+ según ADR (requiere GO).

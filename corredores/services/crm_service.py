@@ -585,6 +585,7 @@ def list_activities(
     organization_id: str,
     *,
     opportunity_id: str | None = None,
+    prospect_id: str | None = None,
     status: str | None = None,
 ) -> list[CrmActivity]:
     _require_read(ctx)
@@ -593,6 +594,8 @@ def list_activities(
         q = apply_scope_to_activity_query(q, session, ctx)
     if opportunity_id:
         q = q.filter(CrmActivity.opportunity_id == opportunity_id)
+    if prospect_id:
+        q = q.filter(CrmActivity.prospect_id == prospect_id)
     if status:
         q = q.filter(CrmActivity.status == status.upper())
     return q.order_by(CrmActivity.due_at.asc().nullslast(), CrmActivity.created_at.desc()).all()

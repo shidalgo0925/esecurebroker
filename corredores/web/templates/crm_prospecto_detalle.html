@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}{{ label }} · Prospecto · ESecureBroker{% endblock %}
+{% block topbar %}Ventas · Prospecto{% endblock %}
+{% block content %}
+<section class="page-head row-between">
+  <div>
+    <h1 class="page-title">{{ label }}</h1>
+    <p class="page-sub">
+      <span class="kind-pill">{{ prospect.prospect_type }}</span>
+      · {{ prospect.status }}
+      · <b>{{ org_name }}</b>
+    </p>
+  </div>
+  <div class="stack-actions">
+    <a class="btn-secondary" href="/crm/prospectos">Lista</a>
+    <a class="btn-secondary" href="/crm">Pipeline</a>
+  </div>
+</section>
+
+{% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+{% if ok %}<p class="flash-ok">{{ ok }}</p>{% endif %}
+
+<div class="poliza-split">
+  <section class="poliza-panel">
+    <h2 class="poliza-panel-title">Datos</h2>
+    <table class="poliza-facts">
+      <tr><th>Nombre</th><td>{{ prospect.first_name or '—' }} {{ prospect.last_name or '' }}</td></tr>
+      <tr><th>Empresa</th><td>{{ prospect.company_name or '—' }}</td></tr>
+      <tr><th>ID</th><td class="mono">{{ prospect.identification_number or '—' }}</td></tr>
+      <tr><th>Teléfono</th><td>{{ prospect.phone or '—' }}</td></tr>
+      <tr><th>Móvil</th><td>{{ prospect.mobile or '—' }}</td></tr>
+      <tr><th>Email</th><td>{{ prospect.email or '—' }}</td></tr>
+      <tr><th>Notas</th><td>{{ prospect.notes or '—' }}</td></tr>
+      {% if prospect.converted_customer_id %}
+      <tr><th>Cliente</th><td><a href="/clientes/{{ prospect.converted_customer_id }}">Ver 360°</a></td></tr>
+      {% endif %}
+    </table>
+  </section>
+
+  <aside class="poliza-side">
+    <section class="poliza-panel catalog-editor">
+      <h2 class="poliza-panel-title">Nueva oportunidad</h2>
+      <form class="catalog-form catalog-stack" method="post" action="/crm/prospectos/{{ prospect.id }}/oportunidades">
+        <label class="catalog-field name">Título
+          <input name="title" required maxlength="200" placeholder="Auto familiar / Fianza…" />
+        </label>
+        <label class="catalog-field name">Prima estimada
+          <input name="estimated_premium" class="mono" inputmode="decimal" placeholder="0.00" />
+        </label>
+        <label class="catalog-field name">Interés / producto
+          <input name="product_interest" maxlength="120" />
+        </label>
+        <label class="catalog-field name">Notas
+          <input name="notes" maxlength="500" />
+        </label>
+        <div class="wizard-actions">
+          <button class="btn-primary" type="submit">Crear oportunidad →</button>
+        </div>
+      </form>
+    </section>
+  </aside>
+</div>
+
+<section class="poliza-panel" style="margin-top:1.25rem">
+  <h2 class="poliza-panel-title">Oportunidades</h2>
+  <div class="table-card">
+    <table class="data-table">
+      <thead><tr><th>Título</th><th>Etapa</th><th>Prima</th><th></th></tr></thead>
+      <tbody>
+      {% for o in opportunities %}
+        <tr>
+          <td>{{ o.title }}</td>
+          <td><span class="kind-pill">{{ stage_labels.get(o.stage_code, o.stage_code) }}</span></td>
+          <td class="mono">{% if o.estimated_premium %}${{ o.estimated_premium|money }}{% else %}—{% endif %}</td>
+          <td class="cli-action"><a class="open-link" href="/crm/oportunidades/{{ o.id }}">Abrir</a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4" class="empty-row">Sin oportunidades — creá una a la derecha.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="poliza-panel catalog-editor" style="margin-top:1.25rem">
+  <h2 class="poliza-panel-title">Actividades</h2>
+  <form class="catalog-form" method="post" action="/crm/prospectos/{{ prospect.id }}/actividades">
+    <div class="catalog-row">
+      <label class="catalog-field name">Tipo
+        <select name="activity_type">
+          {% for t in activity_types %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+        </select>
+      </label>
+      <label class="catalog-field name">Título
+        <input name="title" maxlength="200" />
+      </label>
+      <label class="catalog-field name">Notas
+        <input name="notes" maxlength="500" />
+      </label>
+      <div class="wizard-actions">
+        <button class="btn-secondary" type="submit">Registrar</button>
+      </div>
+    </div>
+  </form>
+  <div class="table-card" style="margin-top:0.75rem">
+    <table class="data-table">
+      <thead><tr><th>Tipo</th><th>Título</th><th>Estado</th><th></th></tr></thead>
+      <tbody>
+      {% for a in activities %}
+        <tr>
+          <td>{{ a.activity_type }}</td>
+          <td>{{ a.title or '—' }}</td>
+          <td>{{ a.status }}</td>
+          <td class="cli-action">
+            {% if a.status == 'PENDING' or a.status == 'OVERDUE' %}
+            <form method="post" action="/crm/actividades/{{ a.id }}/completar" style="display:inline">
+              <input type="hidden" name="return_to" value="/crm/prospectos/{{ prospect.id }}" />
+              <button class="open-link" type="submit" style="background:none;border:0;padding:0;cursor:pointer">Completar</button>
+            </form>
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4" class="empty-row">Sin actividades</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

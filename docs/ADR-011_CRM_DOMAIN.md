@@ -73,4 +73,12 @@ Tests: `tests/test_crm_adr011_f1.py`
 Endpoints clave:
 `GET/POST /prospects` · `GET/POST /opportunities` · `POST .../won|lost|reopen|convert|stage|assign` · `GET/POST /activities` · catalogs `/stages|/lead-sources|/lost-reasons`
 
-**STOP** — no iniciar F4 (Pipeline Web / Kanban) sin GO.
+## F4 — Pipeline Web / Kanban (DONE 2026-08-13)
+
+- UI HTML: `/crm` (Kanban), `/crm/prospectos`, `/crm/prospectos/{id}`, `/crm/oportunidades/{id}`
+- Router: `corredores/web/crm_ui_routes.py` (reusa `crm_service`)
+- Nav Ventas: **CRM / Pipeline** (separado de **Cola renovaciones** `/oportunidades`)
+- Acciones: crear prospecto/oportunidad, mover etapa, WON/LOST/reabrir, actividades, convertir a cliente
+- Tests: `tests/test_crm_adr011_f4.py`
+
+**STOP** — no iniciar F5+ sin GO.

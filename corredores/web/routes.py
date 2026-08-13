@@ -103,7 +103,8 @@ NAV_GROUPS = [
     {
         "title": "Ventas",
         "links": [
-            ("oportunidades", "Oportunidades / CRM", "/oportunidades", "target"),
+            ("crm", "CRM / Pipeline", "/crm", "target"),
+            ("oportunidades", "Cola renovaciones", "/oportunidades", "refresh"),
             ("cotizador", "Cotizador", "/cotizador", "scale"),
             ("referidos", "Referidos", "/referidos", "share"),
         ],
@@ -135,6 +136,7 @@ NAV_FOOTER = [
 ]
 
 NUEVA_GESTION = [
+    ("Nuevo prospecto CRM", "/crm/prospectos#nuevo", "user-plus"),
     ("Captura desde foto", "/captura/poliza-foto", "spark"),
     ("Importar Excel", "/importaciones", "file"),
     ("Nueva póliza", "/polizas/nueva", "folder-plus"),
@@ -197,8 +199,10 @@ def _resolve_back(request: Request, active: str, extra: dict) -> tuple[str | Non
         return "/polizas", "← Pólizas"
     if path.startswith("/clientes/") and path not in {"/clientes/nuevo"}:
         return "/clientes", "← Clientes"
+    if path.startswith("/crm/"):
+        return "/crm", "← Pipeline CRM"
     if path.startswith("/oportunidades/"):
-        return "/oportunidades", "← CRM"
+        return "/oportunidades", "← Cola renovaciones"
     if path.startswith("/productores/"):
         return "/productores", "← Productores"
     if path.startswith("/importaciones/"):
@@ -226,6 +230,7 @@ def _resolve_back(request: Request, active: str, extra: dict) -> tuple[str | Non
         "renovaciones": ("/hoy", "← Hoy"),
         "reclamos": ("/hoy", "← Hoy"),
         "oportunidades": ("/hoy", "← Hoy"),
+        "crm": ("/hoy", "← Hoy"),
         "cotizador": ("/hoy", "← Hoy"),
         "referidos": ("/hoy", "← Hoy"),
         "aseguradoras": ("/hoy", "← Hoy"),

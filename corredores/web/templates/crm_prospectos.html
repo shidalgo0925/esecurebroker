@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Prospectos · CRM · ESecureBroker{% endblock %}
+{% block topbar %}Ventas · Prospectos CRM{% endblock %}
+{% block content %}
+<section class="page-head row-between">
+  <div>
+    <h1 class="page-title">Prospectos</h1>
+    <p class="page-sub">Leads / contactos antes de ser cliente · <b>{{ org_name }}</b></p>
+  </div>
+  <div class="stack-actions">
+    <a class="btn-secondary" href="/crm">Pipeline</a>
+  </div>
+</section>
+
+{% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+{% if ok %}<p class="flash-ok">{{ ok }}</p>{% endif %}
+
+<section class="poliza-panel catalog-editor" id="nuevo">
+  <h2 class="poliza-panel-title">+ Nuevo prospecto</h2>
+  <form class="catalog-form catalog-stack" method="post" action="/crm/prospectos">
+    <div class="catalog-row">
+      <label class="catalog-field name">Tipo
+        <select name="prospect_type">
+          <option value="PERSON">Persona</option>
+          <option value="COMPANY">Empresa</option>
+        </select>
+      </label>
+      <label class="catalog-field name">Nombre
+        <input name="first_name" maxlength="120" placeholder="Juan" />
+      </label>
+      <label class="catalog-field name">Apellido
+        <input name="last_name" maxlength="120" placeholder="Pérez" />
+      </label>
+      <label class="catalog-field name">Empresa
+        <input name="company_name" maxlength="200" placeholder="Solo si es COMPANY" />
+      </label>
+    </div>
+    <div class="catalog-row">
+      <label class="catalog-field name">Cédula / RUC
+        <input name="identification_number" class="mono" maxlength="40" />
+      </label>
+      <label class="catalog-field name">Teléfono
+        <input name="phone" maxlength="40" />
+      </label>
+      <label class="catalog-field name">Móvil
+        <input name="mobile" maxlength="40" />
+      </label>
+      <label class="catalog-field name">Email
+        <input name="email" type="email" maxlength="200" />
+      </label>
+    </div>
+    <div class="catalog-row">
+      <label class="catalog-field name">Origen
+        <select name="source_id">
+          <option value="">—</option>
+          {% for s in sources %}
+          <option value="{{ s.id }}">{{ s.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="catalog-field name">Notas
+        <input name="notes" maxlength="500" />
+      </label>
+      <div class="wizard-actions">
+        <button class="btn-primary" type="submit">Crear prospecto</button>
+      </div>
+    </div>
+  </form>
+  <p class="hint">Persona: nombre o contacto. Empresa: razón social. Al menos un dato de contacto.</p>
+</section>
+
+<div class="table-card">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>Tipo</th>
+        <th>ID</th>
+        <th>Contacto</th>
+        <th>Estado</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for row in rows %}
+      <tr>
+        <td class="cli-name">{{ row.label }}</td>
+        <td>{{ row.type }}</td>
+        <td class="mono">{{ row.id_number or '—' }}</td>
+        <td>{% if row.email %}{{ row.email }}{% elif row.phone %}{{ row.phone }}{% else %}—{% endif %}</td>
+        <td><span class="kind-pill">{{ row.status }}</span></td>
+        <td class="cli-action"><a class="open-link" href="/crm/prospectos/{{ row.id }}">Abrir</a></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6" class="empty-row">Sin prospectos — creá uno arriba.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

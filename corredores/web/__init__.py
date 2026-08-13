@@ -157,6 +157,7 @@ def create_app() -> FastAPI:
     except Exception as e:
         print(f"Warning: ensure_runtime_settings: {e}")
     from corredores.web.crm_routes import router as crm_router
+    from corredores.web.crm_ui_routes import router as crm_ui_router
     from corredores.web.mobile.errors import MobileAPIError, mobile_api_error_handler
     from corredores.web.mobile.router import router as mobile_router
 
@@ -168,6 +169,7 @@ def create_app() -> FastAPI:
     app.include_router(router)
     app.include_router(org_admin_router)
     app.include_router(carrier_incentive_router)
+    app.include_router(crm_ui_router)
     app.include_router(crm_router)
     app.include_router(mobile_router)
     return app

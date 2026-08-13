@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Pipeline CRM · ESecureBroker{% endblock %}
+{% block topbar %}Ventas · Pipeline CRM{% endblock %}
+{% block content %}
+<section class="page-head row-between">
+  <div>
+    <h1 class="page-title">Pipeline CRM</h1>
+    <p class="page-sub">Nuevos negocios (prospectos → oportunidades) · <b>{{ org_name }}</b></p>
+  </div>
+  <div class="stack-actions">
+    <a class="btn-secondary" href="/crm/prospectos">Prospectos</a>
+    <a class="btn-primary" href="/crm/prospectos">+ Nuevo prospecto</a>
+    {% if show_lost %}
+    <a class="btn-secondary" href="/crm">Ocultar perdidos</a>
+    {% else %}
+    <a class="btn-secondary" href="/crm?include_lost=1">Ver perdidos</a>
+    {% endif %}
+  </div>
+</section>
+
+{% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+{% if ok %}<p class="flash-ok">{{ ok }}</p>{% endif %}
+
+<p class="meta" style="margin-top:0">
+  La cola de <a href="/oportunidades">renovaciones</a> es otro flujo (pólizas por vencer).
+</p>
+
+<div class="crm-kanban">
+  {% for col in columns %}
+  <section class="crm-kanban-col">
+    <header class="crm-kanban-head">
+      <h2>{{ col.name }}</h2>
+      <span class="mono">{{ col.cards|length }}</span>
+    </header>
+    <div class="crm-kanban-cards">
+      {% for card in col.cards %}
+      <article class="crm-card">
+        <a class="crm-card-title" href="/crm/oportunidades/{{ card.id }}">{{ card.title }}</a>
+        {% if card.subtitle %}<p class="meta">{{ card.subtitle }}</p>{% endif %}
+        {% if card.premium %}<p class="mono">${{ card.premium|money }}</p>{% endif %}
+        <form method="post" action="/crm/oportunidades/{{ card.id }}/etapa" class="crm-card-move">
+          <label class="meta">Mover
+            <select name="stage_code" onchange="this.form.submit()">
+              {% for code in kanban_codes %}
+              <option value="{{ code }}" {% if code == card.stage_code %}selected{% endif %}>{{ stage_labels.get(code, code) }}</option>
+              {% endfor %}
+            </select>
+          </label>
+        </form>
+      </article>
+      {% else %}
+      <p class="empty-row">Sin tarjetas</p>
+      {% endfor %}
+    </div>
+  </section>
+  {% endfor %}
+</div>
+
+{% if show_lost and lost_rows %}
+<section class="poliza-panel" style="margin-top:1.25rem">
+  <h2 class="poliza-panel-title">Perdidos</h2>
+  <div class="table-card">
+    <table class="data-table">
+      <thead><tr><th>Oportunidad</th><th>Etapa</th><th></th></tr></thead>
+      <tbody>
+      {% for card in lost_rows %}
+        <tr>
+          <td>{{ card.label }}</td>
+          <td><span class="kind-pill">Perdido</span></td>
+          <td class="cli-action"><a class="open-link" href="/crm/oportunidades/{{ card.id }}">Abrir</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% endblock %}
