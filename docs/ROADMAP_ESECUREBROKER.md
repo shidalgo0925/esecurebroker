@@ -51,6 +51,11 @@ Sin inventar límites comerciales en ESB y sin mezclar “cliente asegurado” c
 | Expediente Web | Hoy, clientes, pólizas, cobranza, cotizador, reportes… |
 | Mobile Gate B | Auth refresh, `/me`, scope lists |
 | Mobile F5A backend | Activities + document upload (ACK/idempotency) — **congelado en producto** |
+| ADR-009 incentivos | Schema, calc, settlement, UI Beneficios, alertas Hoy |
+| Dashboard cartera | Pestañas Resumen · Cobros · Producción · Metas |
+| Identidad org | Logo + datos en Configuración (cabecera PDF) |
+| Reportes PDF | Cartera, cobranza, morosidad, pagos, comisiones, cotizaciones, clientes, etc. |
+| Importaciones | Motor XLSX operativo (fix shadowing payments) |
 
 ### Huecos abiertos
 

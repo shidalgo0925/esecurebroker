@@ -4,13 +4,13 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{% if is_dev_env %}[DEV] {% endif %}ESecureBroker — tu correduría, bajo control</title>
-  <meta name="description" content="ESecureBroker está diseñado para la administración de pólizas, cobranza de primas, comisiones, cotizaciones, CRM, renovaciones, reportes y la operación diaria del corredor de seguros." />
+  <meta name="description" content="ESecureBroker: pólizas, cobranza, dashboard de cartera, reportes PDF con la marca de tu correduría, comisiones, cotizaciones, CRM y la operación diaria del corredor de seguros." />
   <link rel="icon" href="/static/brand/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=Inter:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;1,6..72,500&display=swap" rel="stylesheet" />
   {# Nombre sin "landing" — algunos adblockers bloquean */landing.css #}
-  <link rel="stylesheet" type="text/css" href="/static/esb-public.css?v=20260812dev1" />
+  <link rel="stylesheet" type="text/css" href="/static/esb-public.css?v=20260813dev2" />
   <style>
     /* Fallback mínimo si el CSS externo falla */
     body.land-body{margin:0;font-family:Inter,Segoe UI,system-ui,sans-serif;color:#141b30;background:#fbfaf6}
@@ -73,8 +73,9 @@
       <p class="land-eyebrow">EasyTech · Plataformas</p>
       <p class="land-hero-line">Tu correduría, <em>bajo control</em>.</p>
       <p class="land-hero-support">
-        Diseñado para la administración de pólizas, pagos de primas, comisiones, cotizaciones,
-        CRM, campañas, reportes y todo lo referente a la operación diaria del corredor.
+        Diseñado para la administración de pólizas, cobranza, dashboard de cartera,
+        reportes con la identidad de tu correduría, comisiones, cotizaciones, CRM
+        y la operación diaria del equipo.
       </p>
       <div class="land-hero-actions">
         <a class="land-btn-primary land-btn-lg" href="{{ start_href }}">Registrarse</a>
@@ -89,7 +90,7 @@
       </div>
       <div class="mock-body">
         <p class="mock-eyebrow">Expediente del día</p>
-        <h2 class="mock-date">Martes 11 de agosto</h2>
+        <h2 class="mock-date">Jueves 13 de agosto</h2>
         <p class="mock-greet">Buenos días. Tienes <strong>4</strong> asuntos que necesitan tu atención.</p>
         <div class="mock-money">
           <div class="mock-tile">
@@ -198,8 +199,8 @@
       <p class="land-eyebrow">Portales</p>
       <h2 class="land-h2">Todo lo que necesitas para operar seguros.</h2>
       <p class="land-p land-p-narrow">
-        Un solo producto con áreas claras: entra a lo que usas cada día — pólizas, cobranza,
-        cotizaciones, CRM y reportes — sin cambiar de herramienta.
+        Un solo producto con áreas claras: Hoy, cartera, cobranza, cotizaciones, CRM,
+        dashboard y reportes PDF — sin cambiar de herramienta.
       </p>
 
       <div class="land-portals">
@@ -278,10 +279,10 @@
             <img src="/static/img/portal-reportes.jpg?v=20260811j" width="900" height="675" alt="" loading="lazy" decoding="async" />
           </div>
           <div class="land-portal-body">
-            <h3>Comisiones y reportes</h3>
+            <h3>Comisiones y reportes PDF</h3>
             <p>
-              Visibilidad sobre comisiones, desempeño y reportes de la operación de tu
-              correduría — listos para decidir.
+              Comisiones, dashboard (cobros · producción · metas) y reportes PDF con logo
+              e identidad de tu correduría — listos para imprimir o compartir.
             </p>
             <a class="land-portal-cta" href="{{ start_href }}">Visitar</a>
           </div>
@@ -328,6 +329,8 @@
             <li>Comisiones</li>
             <li>Morosidad</li>
             <li>Reclamos</li>
+            <li>Metas / beneficios cia</li>
+            <li>Reportes PDF</li>
           </ul>
           <a href="{{ start_href }}">Saber más</a>
         </article>
@@ -342,12 +345,12 @@
         <p class="land-eyebrow">Integraciones</p>
         <h2 class="land-h2">Conectividad con el ecosistema asegurador.</h2>
         <p class="land-p">
-          Importa producción, alinea aseguradoras y mantén credenciales y rangos de
-          pólizas/pagos bajo control. La meta: menos fricción entre tu correduría y las
-          compañías con las que trabajas.
+          Importa producción con el motor Excel, alinea aseguradoras y catálogos, y
+          da seguimiento a acuerdos de beneficio por producción o cobranza.
+          Menos fricción entre tu correduría y las compañías con las que trabajas.
         </p>
         <p class="land-p">
-          Desde la gestión de pólizas hasta el seguimiento de cobranza y reclamos,
+          Desde la gestión de pólizas hasta cobranza, reclamos y reportes con tu marca,
           ESecureBroker simplifica procesos complejos y aumenta la agilidad operativa.
         </p>
         <div class="land-hero-actions">
@@ -361,7 +364,7 @@
         </div>
 <pre class="land-code-pre">{
   "organization": "correduria-rios",
-  "as_of": "2026-08-11",
+      "as_of": "2026-08-13",
   "items": [
     {
       "policy": "AUTO-10482",
@@ -391,7 +394,8 @@
           <li>Renovaciones próximas</li>
           <li>Pólizas por vencer</li>
           <li>Cobros de primas pendientes</li>
-          <li>Alertas y tareas prioritarias</li>
+          <li>Alertas de metas con aseguradoras</li>
+          <li>Tareas y seguimientos prioritarios</li>
         </ul>
       </div>
       <div class="land-pillars">
@@ -460,9 +464,10 @@
         </div>
         <div class="land-org-card">
           <div class="land-org-row"><strong>Tu correduría</strong><span>Organización propia</span></div>
-          <div class="land-org-row"><strong>Usuarios del equipo</strong><span>Acceso compartido</span></div>
+          <div class="land-org-row"><strong>Equipo y roles</strong><span>Colaboradores · permisos</span></div>
+          <div class="land-org-row"><strong>Identidad / marca</strong><span>Logo en reportes PDF</span></div>
           <div class="land-org-row"><strong>Cartera y cobranza</strong><span>Datos separados</span></div>
-          <div class="land-org-row"><strong>Integraciones</strong><span>Aseguradoras / imports</span></div>
+          <div class="land-org-row"><strong>Integraciones</strong><span>Aseguradoras · Excel</span></div>
         </div>
       </div>
     </div>
@@ -526,7 +531,11 @@
       </details>
       <details>
         <summary>¿Qué incluye?</summary>
-        <p>Administración de pólizas, cobranza de primas, comisiones, cotizaciones, CRM, renovaciones, reclamos y reportes — centrados en la vista Hoy.</p>
+        <p>
+          Pólizas, cobranza, dashboard de cartera, comisiones, cotizaciones, CRM,
+          renovaciones, reclamos, importaciones Excel, metas con aseguradoras y
+          reportes PDF con la identidad de tu correduría — centrados en la vista Hoy.
+        </p>
       </details>
       <details>
         <summary>¿Ya tengo cuenta?</summary>
