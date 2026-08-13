@@ -17,6 +17,7 @@ from corredores.domain.permissions_catalog import (
     SYSTEM_ROLE_PERMISSIONS,
 )
 from corredores.services.access_control import AccessDenied, require_permission
+from corredores.services.invite_mail import send_collaborator_invite_email
 from corredores.services.org_access_admin import (
     AccessAdminError,
     accept_invitation,
@@ -69,6 +70,39 @@ def _role_options(session: Session, organization_id: str) -> list[tuple[str, str
     return opts
 
 
+def _role_label(session: Session, organization_id: str, role_code: str) -> str:
+    if role_code in SYSTEM_ROLE_LABELS:
+        return SYSTEM_ROLE_LABELS[role_code]
+    for role in list_roles_for_org(session, organization_id):
+        if role.code == role_code:
+            return role.name
+    return role_code
+
+
+def _dispatch_invite_mail(
+    *,
+    session: Session,
+    org: Organization,
+    to_email: str,
+    invitee_name: str,
+    role_code: str,
+    invite_url: str,
+) -> str:
+    """Returns mail=sent|skipped|failed for flash query."""
+    result = send_collaborator_invite_email(
+        to_email=to_email,
+        invite_url=invite_url,
+        org_name=org.name,
+        invitee_name=invitee_name,
+        role_label=_role_label(session, org.id, role_code),
+    )
+    if result.ok:
+        return "sent"
+    if "deshabilitado" in result.detail or "SMTP incompleto" in result.detail:
+        return "skipped"
+    return "failed"
+
+
 @router.get("/configuracion/colaboradores", response_class=HTMLResponse)
 def colaboradores_list(request: Request, session: Session = Depends(get_session)):
     org = resolve_org(session, request)
@@ -87,6 +121,7 @@ def colaboradores_list(request: Request, session: Session = Depends(get_session)
             flash=request.query_params.get("ok"),
             error=request.query_params.get("error"),
             invite_url=request.query_params.get("invite_url") or "",
+            mail_status=request.query_params.get("mail") or "",
         ),
     )
 
@@ -102,7 +137,7 @@ def colaboradores_invitar(
     org = resolve_org(session, request)
     _require_perm(session, request, "members:manage", "sin permiso para administrar colaboradores")
     try:
-        _m, _inv, raw = invite_collaborator(
+        membership, _inv, raw = invite_collaborator(
             session,
             organization_id=org.id,
             email=email,
@@ -110,13 +145,23 @@ def colaboradores_invitar(
             role_code=role_code,
             actor_subject_id=_actor_subject(request),
         )
+        session.commit()
     except AccessAdminError as exc:
+        session.rollback()
         return RedirectResponse(
             f"/configuracion/colaboradores?error={quote(str(exc))}", status_code=303
         )
     link = str(request.base_url).rstrip("/") + f"/invitacion/{raw}"
+    mail = _dispatch_invite_mail(
+        session=session,
+        org=org,
+        to_email=membership.email or email,
+        invitee_name=membership.display_name or display_name,
+        role_code=membership.role_code,
+        invite_url=link,
+    )
     return RedirectResponse(
-        f"/configuracion/colaboradores?ok=invited&invite_url={quote(link, safe='')}",
+        f"/configuracion/colaboradores?ok=invited&mail={mail}&invite_url={quote(link, safe='')}",
         status_code=303,
     )
 
@@ -144,6 +189,7 @@ def colaborador_detalle(
             flash=request.query_params.get("ok"),
             error=request.query_params.get("error"),
             invite_url=request.query_params.get("invite_url") or "",
+            mail_status=request.query_params.get("mail") or "",
         ),
     )
 
@@ -249,20 +295,32 @@ def colaborador_reenviar(
     org = resolve_org(session, request)
     _require_perm(session, request, "members:manage", "sin permiso para administrar colaboradores")
     try:
-        _inv, raw = resend_invitation(
+        inv, raw = resend_invitation(
             session,
             organization_id=org.id,
             membership_id=membership_id,
             actor_subject_id=_actor_subject(request),
         )
+        membership = get_membership_in_org(session, org.id, membership_id)
+        session.commit()
     except AccessAdminError as exc:
+        session.rollback()
         return RedirectResponse(
             f"/configuracion/colaboradores/{membership_id}?error={quote(str(exc))}",
             status_code=303,
         )
     link = str(request.base_url).rstrip("/") + f"/invitacion/{raw}"
+    mail = _dispatch_invite_mail(
+        session=session,
+        org=org,
+        to_email=(membership.email if membership else None) or inv.email,
+        invitee_name=(membership.display_name if membership else "") or inv.email,
+        role_code=(membership.role_code if membership else None) or inv.role_code,
+        invite_url=link,
+    )
     return RedirectResponse(
-        f"/configuracion/colaboradores/{membership_id}?ok=resent&invite_url={quote(link, safe='')}",
+        f"/configuracion/colaboradores/{membership_id}?ok=resent&mail={mail}"
+        f"&invite_url={quote(link, safe='')}",
         status_code=303,
     )
 

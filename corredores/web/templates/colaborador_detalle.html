@@ -8,6 +8,9 @@
 </section>
 
 {% if flash %}<p class="flash-ok">Actualizado ({{ flash }}).</p>{% endif %}
+{% if mail_status == 'sent' %}<p class="flash-ok">Correo de invitación enviado.</p>{% endif %}
+{% if mail_status == 'skipped' %}<p class="form-error">SMTP no configurado: copia el enlace o configura Correo en Mantenimiento.</p>{% endif %}
+{% if mail_status == 'failed' %}<p class="form-error">No se pudo enviar el correo. Usa el enlace o revisa SMTP.</p>{% endif %}
 {% if error %}<p class="form-error">{{ error }}</p>{% endif %}
 {% if invite_url %}
 <p class="flash-ok">Enlace de invitación:<br><a class="mono" href="{{ invite_url }}">{{ invite_url }}</a></p>

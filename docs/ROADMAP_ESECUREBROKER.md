@@ -109,7 +109,7 @@ comprobante  Bandeja verify      API admin JSON     Cutover
 | Roles system + custom | DONE |
 | Invitaciones + accept | DONE (link DEV) |
 | Seat reserve INVITED | DONE |
-| SMTP invite email | NEXT |
+| SMTP invite email | DONE (usa SMTP de Mantenimiento; fallback enlace UI) |
 | API `/api/admin/v1` | LATER |
 | Bandeja verificación pagos | NEXT |
 
@@ -159,7 +159,7 @@ Checklist:
 |---|---------|-------|
 | 1 | Inspección + fix Cliente canónico EN1 | CODITO |
 | 2 | Re-prueba E2E `/registro` | ESB + CODITO |
-| 3 | SMTP invitaciones colaboradores | ESB |
+| 3 | SMTP invitaciones colaboradores | ESB — DONE |
 | 4 | Bandeja verificar comprobantes Banistmo/Yappy | ESB |
 | 5 | Descongelar GO F5A (LOCAL) | LOCAL + ESB |
 | 6 | Tarjeta cuando EN1 liste | ESB + EN1 |

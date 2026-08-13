@@ -22,13 +22,12 @@
 ## UX
 
 1. OWNER/ADMIN → Configuración → **Colaboradores** → Invitar  
-2. DEV muestra link de invitación (SMTP pendiente)  
+2. Invitar / reenviar → SMTP si está configurado (`invite_mail.py`); si no, enlace en UI  
 3. Colaborador abre `/invitacion/...` → crea contraseña → `/hoy`  
 4. **Roles y permisos** → ver system (RO) + crear custom  
 
 ## Pendiente / siguiente
 
-- Envío email real de invitación (SMTP)  
 - API JSON `/api/admin/v1/...` (contrato §20)  
 - E2E UI completo casos §29  
 - Cookie web denylist (hoy solo refresh mobile revoke)  
