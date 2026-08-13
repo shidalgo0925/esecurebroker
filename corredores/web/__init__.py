@@ -87,6 +87,7 @@ def ensure_saas_tables() -> None:
         OrgRole,
         OrgRolePermission,
         OrgSubscription,
+        SaasPaymentReceipt,
     )
 
     BrokerAccount.__table__.create(bind=engine, checkfirst=True)
@@ -96,6 +97,7 @@ def ensure_saas_tables() -> None:
     OrgRole.__table__.create(bind=engine, checkfirst=True)
     OrgRolePermission.__table__.create(bind=engine, checkfirst=True)
     OrgInvitation.__table__.create(bind=engine, checkfirst=True)
+    SaasPaymentReceipt.__table__.create(bind=engine, checkfirst=True)
 
 
 def ensure_runtime_settings() -> None:

@@ -696,6 +696,36 @@ class OrgSubscription(Base, TimestampMixin):
     producer_seats_limit: Mapped[Optional[int]] = mapped_column(Integer)
 
 
+class SaasPaymentReceipt(Base, TimestampMixin):
+    """Comprobante transferencia/Yappy SaaS — cola de verificación (plataforma)."""
+
+    __tablename__ = "saas_payment_receipts"
+    __table_args__ = (Index("ix_saas_receipts_status_created", "verification_status", "created_at"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(
+        ForeignKey("organizations.id"), nullable=False, index=True
+    )
+    subscription_id: Mapped[Optional[str]] = mapped_column(
+        ForeignKey("org_subscriptions.id"), nullable=True, index=True
+    )
+    plan_code: Mapped[str] = mapped_column(String(40), nullable=False)
+    method: Mapped[str] = mapped_column(String(32), nullable=False)  # transfer | yappy
+    payment_reference: Mapped[Optional[str]] = mapped_column(String(120))
+    amount_usd: Mapped[Optional[int]] = mapped_column(Integer)
+    relative_path: Mapped[str] = mapped_column(String(500), nullable=False)
+    original_filename: Mapped[str] = mapped_column(String(200), nullable=False)
+    content_type: Mapped[Optional[str]] = mapped_column(String(120))
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    reported_by: Mapped[Optional[str]] = mapped_column(String(200))
+    verification_status: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="pending"
+    )  # pending|approved|rejected
+    reviewer_subject_id: Mapped[Optional[str]] = mapped_column(String(128))
+    reviewed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    review_note: Mapped[Optional[str]] = mapped_column(String(500))
+
+
 class MobileRefreshToken(Base, TimestampMixin):
     """Refresh tokens for ESB GO Mobile API (Gate B). Opaque token hashed at rest."""
 

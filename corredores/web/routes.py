@@ -598,8 +598,8 @@ async def checkout_post(
     from corredores.services.en1_commercial import en1_commerce_enabled
     from corredores.services.payments import PaymentService
     from corredores.services.saas_billing import confirm_piloto_payment, start_checkout
-    from corredores.services.saas_payment_receipts import save_saas_payment_receipt
     from corredores.services.saas_plans import require_plan
+    from corredores.services.saas_receipt_verify import create_receipt_report
     from corredores.services.saas_signup import get_subscription
     from corredores.web.auth_session import read_session
 
@@ -649,12 +649,18 @@ async def checkout_post(
                     status_code=400,
                 )
             try:
-                receipt = save_saas_payment_receipt(
+                receipt_row = create_receipt_report(
+                    session,
                     organization_id=org.id,
+                    subscription_id=sub.id,
+                    plan_code=p.code,
                     method=method,
+                    payment_reference=ref or None,
+                    amount_usd=p.price_monthly_usd,
                     filename=fname,
                     content=raw,
                     content_type=ctype,
+                    reported_by=principal.username,
                 )
             except ValueError as exc:
                 return templates.TemplateResponse(
@@ -674,8 +680,8 @@ async def checkout_post(
                 AuditEvent(
                     organization_id=org.id,
                     actor_id=principal.username,
-                    entity_type="OrgSubscription",
-                    entity_id=sub.id,
+                    entity_type="SaasPaymentReceipt",
+                    entity_id=receipt_row.id,
                     action="SAAS_PAYMENT_REPORTED",
                     detail_json=json_lib.dumps(
                         {
@@ -683,7 +689,7 @@ async def checkout_post(
                             "plan_code": p.code,
                             "reference": ref or None,
                             "amount_usd": p.price_monthly_usd,
-                            "receipt": receipt,
+                            "relative_path": receipt_row.relative_path,
                             "verification_status": "pending",
                             "note": "Sujeto a verificación manual; si no es válido se inhabilita y se contacta al cliente.",
                         },
@@ -4608,6 +4614,143 @@ async def mantenimiento_post(request: Request, session: Session = Depends(get_se
         )
     detail = quote(f"{len(changed)} cambio(s)", safe="")
     return RedirectResponse(f"/mantenimiento?ok=saved&detail={detail}", status_code=303)
+
+
+@router.get("/mantenimiento/comprobantes", response_class=HTMLResponse)
+def mantenimiento_comprobantes(
+    request: Request,
+    status: str = Query(default="pending"),
+    session: Session = Depends(get_session),
+):
+    from corredores.services.saas_receipt_verify import list_receipts
+
+    _require_platform_admin(request, session)
+    st = (status or "pending").strip().lower()
+    if st not in {"pending", "approved", "rejected", "all"}:
+        st = "pending"
+    rows = list_receipts(session, status=None if st == "all" else st)
+    return templates.TemplateResponse(
+        request,
+        "mantenimiento_comprobantes.html",
+        _ctx(
+            request,
+            "mantenimiento",
+            org_name="Plataforma",
+            rows=rows,
+            status_filter=st,
+            flash=request.query_params.get("ok"),
+            error=request.query_params.get("error"),
+        ),
+    )
+
+
+@router.get("/mantenimiento/comprobantes/{receipt_id}", response_class=HTMLResponse)
+def mantenimiento_comprobante_detalle(
+    receipt_id: str, request: Request, session: Session = Depends(get_session)
+):
+    from corredores.domain.models import Organization
+    from corredores.services.saas_receipt_verify import get_receipt
+
+    _require_platform_admin(request, session)
+    row = get_receipt(session, receipt_id)
+    if row is None:
+        raise HTTPException(404, "comprobante no encontrado")
+    org = session.get(Organization, row.organization_id)
+    return templates.TemplateResponse(
+        request,
+        "mantenimiento_comprobante_detalle.html",
+        _ctx(
+            request,
+            "mantenimiento",
+            org_name="Plataforma",
+            row=row,
+            org=org,
+            flash=request.query_params.get("ok"),
+            error=request.query_params.get("error"),
+        ),
+    )
+
+
+@router.get("/mantenimiento/comprobantes/{receipt_id}/archivo")
+def mantenimiento_comprobante_archivo(
+    receipt_id: str, request: Request, session: Session = Depends(get_session)
+):
+    from fastapi.responses import FileResponse
+
+    from corredores.services.saas_receipt_verify import (
+        ReceiptVerifyError,
+        absolute_receipt_path,
+        get_receipt,
+    )
+
+    _require_platform_admin(request, session)
+    row = get_receipt(session, receipt_id)
+    if row is None:
+        raise HTTPException(404, "comprobante no encontrado")
+    try:
+        path = absolute_receipt_path(row)
+    except ReceiptVerifyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    media = row.content_type or "application/octet-stream"
+    return FileResponse(path, media_type=media, filename=row.original_filename)
+
+
+@router.post("/mantenimiento/comprobantes/{receipt_id}/aprobar")
+def mantenimiento_comprobante_aprobar(
+    receipt_id: str,
+    request: Request,
+    note: str = Form(default=""),
+    session: Session = Depends(get_session),
+):
+    from urllib.parse import quote
+
+    from corredores.services.saas_receipt_verify import ReceiptVerifyError, approve_receipt
+
+    principal = _require_platform_admin(request, session)
+    try:
+        approve_receipt(
+            session,
+            receipt_id=receipt_id,
+            reviewer_subject_id=principal.actor_id,
+            note=note,
+        )
+    except ReceiptVerifyError as exc:
+        return RedirectResponse(
+            f"/mantenimiento/comprobantes/{receipt_id}?error={quote(str(exc))}",
+            status_code=303,
+        )
+    return RedirectResponse(
+        f"/mantenimiento/comprobantes/{receipt_id}?ok=approved", status_code=303
+    )
+
+
+@router.post("/mantenimiento/comprobantes/{receipt_id}/rechazar")
+def mantenimiento_comprobante_rechazar(
+    receipt_id: str,
+    request: Request,
+    note: str = Form(default=""),
+    session: Session = Depends(get_session),
+):
+    from urllib.parse import quote
+
+    from corredores.services.saas_receipt_verify import ReceiptVerifyError, reject_receipt
+
+    principal = _require_platform_admin(request, session)
+    try:
+        reject_receipt(
+            session,
+            receipt_id=receipt_id,
+            reviewer_subject_id=principal.actor_id,
+            note=note,
+        )
+    except ReceiptVerifyError as exc:
+        return RedirectResponse(
+            f"/mantenimiento/comprobantes/{receipt_id}?error={quote(str(exc))}",
+            status_code=303,
+        )
+    return RedirectResponse(
+        f"/mantenimiento/comprobantes/{receipt_id}?ok=rejected", status_code=303
+    )
 
 
 @router.post("/nba/{rec_id}/decide")

@@ -111,7 +111,7 @@ comprobante  Bandeja verify      API admin JSON     Cutover
 | Seat reserve INVITED | DONE |
 | SMTP invite email | DONE (usa SMTP de Mantenimiento; fallback enlace UI) |
 | API `/api/admin/v1` | LATER |
-| Bandeja verificación pagos | NEXT |
+| Bandeja verificación pagos | DONE (`/mantenimiento/comprobantes`) |
 
 ### FASE 3 — Campo (ESB GO)
 
@@ -160,7 +160,7 @@ Checklist:
 | 1 | Inspección + fix Cliente canónico EN1 | CODITO |
 | 2 | Re-prueba E2E `/registro` | ESB + CODITO |
 | 3 | SMTP invitaciones colaboradores | ESB — DONE |
-| 4 | Bandeja verificar comprobantes Banistmo/Yappy | ESB |
+| 4 | Bandeja verificar comprobantes Banistmo/Yappy | ESB — DONE |
 | 5 | Descongelar GO F5A (LOCAL) | LOCAL + ESB |
 | 6 | Tarjeta cuando EN1 liste | ESB + EN1 |
 | 7 | Gate PROD | Ana |

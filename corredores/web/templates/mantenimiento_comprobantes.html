@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Comprobantes SaaS · ESecureBroker{% endblock %}
+{% block topbar %}Plataforma · Comprobantes{% endblock %}
+{% block content %}
+<section class="page-head row-between">
+  <div>
+    <h1 class="page-title">Comprobantes Banistmo / Yappy</h1>
+    <p class="page-sub">Cola de verificación manual · activación local al aprobar (ACK EN1 aparte)</p>
+  </div>
+  <div class="wizard-actions">
+    <a class="btn-secondary" href="/mantenimiento">← Mantenimiento</a>
+  </div>
+</section>
+
+{% if flash == 'approved' %}<p class="flash-ok">Comprobante aprobado · suscripción activada.</p>{% endif %}
+{% if flash == 'rejected' %}<p class="flash-ok">Comprobante rechazado.</p>{% endif %}
+{% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+
+<p class="hint" style="margin-bottom:1rem">
+  Filtro:
+  <a href="/mantenimiento/comprobantes?status=pending"{% if status_filter == 'pending' %} style="font-weight:700"{% endif %}>Pendientes</a> ·
+  <a href="/mantenimiento/comprobantes?status=approved"{% if status_filter == 'approved' %} style="font-weight:700"{% endif %}>Aprobados</a> ·
+  <a href="/mantenimiento/comprobantes?status=rejected"{% if status_filter == 'rejected' %} style="font-weight:700"{% endif %}>Rechazados</a> ·
+  <a href="/mantenimiento/comprobantes?status=all"{% if status_filter == 'all' %} style="font-weight:700"{% endif %}>Todos</a>
+</p>
+
+<div class="table-card">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Fecha</th><th>Org</th><th>Método</th><th>Plan</th><th>Ref</th><th>Monto</th><th>Estado</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td class="mono">{{ r.created_at }}</td>
+        <td>{{ r.org_name }}</td>
+        <td>{{ r.method }}</td>
+        <td class="mono">{{ r.plan_code }}</td>
+        <td class="mono">{{ r.payment_reference or '—' }}</td>
+        <td class="mono">{% if r.amount_usd is not none %}${{ r.amount_usd }}{% else %}—{% endif %}</td>
+        <td>{{ r.verification_status }}</td>
+        <td class="cli-action"><a class="open-link" href="/mantenimiento/comprobantes/{{ r.id }}">Ver</a></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="8" class="empty-row">Sin comprobantes en este filtro.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

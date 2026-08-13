@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Comprobante · ESecureBroker{% endblock %}
+{% block topbar %}Plataforma · Comprobante{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1 class="page-title">Comprobante {{ row.method }}</h1>
+  <p class="page-sub">{{ org.name if org else row.organization_id }} · {{ row.plan_code }} · {{ row.verification_status }}</p>
+</section>
+
+{% if flash == 'approved' %}<p class="flash-ok">Aprobado · suscripción ACTIVE (bank_manual).</p>{% endif %}
+{% if flash == 'rejected' %}<p class="flash-ok">Rechazado.</p>{% endif %}
+{% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+
+<section class="poliza-panel" style="margin-bottom:1rem">
+  <h2 class="poliza-panel-title">Detalle</h2>
+  <p class="meta">
+    Ref: <span class="mono">{{ row.payment_reference or '—' }}</span> ·
+    Monto: <span class="mono">{% if row.amount_usd is not none %}${{ row.amount_usd }}{% else %}—{% endif %}</span> ·
+    Reportó: <span class="mono">{{ row.reported_by or '—' }}</span>
+  </p>
+  <p class="meta">
+    Archivo: <a href="/mantenimiento/comprobantes/{{ row.id }}/archivo">{{ row.original_filename }}</a>
+    ({{ row.size_bytes }} bytes)
+  </p>
+  {% if row.review_note %}<p class="meta">Nota revisión: {{ row.review_note }}</p>{% endif %}
+</section>
+
+{% if row.verification_status == 'pending' %}
+<section class="poliza-panel">
+  <h2 class="poliza-panel-title">Revisión</h2>
+  <form method="post" action="/mantenimiento/comprobantes/{{ row.id }}/aprobar" class="catalog-form" style="margin-bottom:1rem">
+    <label class="catalog-field name">Nota (opcional)
+      <input name="note" maxlength="500" placeholder="Pago confirmado en extracto…" />
+    </label>
+    <div class="wizard-actions" style="margin-top:0.75rem">
+      <button class="btn-primary" type="submit">Aprobar y activar</button>
+    </div>
+  </form>
+  <form method="post" action="/mantenimiento/comprobantes/{{ row.id }}/rechazar" class="catalog-form"
+        onsubmit="return confirm('¿Rechazar este comprobante?');">
+    <label class="catalog-field name">Motivo (opcional)
+      <input name="note" maxlength="500" placeholder="Comprobante ilegible / monto no cuadra…" />
+    </label>
+    <div class="wizard-actions" style="margin-top:0.75rem">
+      <button class="btn-secondary" type="submit">Rechazar</button>
+    </div>
+  </form>
+</section>
+{% endif %}
+
+<p class="hint" style="margin-top:1rem">
+  <a href="/mantenimiento/comprobantes">← Cola</a> ·
+  Aprobar activa la suscripción en ESB. ACK comercial en EN1 queda para el carril de cobro real.
+</p>
+{% endblock %}
