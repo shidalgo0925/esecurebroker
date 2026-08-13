@@ -6,7 +6,7 @@
   <div>
     <h1 class="page-title">Análisis de morosidad</h1>
     <p class="page-sub">
-      Solo cuotas con saldo y vencidas · datos del dominio · <b>{{ org_name }}</b> · {{ analysis.as_of }}
+      Solo cuotas con saldo y vencidas · Domain Truth · <b>{{ org_name }}</b> · {{ analysis.as_of }}
       {% if aging %} · banda <b>{{ aging }}</b>{% endif %}
     </p>
   </div>
@@ -15,7 +15,7 @@
     <a class="btn-secondary" href="/morosidad/imprimir{% if aging %}?aging={{ aging }}{% endif %}" target="_blank">Imprimir</a>
     <a class="btn-secondary" href="/reportes/morosidad.csv{% if aging %}?aging={{ aging }}{% endif %}">CSV</a>
     <a class="btn-secondary" href="/cobranza?vencimiento=vencido">Cobranza</a>
-    <a class="btn-primary" href="/cartera">Panel</a>
+    <a class="btn-primary" href="/cartera">Dashboard</a>
   </div>
 </section>
 
@@ -33,7 +33,7 @@
 
 <section class="dash-block">
   <div class="block-head">
-    <h2 class="section-title" style="margin:0">Antigüedad</h2>
+    <h2 class="section-title" style="margin:0">Aging</h2>
     {% if aging %}<a class="see-all" href="/morosidad">Ver todas →</a>{% endif %}
   </div>
   <div class="aging-grid">

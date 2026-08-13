@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Oportunidad · ESecureBroker{% endblock %}
-{% block topbar %}Ventas · Oportunidades{% endblock %}
+{% block topbar %}Ventas · CRM{% endblock %}
 {% block content %}
 <section class="page-head row-between">
   <div>
@@ -13,7 +13,7 @@
     </p>
   </div>
   <div class="stack-actions">
-    <a class="btn-secondary" href="/oportunidades">← Oportunidades</a>
+    <a class="btn-secondary" href="/oportunidades">← CRM</a>
     <a class="btn-secondary" href="/polizas/{{ ren.previous_policy_id }}">Póliza</a>
     {% if quote_request_id %}
     <a class="btn-primary" href="/cotizador?quote_request_id={{ quote_request_id }}">Ver cotización</a>
@@ -39,19 +39,19 @@
       </select>
       <button class="btn-primary" type="submit">Actualizar</button>
     </form>
-    <p class="meta" style="margin-top:0.75rem">Flujo: UPCOMING → CONTACTED → QUOTING → PROPOSAL_SENT → WAITING_CLIENT → ACCEPTED / RENEWED.</p>
+    <p class="meta" style="margin-top:0.75rem">Pipeline: UPCOMING → CONTACTED → QUOTING → PROPOSAL_SENT → WAITING_CLIENT → ACCEPTED / RENEWED.</p>
   </section>
 
   <aside class="poliza-side">
     <section class="poliza-panel">
-      <h2 class="poliza-panel-title">Camino A · Misma compañía</h2>
+      <h2 class="poliza-panel-title">Path A · Misma compañía</h2>
       <p class="meta">Contactar y negociar renovación con {{ carrier_name }}.</p>
       <form method="post" action="/oportunidades/{{ ren.id }}/misma-cia" style="margin-top:0.55rem">
         <button class="btn-secondary" type="submit">Marcar contactado</button>
       </form>
     </section>
     <section class="poliza-panel">
-      <h2 class="poliza-panel-title">Camino B · Recotizar multi-cia</h2>
+      <h2 class="poliza-panel-title">Path B · Recotizar multi-cia</h2>
       <form method="post" action="/oportunidades/{{ ren.id }}/recotizar">
         <p class="meta">Selecciona compañías a pedir:</p>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.35rem;margin:0.45rem 0 0.65rem">

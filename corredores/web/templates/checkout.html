@@ -24,7 +24,7 @@
         <span aria-hidden="true">›</span>
         <span>Confirmación</span>
       </nav>
-      <p class="pay-top-meta">{% if is_dev_env %}DEV{% else %}Pago seguro{% endif %}</p>
+      <p class="pay-top-meta">{% if is_dev_env %}DEV{% else %}Checkout seguro{% endif %}</p>
     </header>
 
     <main class="pay-layout">
@@ -207,7 +207,7 @@
 
           {% elif stripe_ready %}
           <button type="submit" class="pay-submit">Pagar con tarjeta</button>
-          <p class="auth-note">Serás redirigido a pago con Stripe.</p>
+          <p class="auth-note">Serás redirigido a Stripe Checkout.</p>
           {% else %}
           <button type="submit" class="pay-submit">Confirmar y activar plan</button>
           <p class="auth-note">Modo puente local.</p>

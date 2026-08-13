@@ -91,7 +91,7 @@ NAV_GROUPS = [
     {
         "title": "Cartera",
         "links": [
-            ("cartera", "Panel", "/cartera", "chart"),
+            ("cartera", "Dashboard", "/cartera", "chart"),
             ("clientes", "Clientes", "/clientes", "users"),
             ("polizas", "Pólizas", "/polizas", "folder"),
             ("cobranza", "Cobranza", "/cobranza", "coins"),
@@ -103,7 +103,7 @@ NAV_GROUPS = [
     {
         "title": "Ventas",
         "links": [
-            ("oportunidades", "Oportunidades", "/oportunidades", "target"),
+            ("oportunidades", "Oportunidades / CRM", "/oportunidades", "target"),
             ("cotizador", "Cotizador", "/cotizador", "scale"),
             ("referidos", "Referidos", "/referidos", "share"),
         ],
@@ -185,7 +185,7 @@ def _resolve_back(request: Request, active: str, extra: dict) -> tuple[str | Non
 
     # Sub-rutas con padre claro
     if path.startswith("/cartera/") and path != "/cartera":
-        return "/cartera", "← Panel"
+        return "/cartera", "← Dashboard"
     if "/beneficios/" in path:
         # /aseguradoras/{id}/beneficios/{plan_id}
         parts = [p for p in path.split("/") if p]
@@ -216,7 +216,7 @@ def _resolve_back(request: Request, active: str, extra: dict) -> tuple[str | Non
 
     by_active = {
         # Incluso Hoy lleva retorno (pedido: todas las pantallas).
-        "hoy": ("/cartera", "← Panel"),
+        "hoy": ("/cartera", "← Dashboard"),
         "radar": ("/hoy", "← Hoy"),
         "cartera": ("/hoy", "← Hoy"),
         "clientes": ("/hoy", "← Hoy"),

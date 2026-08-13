@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Oportunidades · ESecureBroker{% endblock %}
-{% block topbar %}Ventas · Oportunidades{% endblock %}
+{% block topbar %}Ventas · CRM{% endblock %}
 {% block content %}
 <section class="page-head row-between">
   <div>
     <h1 class="page-title">Oportunidades</h1>
-    <p class="page-sub">Flujo de renovación y cotización · <b>{{ org_name }}</b> · {{ opportunities|length }} abiertas</p>
+    <p class="page-sub">Pipeline de renovación y cotización · <b>{{ org_name }}</b> · {{ opportunities|length }} abiertas</p>
   </div>
   <div class="stack-actions">
     <a class="btn-secondary" href="/reportes/oportunidades/imprimir" target="_blank">PDF</a>
@@ -22,7 +22,7 @@
 </div>
 
 <section style="margin-top:1rem">
-  <h2 class="section-title">Cola de oportunidades</h2>
+  <h2 class="section-title">Cola CRM</h2>
   <div class="table-card">
     <table class="data-table">
       <thead>

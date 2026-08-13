@@ -58,7 +58,7 @@
         <label class="catalog-field code">Teléfono
           <input name="phone" maxlength="40" value="{{ identity.phone or '' }}" />
         </label>
-        <label class="catalog-field name">Correo
+        <label class="catalog-field name">Email
           <input name="email" type="email" maxlength="200" value="{{ identity.email or '' }}" />
         </label>
         <label class="catalog-field name">Sitio web
@@ -116,7 +116,7 @@
         <td>{% if setup.openai_ok %}<span class="kind-pill">OK</span>{% else %}<span class="kind-pill">Falta</span> · <a href="/mantenimiento">Mantenimiento → Captura</a> (PDF con texto ya funciona){% endif %}</td>
       </tr>
       <tr>
-        <td>Pago con Stripe</td>
+        <td>Checkout Stripe</td>
         <td>{% if setup.stripe_ok %}<span class="kind-pill">OK</span>{% else %}<span class="kind-pill">Opcional</span> · <a href="/mantenimiento">Mantenimiento → SaaS</a>{% endif %}</td>
       </tr>
       <tr>
@@ -148,7 +148,7 @@
   <section>
     <h2 class="section-title">Envío automático de estados</h2>
     <div class="table-card" style="padding:1rem">
-      <p class="meta">Envía el estado de cuenta a clientes con saldo vencido (datos del dominio), respetando cooldown.</p>
+      <p class="meta">Envía el estado de cuenta a clientes con saldo vencido (Domain Truth), respetando cooldown.</p>
       <table class="data-table" style="margin-top:0.5rem">
         <tbody>
           <tr><td>STATEMENT_AUTO_ENABLED</td><td class="mono">{% if mail.auto_enabled %}sí{% else %}no{% endif %}</td></tr>

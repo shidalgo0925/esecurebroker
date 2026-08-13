@@ -30,7 +30,7 @@
   {% else %}
   <form class="catalog-form" method="post" action="/productores/{{ profile.id }}/acceso">
     <div class="catalog-row">
-      <label class="catalog-field name">Correo de cuenta ESB
+      <label class="catalog-field name">Email de cuenta ESB
         <input name="account_email" type="email" required maxlength="200"
           value="{{ party.email if party and party.email else '' }}"
           placeholder="debe existir como BrokerAccount" />

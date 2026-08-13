@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Cobros · Panel · ESecureBroker{% endblock %}
-{% block topbar %}Cartera · Panel · Cobros{% endblock %}
+{% block topbar %}Cartera · Dashboard · Cobros{% endblock %}
 {% block content %}
 <section class="page-head row-between">
   <div>
@@ -73,7 +73,7 @@
   </section>
 
   <section class="chart-card dash-pane-card">
-    <h2 class="chart-title">Antigüedad</h2>
+    <h2 class="chart-title">Aging</h2>
     <div class="aging-grid">
       {% for a in dash.aging %}
       <a class="aging-card {% if a.amount > 0 %}has-debt{% endif %}" href="{{ a.href }}">

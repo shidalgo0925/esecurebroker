@@ -5,7 +5,7 @@
 <section class="page-head row-between">
   <div>
     <h1 class="page-title">Renovaciones</h1>
-    <p class="page-sub">Flujo — misma cia o recotizar · <b>{{ org_name }}</b>
+    <p class="page-sub">Pipeline — misma cia o recotizar · <b>{{ org_name }}</b>
       {% if q or status %} · {{ result_count }} resultado{% if result_count != 1 %}s{% endif %}{% endif %}
     </p>
   </div>
@@ -29,7 +29,7 @@
 
 <div class="table-card">
   <table class="data-table">
-    <thead><tr><th>Estado</th><th>Fecha objetivo</th><th>Cliente</th><th>Póliza</th><th></th></tr></thead>
+    <thead><tr><th>Estado</th><th>Target</th><th>Cliente</th><th>Póliza</th><th></th></tr></thead>
     <tbody>
     {% for r in rows %}
       <tr>
