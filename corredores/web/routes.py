@@ -3495,6 +3495,9 @@ def _require_producers_manage(session: Session, request: Request) -> None:
     access = current_access_context(session, request)
     if access is None:
         return  # auth off / piloto
+    # Platform admin acting inside a tenant org (support / demos).
+    if access.has_permission("platform:admin"):
+        return
     try:
         require_permission(access, "producers:manage")
     except AccessDenied as e:

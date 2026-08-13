@@ -223,9 +223,12 @@ SYSTEM_ROLE_PERMISSIONS: dict[str, tuple[str, ...]] = {
     + (
         "platform:admin",
         "producers:read",
+        "producers:manage",
         "reports:read",
         "members:read",
+        "members:manage",
         "roles:read",
+        "roles:manage",
         "incentives:read",
         "incentives:manage",
         "settings:read",
