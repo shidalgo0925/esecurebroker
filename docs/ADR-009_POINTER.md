@@ -12,4 +12,4 @@
 | **Tema** | Carrier Incentive Plans / beneficios por producción y cobranza |
 | **Ambiente** | Solo DEV · PROD no tocar |
 
-**No confundir:** M2M / credenciales = **ADR-037** (el archivo wiki `ADR-009_m2m_credentials_operations.md` es SUPERSEDED/pointer).
+**No confundir:** M2M / credenciales = **ADR-037** — ver `docs/ADR-037_POINTER.md` (SPAGHETTI ACCEPT 2026-08-13).

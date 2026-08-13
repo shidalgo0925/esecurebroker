@@ -3,7 +3,8 @@
 **Producto:** ESecureBroker (ESB) — expediente operativo de la correduría  
 **Actualizado:** 2026-08-13  
 **Ambiente activo:** DEV (`https://esecurebroker-dev.etsrv.site`)  
-**PROD:** cerrado hasta gate ADR-037  
+**PROD:** cerrado hasta F1–F3 ADR-037 + E2E `credential_ref`  
+**ADR-037:** SPAGHETTI ACCEPT 2026-08-13 · GO F1 → CODITO (EN1 DEV)  
 **Companion Ana/EN1:** `docs/briefs/ANA-roadmap-esb-en1-contexto.md`
 
 ---

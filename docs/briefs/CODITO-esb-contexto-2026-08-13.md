@@ -71,7 +71,7 @@ No reutilizar 009 para Caja/M2M.
 |---|------|-------|---------------|
 | 1 | **Cliente canónico** vs `ets_commercial_customer` | CODITO | Inspección pedida (briefs previos); **sin fix aún** |
 | 2 | Re-test E2E `/registro` tras #1 | ESB + CODITO | Esperando #1 |
-| 3 | **ADR-037** aceptación + diseño ops secretos PROD | CODITO + SPAGHETTI | Publicado; **no implementado** |
+| 3 | **ADR-037** F1 Integration Center EN1 DEV | CODITO | SPAGHETTI **ACCEPT** + **GO F1** 2026-08-13 (`docs/ADR-037_ACCEPT.md`) |
 | 4 | Tarjeta / Stripe ↔ EN1 | ESB + EN1 | LATER |
 | 5 | Gate cutover PROD | Ana + ADR-037 | Cerrado |
 
@@ -85,7 +85,7 @@ Briefs ya en ESB:
 
 ## 6. Lo que **no** pedimos a CODITO ahora
 
-- Implementar pantalla Integration Center (eso es GO post-aceptación ADR-037).  
+- Implementar F2 ESB Integraciones (espera done F1 + GO F2).  
 - Endpoints para incentivos de aseguradora (dominio ESB).  
 - Deploy / pull a EN1 PROD o ESB PROD.  
 - Cambiar contrato C1 `commercial/bootstrap|checkout|entitlement` salvo bug reportado.
@@ -95,7 +95,7 @@ Briefs ya en ESB:
 ## 7. Pedido concreto a CODITO (siguiente)
 
 1. **Prioridad:** cerrar inspección Cliente canónico (brief §pedido) y devolver mapa tabla/UI + si bootstrap debe materializar Cliente.  
-2. **En paralelo (gobierno):** revisar ADR-037 y marcar aceptación / gaps antes de cualquier diseño de secret delivery PROD.  
+2. **Gobierno:** confirmar ACCEPT CODITO en canónico ADR-037 y ejecutar **GO F1** (brief `docs/briefs/CODITO-adr037-go-f1.md`).  
 3. Avisar a ESB cuando haya resultado de #1 para re-probar `/registro` en DEV.
 
 ---
