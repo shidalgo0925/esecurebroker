@@ -4,7 +4,7 @@
 {% block content %}
 <section class="page-head">
   <h1 class="page-title">{{ member.display_name }}</h1>
-  <p class="page-sub">{{ member.email or '—' }} · {{ member.role_label }} · {{ member.status }} · <b>{{ org_name }}</b></p>
+  <p class="page-sub">{{ member.email or '—' }} · {{ member.role_label }} · {{ member.status|es }} · <b>{{ org_name }}</b></p>
 </section>
 
 {% if flash %}<p class="flash-ok">Actualizado ({{ flash }}).</p>{% endif %}
@@ -18,7 +18,7 @@
 
 <section class="poliza-panel" style="margin-bottom:1rem">
   <h2 class="poliza-panel-title">Acceso</h2>
-  <p class="meta">Alcance: {{ member.scope }} · Productor: {{ 'Sí' if member.is_producer else 'No' }}</p>
+  <p class="meta">Alcance: {{ member.scope|es }} · Productor: {{ 'Sí' if member.is_producer else 'No' }}</p>
   <form method="post" action="/configuracion/colaboradores/{{ membership.id }}/rol" class="catalog-form" style="margin-top:0.75rem">
     <div class="catalog-row">
       <label class="catalog-field code">Cambiar rol

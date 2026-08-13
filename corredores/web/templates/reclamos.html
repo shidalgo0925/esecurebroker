@@ -19,7 +19,7 @@
   <select name="status">
     <option value="">Todo estado</option>
     {% for s in statuses %}
-    <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>
+    <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s|es }}</option>
     {% endfor %}
   </select>
   <button type="submit" class="btn-secondary">Filtrar</button>
@@ -33,7 +33,7 @@
     {% for r in rows %}
       <tr>
         <td class="cli-id">{{ r.claim_number or r.id[:8] }}</td>
-        <td><span class="kind-pill">{{ r.status }}</span></td>
+        <td><span class="kind-pill">{{ r.status|es }}</span></td>
         <td class="mono"><a href="/polizas/{{ r.policy_id }}">{{ r.policy_id[:8] }}…</a></td>
         <td class="mono">{{ r.loss_date or '—' }}</td>
         <td>{{ r.source }}</td>

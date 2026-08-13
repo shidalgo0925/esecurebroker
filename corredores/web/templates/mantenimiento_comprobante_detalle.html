@@ -4,10 +4,10 @@
 {% block content %}
 <section class="page-head">
   <h1 class="page-title">Comprobante {{ row.method }}</h1>
-  <p class="page-sub">{{ org.name if org else row.organization_id }} · {{ row.plan_code }} · {{ row.verification_status }}</p>
+  <p class="page-sub">{{ org.name if org else row.organization_id }} · {{ row.plan_code }} · {{ row.verification_status|es }}</p>
 </section>
 
-{% if flash == 'approved' %}<p class="flash-ok">Aprobado · suscripción ACTIVE (bank_manual).</p>{% endif %}
+{% if flash == 'approved' %}<p class="flash-ok">Aprobado · suscripción activa (transferencia manual).</p>{% endif %}
 {% if flash == 'rejected' %}<p class="flash-ok">Rechazado.</p>{% endif %}
 {% if error %}<p class="form-error">{{ error }}</p>{% endif %}
 

@@ -58,7 +58,7 @@
         <label class="catalog-field code">Teléfono
           <input name="phone" maxlength="40" value="{{ identity.phone or '' }}" />
         </label>
-        <label class="catalog-field name">Email
+        <label class="catalog-field name">Correo
           <input name="email" type="email" maxlength="200" value="{{ identity.email or '' }}" />
         </label>
         <label class="catalog-field name">Sitio web
@@ -93,7 +93,7 @@
 </section>
 
 {% if flash == 'auto_ok' %}
-<p class="flash-ok">Corrida automática ejecutada{% if dry_run %} (dry-run){% endif %}: enviados {{ auto_sent }}, omitidos {{ auto_skipped }}, fallidos {{ auto_failed }}.</p>
+<p class="flash-ok">Corrida automática ejecutada{% if dry_run %} (simulación){% endif %}: enviados {{ auto_sent }}, omitidos {{ auto_skipped }}, fallidos {{ auto_failed }}.</p>
 {% elif flash == 'auto_blocked' %}
 <p class="form-error">{{ flash_detail or 'Auto-envío deshabilitado o SMTP incompleto' }}</p>
 {% endif %}
@@ -116,7 +116,7 @@
         <td>{% if setup.openai_ok %}<span class="kind-pill">OK</span>{% else %}<span class="kind-pill">Falta</span> · <a href="/mantenimiento">Mantenimiento → Captura</a> (PDF con texto ya funciona){% endif %}</td>
       </tr>
       <tr>
-        <td>Checkout Stripe</td>
+        <td>Pago con Stripe</td>
         <td>{% if setup.stripe_ok %}<span class="kind-pill">OK</span>{% else %}<span class="kind-pill">Opcional</span> · <a href="/mantenimiento">Mantenimiento → SaaS</a>{% endif %}</td>
       </tr>
       <tr>
@@ -148,7 +148,7 @@
   <section>
     <h2 class="section-title">Envío automático de estados</h2>
     <div class="table-card" style="padding:1rem">
-      <p class="meta">Envía el estado de cuenta a clientes con saldo vencido (Domain Truth), respetando cooldown.</p>
+      <p class="meta">Envía el estado de cuenta a clientes con saldo vencido (datos del dominio), respetando cooldown.</p>
       <table class="data-table" style="margin-top:0.5rem">
         <tbody>
           <tr><td>STATEMENT_AUTO_ENABLED</td><td class="mono">{% if mail.auto_enabled %}sí{% else %}no{% endif %}</td></tr>
@@ -160,21 +160,21 @@
       <div class="stack-actions" style="margin-top:0.85rem">
         <form method="post" action="/configuracion/estados-auto" style="display:inline">
           <input type="hidden" name="dry_run" value="1" />
-          <button type="submit" class="btn-secondary">Simular (dry-run)</button>
+          <button type="submit" class="btn-secondary">Simular (simulación)</button>
         </form>
         <form method="post" action="/configuracion/estados-auto" style="display:inline" onsubmit="return confirm('¿Enviar estados de cuenta reales ahora?');">
           <input type="hidden" name="dry_run" value="0" />
           <button type="submit" class="btn-primary" {% if not mail.configured or not mail.auto_enabled %}disabled title="Activa MAIL_ENABLED, SMTP y STATEMENT_AUTO_ENABLED"{% endif %}>Ejecutar ahora</button>
         </form>
       </div>
-      <p class="meta" style="margin-top:0.6rem">Timer systemd: <span class="mono">esecurebroker-statements.timer</span> (07:30) · CLI: <span class="mono">python -m corredores.cli send-statements [--dry-run]</span></p>
+      <p class="meta" style="margin-top:0.6rem">Timer systemd: <span class="mono">esecurebroker-statements.timer</span> (07:30) · CLI: <span class="mono">python -m corredores.cli send-statements [--simulación]</span></p>
     </div>
   </section>
 </div>
 
 {% if auto_outcomes %}
 <section style="margin-top:1rem">
-  <h2 class="section-title">Resultado dry-run</h2>
+  <h2 class="section-title">Resultado simulación</h2>
   <div class="table-card">
     <table class="data-table">
       <thead><tr><th>Cliente</th><th>Estado</th><th>Para</th><th>Detalle</th></tr></thead>
@@ -182,7 +182,7 @@
       {% for o in auto_outcomes %}
         <tr>
           <td>{{ o.party_name }}</td>
-          <td><span class="kind-pill">{{ o.status }}</span></td>
+          <td><span class="kind-pill">{{ o.status|es }}</span></td>
           <td class="mono">{{ o.to_email or '—' }}</td>
           <td class="meta">{{ o.detail or '—' }}</td>
         </tr>
@@ -208,7 +208,7 @@
           <td>{{ d.channel }}</td>
           <td><span class="kind-pill">{{ d.trigger }}</span></td>
           <td class="mono">{{ d.to_email or '—' }}</td>
-          <td><span class="kind-pill">{{ d.status }}</span></td>
+          <td><span class="kind-pill">{{ d.status|es }}</span></td>
           <td class="mono">${{ d.overdue_balance|money }}</td>
           <td class="meta">{{ d.detail or '—' }}</td>
         </tr>

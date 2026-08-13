@@ -28,7 +28,7 @@
         <button type="submit" name="organization_id" value="{{ o.organization_id }}" style="text-align:left">
           {{ o.name }}
           <span style="display:block;font-size:0.75rem;font-weight:500;opacity:0.75;margin-top:0.35rem">
-            {{ o.role }}
+            {{ o.role|es }}
             · {{ o.policies }} póliza{% if o.policies != 1 %}s{% endif %}
             · {{ o.clients }} cliente{% if o.clients != 1 %}s{% endif %}
             · {{ o.carriers }} cia{% if o.carriers != 1 %}s{% endif %}

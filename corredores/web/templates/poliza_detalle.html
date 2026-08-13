@@ -9,7 +9,7 @@
       <p class="page-sub">
         <a href="/clientes/{{ policy.client_party_id }}">{{ client_name }}</a>
         {% if client_id_doc %} · {{ client_id_doc }}{% endif %}
-        · <span class="kind-pill">{{ policy.status }}</span>
+        · <span class="kind-pill">{{ policy.status|es }}</span>
       </p>
     </div>
     <div class="stack-actions">
@@ -58,7 +58,7 @@
       <h2 class="poliza-panel-title">Registro</h2>
       <table class="poliza-facts">
         <tr><th>Número</th><td class="mono"><b>{{ policy.policy_number or '—' }}</b></td></tr>
-        <tr><th>Estado</th><td>{{ policy.status }}</td></tr>
+        <tr><th>Estado</th><td>{{ policy.status|es }}</td></tr>
         <tr><th>Cliente</th><td><a href="/clientes/{{ policy.client_party_id }}">{{ client_name }}</a>{% if client_id_doc %} · {{ client_id_doc }}{% endif %}</td></tr>
         <tr><th>Aseguradora</th><td>{{ carrier_name }} ({{ carrier_code }})</td></tr>
         <tr><th>Ramo</th><td>{{ line_name }} · <span class="mono">{{ line_code }}</span></td></tr>
@@ -109,7 +109,7 @@
       <section class="poliza-panel">
         <h2 class="poliza-panel-title">Renovación</h2>
         <table class="poliza-facts">
-          <tr><th>Estado</th><td>{{ renewal.status }}</td></tr>
+          <tr><th>Estado</th><td>{{ renewal.status|es }}</td></tr>
           <tr><th>Objetivo</th><td class="mono">{{ renewal.target_date or '—' }}</td></tr>
         </table>
         <p class="meta" style="margin:0.5rem 0 0"><a href="/renovaciones">Ver renovaciones →</a></p>
@@ -147,7 +147,7 @@
             <td class="mono">{{ i.due_date }}</td>
             <td class="mono">${{ i.amount|money }}</td>
             <td class="mono">${{ i.balance|money }}</td>
-            <td><span class="kind-pill">{{ i.status }}</span></td>
+            <td><span class="kind-pill">{{ i.status|es }}</span></td>
             <td class="cli-action">{% if i.balance > 0 %}<a class="open-link" href="/cobranza/pagos/nuevo?installment_id={{ i.id }}">Cobrar</a>{% else %}—{% endif %}</td>
           </tr>
         {% else %}

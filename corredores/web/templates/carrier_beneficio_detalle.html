@@ -34,7 +34,7 @@
       <div class="money-amt">{% if progress.remaining is not none %}${{ progress.remaining|money }}{% else %}—{% endif %}</div>
     </div>
     <div>
-      <div class="meta">Beneficio {{ progress.benefit_stage }}</div>
+      <div class="meta">Beneficio {{ progress.benefit_stage|es }}</div>
       <div class="money-amt">
         {% if progress.benefit_stage == 'EARNED' %}${{ progress.earned_benefit|money }}
         {% else %}${{ progress.estimated_benefit|money }}{% endif %}
@@ -76,8 +76,8 @@
       </label>
       <label class="catalog-field code">Estado
         <select name="confirmation_status">
-          <option value="PENDING">PENDING (no suma oficial)</option>
-          <option value="CONFIRMED">CONFIRMED</option>
+          <option value="PENDING">Pendiente (no suma oficial)</option>
+          <option value="CONFIRMED">{{ 'CONFIRMED'|es }}</option>
         </select>
       </label>
       <label class="catalog-field code">Nº recibo cia
@@ -124,11 +124,11 @@
 <section class="poliza-panel" style="margin-bottom:1rem">
   <h2 class="poliza-panel-title">Liquidación</h2>
   <form method="post" action="/aseguradoras/{{ carrier.id }}/beneficios/{{ plan.id }}/reclamar" style="margin-bottom:0.75rem">
-    <button class="btn-primary" type="submit">Calcular y marcar CLAIMED</button>
+    <button class="btn-primary" type="submit">Calcular y marcar como reclamado</button>
   </form>
   <table class="data-table">
     <thead>
-      <tr><th>Período</th><th>Elegible</th><th>Calc.</th><th>Stage</th><th>Status</th><th>Reconocido</th><th>Pagado</th><th></th></tr>
+      <tr><th>Período</th><th>Elegible</th><th>Calc.</th><th>Etapa</th><th>Estado</th><th>Reconocido</th><th>Pagado</th><th></th></tr>
     </thead>
     <tbody>
     {% for s in settlements %}
@@ -136,8 +136,8 @@
         <td>{{ s.period_label }}</td>
         <td class="mono">${{ s.eligible_amount|money }}</td>
         <td class="mono">${{ s.calculated_benefit|money }}</td>
-        <td>{{ s.benefit_stage }}</td>
-        <td>{{ s.status }}</td>
+        <td>{{ s.benefit_stage|es }}</td>
+        <td>{{ s.status|es }}</td>
         <td class="mono">{% if s.recognized_amount is not none %}${{ s.recognized_amount|money }}{% else %}—{% endif %}</td>
         <td class="mono">{% if s.paid_amount is not none %}${{ s.paid_amount|money }}{% else %}—{% endif %}</td>
         <td>

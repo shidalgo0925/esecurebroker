@@ -76,7 +76,7 @@
           <td class="mono">${{ r.amount|money }}</td>
           <td class="mono">${{ r.paid|money }}</td>
           <td class="mono {% if r.balance > 0 and r.days_overdue %}warn{% endif %}">${{ r.balance|money }}</td>
-          <td><span class="kind-pill">{{ r.status }}</span></td>
+          <td><span class="kind-pill">{{ r.status|es }}</span></td>
           <td class="mono">{% if r.days_overdue %}{{ r.days_overdue }}d{% else %}—{% endif %}</td>
           <td class="cli-action cob-actions">
             {% if r.balance > 0 %}

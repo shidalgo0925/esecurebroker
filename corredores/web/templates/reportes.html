@@ -8,7 +8,7 @@
     <p class="page-sub">Informes operativos · <b>{{ org_name }}</b> · {{ today }}</p>
   </div>
   <div class="stack-actions">
-    <a class="btn-secondary" href="/cartera">Dashboard</a>
+    <a class="btn-secondary" href="/cartera">Panel</a>
   </div>
 </section>
 
@@ -24,7 +24,7 @@
   </a>
   <a class="report-tile tone-risk" href="/morosidad">
     <div class="money-title">MOROSIDAD</div>
-    <div class="meta" style="margin-top:0.45rem">Aging · top deudores · CSV</div>
+    <div class="meta" style="margin-top:0.45rem">Antigüedad · top deudores · CSV</div>
   </a>
   <div class="report-tile tone-money">
     <div class="money-amt">${{ summary.payments_mtd_amount|money }}</div>
@@ -103,7 +103,7 @@
     <div class="meta">{{ summary.commissions_count }} calculadas</div>
   </a>
   <a class="report-tile" href="/cartera/produccion">
-    <div class="money-title">DASHBOARD</div>
+    <div class="money-title">PANEL</div>
     <div class="meta" style="margin-top:0.45rem">Producción →</div>
   </a>
 </div>
@@ -145,7 +145,7 @@
           <tr>
             <td class="cli-id">{{ r.policy }}</td>
             <td class="cli-name">{{ r.client }}</td>
-            <td><span class="kind-pill">{{ r.status }}</span></td>
+            <td><span class="kind-pill">{{ r.status|es }}</span></td>
             <td class="mono">{{ r.target or '—' }}</td>
           </tr>
         {% else %}
@@ -170,7 +170,7 @@
   <div class="report-tile tone-money">
     <div class="money-amt">${{ metas.confirmed_total|money }}</div>
     <div class="money-title">CONFIRMADO</div>
-    <div class="meta">solo CONFIRMED</div>
+    <div class="meta">solo confirmado</div>
   </div>
   <div class="report-tile">
     <div class="money-amt">${{ metas.benefit_total|money }}</div>
@@ -178,7 +178,7 @@
     <div class="meta">estimado / devengado</div>
   </div>
   <a class="report-tile" href="/cartera/metas">
-    <div class="money-title">VER EN DASHBOARD</div>
+    <div class="money-title">VER EN PANEL</div>
     <div class="meta" style="margin-top:0.45rem">Metas →</div>
   </a>
 </div>
@@ -305,7 +305,7 @@
         </tr>
         <tr>
           <td class="cli-name">Oportunidades</td>
-          <td>CRM abierto</td>
+          <td>Flujo abierto</td>
           <td class="cli-action">
             <a class="open-link open-link-strong" href="/reportes/oportunidades/imprimir">PDF</a>
           </td>

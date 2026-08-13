@@ -52,7 +52,7 @@
     {% for r in rows %}
       <tr>
         <td class="mono">{{ r.number }}</td>
-        <td>{{ r.status }}</td>
+        <td>{{ r.status|es }}</td>
         <td>{{ r.client }}</td>
         <td>{{ r.carrier }}</td>
         <td class="mono">{{ r.line }}</td>

@@ -24,7 +24,7 @@
   <select name="status">
     <option value="">Todo estado</option>
     {% for s in ['ACTIVE','CANCELLED','EXPIRED','PENDING_EFFECTIVE'] %}
-    <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>
+    <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s|es }}</option>
     {% endfor %}
   </select>
   <select name="line">
@@ -68,7 +68,7 @@
         <td class="mono meta" style="white-space:nowrap">
           {% if p.effective %}{{ p.effective }}→{{ p.expiration or '—' }}{% else %}—{% endif %}
         </td>
-        <td><span class="kind-pill">{{ p.status }}</span></td>
+        <td><span class="kind-pill">{{ p.status|es }}</span></td>
         <td class="mono">{% if p.premium %}${{ p.premium|money }}{% else %}<span class="meta">—</span>{% endif %}</td>
         <td class="mono">{% if p.has_plan %}{{ p.installments }}{% else %}<span class="meta">—</span>{% endif %}</td>
         <td class="cli-action"><a class="open-link" href="/polizas/{{ p.id }}">Abrir</a></td>

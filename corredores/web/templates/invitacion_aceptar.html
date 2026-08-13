@@ -17,10 +17,10 @@
       {% if not valid %}
       <h1 class="auth-title">Invitación no válida</h1>
       <p class="auth-lead">El enlace expiró, ya se usó o fue revocado. Pide un reenvío a tu administrador.</p>
-      <a class="auth-cta" href="/login">Ir al login</a>
+      <a class="auth-cta" href="/login">Ir a iniciar sesión</a>
       {% else %}
       <h1 class="auth-title">Únete a {{ org_name }}</h1>
-      <p class="auth-lead">Te invitaron como <strong>{{ role_code }}</strong> · {{ email }}</p>
+      <p class="auth-lead">Te invitaron como <strong>{{ role_code|es }}</strong> · {{ email }}</p>
       {% if error %}<p class="auth-error" role="alert">{{ error }}</p>{% endif %}
       <form method="post" action="/invitacion/{{ token }}" class="auth-form">
         <label>Nombre

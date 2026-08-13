@@ -27,7 +27,7 @@
       <label class="catalog-field name">Apellido
         <input name="last_name" maxlength="80" placeholder="Agente" />
       </label>
-      <label class="catalog-field name">Email (opcional · vincula login PRODUCER)
+      <label class="catalog-field name">Correo (opcional · vincula cuenta de productor)
         <input name="email" type="email" maxlength="200" placeholder="carlos@correduria.local" />
       </label>
       <label class="catalog-field code">Código
@@ -47,7 +47,7 @@
       <tr>
         <th>Nombre</th>
         <th>Código</th>
-        <th>Email</th>
+        <th>Correo</th>
         <th>Estado</th>
         <th>Pólizas PRIMARY</th>
         <th></th>
@@ -59,7 +59,7 @@
         <td class="cli-name">{{ row.profile.display_name }}</td>
         <td class="cli-id mono">{{ row.profile.code or "—" }}</td>
         <td>{{ row.email or "—" }}</td>
-        <td>{{ row.profile.status }}</td>
+        <td>{{ row.profile.status|es }}</td>
         <td>{{ row.active_policies }}</td>
         <td class="cli-action">
           <a class="open-link" href="/productores/{{ row.profile.id }}">Abrir</a>

@@ -73,9 +73,11 @@ from corredores.web.deps import (
 
 router = APIRouter()
 from corredores.services.money_format import format_money
+from corredores.services.ui_labels import label_es
 
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 templates.env.filters["money"] = format_money
+templates.env.filters["es"] = label_es
 
 # Sidebar groups — (key, label, href, icon)
 NAV_GROUPS = [
@@ -89,7 +91,7 @@ NAV_GROUPS = [
     {
         "title": "Cartera",
         "links": [
-            ("cartera", "Dashboard", "/cartera", "chart"),
+            ("cartera", "Panel", "/cartera", "chart"),
             ("clientes", "Clientes", "/clientes", "users"),
             ("polizas", "Pólizas", "/polizas", "folder"),
             ("cobranza", "Cobranza", "/cobranza", "coins"),
@@ -101,7 +103,7 @@ NAV_GROUPS = [
     {
         "title": "Ventas",
         "links": [
-            ("oportunidades", "Oportunidades / CRM", "/oportunidades", "target"),
+            ("oportunidades", "Oportunidades", "/oportunidades", "target"),
             ("cotizador", "Cotizador", "/cotizador", "scale"),
             ("referidos", "Referidos", "/referidos", "share"),
         ],
@@ -183,7 +185,7 @@ def _resolve_back(request: Request, active: str, extra: dict) -> tuple[str | Non
 
     # Sub-rutas con padre claro
     if path.startswith("/cartera/") and path != "/cartera":
-        return "/cartera", "← Dashboard"
+        return "/cartera", "← Panel"
     if "/beneficios/" in path:
         # /aseguradoras/{id}/beneficios/{plan_id}
         parts = [p for p in path.split("/") if p]
@@ -214,7 +216,7 @@ def _resolve_back(request: Request, active: str, extra: dict) -> tuple[str | Non
 
     by_active = {
         # Incluso Hoy lleva retorno (pedido: todas las pantallas).
-        "hoy": ("/cartera", "← Dashboard"),
+        "hoy": ("/cartera", "← Panel"),
         "radar": ("/hoy", "← Hoy"),
         "cartera": ("/hoy", "← Hoy"),
         "clientes": ("/hoy", "← Hoy"),

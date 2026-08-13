@@ -5,7 +5,7 @@
 <section class="page-head row-between">
   <div>
     <h1 class="page-title">Renovaciones</h1>
-    <p class="page-sub">Pipeline — misma cia o recotizar · <b>{{ org_name }}</b>
+    <p class="page-sub">Flujo — misma cia o recotizar · <b>{{ org_name }}</b>
       {% if q or status %} · {{ result_count }} resultado{% if result_count != 1 %}s{% endif %}{% endif %}
     </p>
   </div>
@@ -20,7 +20,7 @@
   <select name="status">
     <option value="">Todo estado</option>
     {% for s in statuses %}
-    <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>
+    <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s|es }}</option>
     {% endfor %}
   </select>
   <button type="submit" class="btn-secondary">Filtrar</button>
@@ -29,11 +29,11 @@
 
 <div class="table-card">
   <table class="data-table">
-    <thead><tr><th>Estado</th><th>Target</th><th>Cliente</th><th>Póliza</th><th></th></tr></thead>
+    <thead><tr><th>Estado</th><th>Fecha objetivo</th><th>Cliente</th><th>Póliza</th><th></th></tr></thead>
     <tbody>
     {% for r in rows %}
       <tr>
-        <td><span class="kind-pill">{{ r.status }}</span></td>
+        <td><span class="kind-pill">{{ r.status|es }}</span></td>
         <td class="mono">{{ r.target_date or '—' }}</td>
         <td class="cli-name">{% if r.party_id %}<a href="/clientes/{{ r.party_id }}">{{ r.client }}</a>{% else %}{{ r.client }}{% endif %}</td>
         <td class="cli-id"><a href="/polizas/{{ r.previous_policy_id }}">{{ r.policy_number }}</a></td>

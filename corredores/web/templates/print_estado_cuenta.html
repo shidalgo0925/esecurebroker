@@ -83,7 +83,7 @@
         <td class="num mono">${{ r.amount|money }}</td>
         <td class="num mono">${{ r.paid|money }}</td>
         <td class="num mono {% if r.balance > 0 and r.days_overdue %}warn{% endif %}">${{ r.balance|money }}</td>
-        <td>{{ r.status }}</td>
+        <td>{{ r.status|es }}</td>
         <td class="mono">{% if r.days_overdue %}{{ r.days_overdue }}d{% else %}—{% endif %}</td>
       </tr>
     {% else %}
@@ -139,7 +139,7 @@
   {% endif %}
 
   <footer class="print-footer">
-    Saldos según Domain Truth (cuotas y pagos registrados). Vencido = fecha de vencimiento &lt; hoy y saldo &gt; 0.
+    Saldos según datos del dominio (cuotas y pagos registrados). Vencido = fecha de vencimiento &lt; hoy y saldo &gt; 0.
     No constituye factura fiscal.
   </footer>
 

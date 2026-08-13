@@ -7,7 +7,7 @@
   <h1 class="page-title">{{ profile.display_name }}</h1>
   <p class="page-sub">
     Código <span class="mono">{{ profile.code or "—" }}</span>
-    · {{ profile.status }}
+    · {{ profile.status|es }}
     {% if party and party.email %} · {{ party.email }}{% endif %}
   </p>
 </section>
@@ -30,7 +30,7 @@
   {% else %}
   <form class="catalog-form" method="post" action="/productores/{{ profile.id }}/acceso">
     <div class="catalog-row">
-      <label class="catalog-field name">Email de cuenta ESB
+      <label class="catalog-field name">Correo de cuenta ESB
         <input name="account_email" type="email" required maxlength="200"
           value="{{ party.email if party and party.email else '' }}"
           placeholder="debe existir como BrokerAccount" />
@@ -52,7 +52,7 @@
         <select name="policy_id" required>
           <option value="">— elegir —</option>
           {% for pol in policies %}
-          <option value="{{ pol.id }}">{{ pol.policy_number or pol.id[:8] }} · {{ pol.status }}</option>
+          <option value="{{ pol.id }}">{{ pol.policy_number or pol.id[:8] }} · {{ pol.status|es }}</option>
           {% endfor %}
         </select>
       </label>

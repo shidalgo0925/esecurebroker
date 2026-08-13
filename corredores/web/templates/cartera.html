@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Cartera · ESecureBroker{% endblock %}
-{% block topbar %}Cartera · Dashboard{% endblock %}
+{% block topbar %}Cartera · Panel{% endblock %}
 {% block content %}
 <section class="page-head row-between">
   <div>
-    <h1 class="page-title">Dashboard de cartera</h1>
+    <h1 class="page-title">Panel de cartera</h1>
     <p class="page-sub">
       Inventario y cobranza · <b>{{ dash.organization_name }}</b> · {{ dash.as_of }}
     </p>
@@ -53,7 +53,7 @@
 
 <section class="dash-block">
   <div class="block-head">
-    <h2 class="section-title" style="margin:0">Aging de cobranza</h2>
+    <h2 class="section-title" style="margin:0">Antigüedad de cobranza</h2>
     <a class="see-all" href="/cobranza">Ver cobranza →</a>
   </div>
   <div class="aging-grid">
@@ -86,7 +86,7 @@
 
 <div class="chart-grid">
   <section class="chart-card">
-    <h2 class="chart-title">Aging (monto)</h2>
+    <h2 class="chart-title">Antigüedad (monto)</h2>
     <div class="hbar-list">
       {% for a in dash.aging %}
       <div class="hbar-row">

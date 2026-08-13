@@ -21,7 +21,7 @@
       <tr>
         <td class="mono">{{ r.code }}</td>
         <td>{{ r.name }}</td>
-        <td>{{ r.default_scope }}</td>
+        <td>{{ r.default_scope|es }}</td>
         <td class="cli-action"><a class="open-link" href="/configuracion/roles/{{ r.id }}">Ver</a></td>
       </tr>
     {% endfor %}
@@ -38,7 +38,7 @@
       <tr>
         <td class="mono">{{ r.code }}</td>
         <td>{{ r.name }}</td>
-        <td>{{ r.default_scope }}</td>
+        <td>{{ r.default_scope|es }}</td>
         <td>{{ 'Activo' if r.active else 'Inactivo' }}</td>
         <td class="cli-action"><a class="open-link" href="/configuracion/roles/{{ r.id }}">Editar</a></td>
       </tr>

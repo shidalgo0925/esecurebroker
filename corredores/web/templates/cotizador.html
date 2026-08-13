@@ -93,7 +93,7 @@
         <tr>
           <td class="cli-name">{{ row.carrier_name }} <span class="meta">({{ row.carrier_code }})</span></td>
           <td>{{ row.source }}</td>
-          <td><span class="kind-pill">{{ row.status }}</span></td>
+          <td><span class="kind-pill">{{ row.status|es }}</span></td>
           <td class="mono">{% if row.premium is not none %}<b>${{ row.premium|money }}</b> {{ row.currency }}{% else %}—{% endif %}</td>
           <td>
             <form method="post" action="/cotizador/{{ selected_id }}/manual" class="stack-actions" style="gap:0.35rem">

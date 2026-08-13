@@ -55,17 +55,17 @@
       {% for p in snap.policies %}
       <li>
         <a href="/polizas/{{ p.id }}">{{ p.number or p.id[:8] }}</a>
-        · {{ p.status }} · {{ p.premium }}
+        · {{ p.status|es }} · {{ p.premium }}
       </li>
       {% else %}<li class="empty">Ninguna — <a href="/polizas/nueva?party_id={{ snap.party_id }}">crear póliza</a></li>{% endfor %}
     </ul>
   </section>
   <section>
-    <h2 class="section-title">Vehículos / claims / renovaciones</h2>
+    <h2 class="section-title">Vehículos / reclamos / renovaciones</h2>
     <ul class="worklist compact">
       {% for v in snap.vehicles %}<li>{{ v.make }} {{ v.model }} {{ v.plate }}</li>{% endfor %}
-      {% for c in snap.claims %}<li>Claim {{ c.status }} {{ c.number or c.id[:8] }}</li>{% endfor %}
-      {% for r in snap.renewals %}<li>Renov {{ r.status }} {{ r.target }}</li>{% endfor %}
+      {% for c in snap.reclamos %}<li>Reclamo {{ c.status|es }} {{ c.number or c.id[:8] }}</li>{% endfor %}
+      {% for r in snap.renewals %}<li>Renov {{ r.status|es }} {{ r.target }}</li>{% endfor %}
     </ul>
   </section>
 </div>

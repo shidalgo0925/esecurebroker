@@ -92,7 +92,7 @@
             {% else %}${{ g.estimated_benefit|money }} (est.){% endif %}
           {% else %}—{% endif %}
         </td>
-        <td>{{ p.status }}</td>
+        <td>{{ p.status|es }}</td>
         <td class="cli-action"><a class="open-link" href="/aseguradoras/{{ carrier.id }}/beneficios/{{ p.id }}">Abrir</a></td>
       </tr>
     {% else %}

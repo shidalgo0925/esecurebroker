@@ -66,8 +66,8 @@
         <td class="cli-name">{{ m.display_name }}</td>
         <td class="mono">{{ m.email or '—' }}</td>
         <td>{{ m.role_label }}</td>
-        <td>{{ m.scope }}</td>
-        <td>{{ m.status }}</td>
+        <td>{{ m.scope|es }}</td>
+        <td>{{ m.status|es }}</td>
         <td>{{ 'Sí' if m.is_producer else 'No' }}</td>
         <td class="cli-action"><a class="open-link" href="/configuracion/colaboradores/{{ m.id }}">Ver</a></td>
       </tr>

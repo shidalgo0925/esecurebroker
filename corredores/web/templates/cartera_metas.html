@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Metas · Dashboard · ESecureBroker{% endblock %}
-{% block topbar %}Cartera · Dashboard · Metas{% endblock %}
+{% block title %}Metas · Panel · ESecureBroker{% endblock %}
+{% block topbar %}Cartera · Panel · Metas{% endblock %}
 {% block content %}
 <section class="page-head row-between">
   <div>
@@ -64,7 +64,7 @@
             <div class="meta-card-carrier">{{ row.carrier_name }}</div>
             <h3 class="meta-card-title">{{ p.name }}</h3>
           </div>
-          <span class="meta-card-badge">{{ p.status }}</span>
+          <span class="meta-card-badge">{{ p.status|es }}</span>
         </header>
         <p class="meta-card-sub mono">
           {{ p.metric_type }} · {{ p.period_start }} → {{ p.period_end }}
