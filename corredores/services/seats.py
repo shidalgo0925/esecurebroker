@@ -13,11 +13,24 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from corredores.domain.membership_roles import BROKER, PLATFORM, PRODUCER
+from corredores.domain.membership_roles import (
+    BROKER,
+    MEMBERSHIP_STATUS_ACTIVE,
+    MEMBERSHIP_STATUSES_SEAT_HOLD,
+    PLATFORM,
+    PRODUCER,
+)
 from corredores.domain.models import OrgMembership, OrgSubscription, ProducerProfile
 from corredores.services.producer_portfolio import PRODUCER_STATUS_ACTIVE
 from corredores.services.saas_plans import get_plan
 from corredores.services.saas_signup import get_subscription
+
+
+def _membership_holds_seat(m: OrgMembership) -> bool:
+    status = (getattr(m, "status", None) or "").upper()
+    if status:
+        return status in MEMBERSHIP_STATUSES_SEAT_HOLD
+    return bool(m.active)
 
 
 class SeatLimitError(ValueError):
@@ -124,13 +137,12 @@ def persist_en1_seat_limits(
 
 
 def count_internal_seats_used(session: Session, organization_id: str) -> int:
-    rows = (
-        session.query(OrgMembership)
-        .filter_by(organization_id=organization_id, active=True)
-        .all()
-    )
+    """ACTIVE + INVITED non-producer memberships (F7 seat reservation)."""
+    rows = session.query(OrgMembership).filter_by(organization_id=organization_id).all()
     n = 0
     for m in rows:
+        if not _membership_holds_seat(m):
+            continue
         role = (m.role_code or BROKER).upper()
         if role in {PRODUCER, PLATFORM}:
             continue
@@ -139,16 +151,13 @@ def count_internal_seats_used(session: Session, organization_id: str) -> int:
 
 
 def count_producer_seats_used(session: Session, organization_id: str) -> int:
-    """Active PRODUCER memberships (system access). Profile-only does not count."""
-    return (
+    """ACTIVE + INVITED PRODUCER memberships. Profile-only does not count."""
+    rows = (
         session.query(OrgMembership)
-        .filter_by(
-            organization_id=organization_id,
-            active=True,
-            role_code=PRODUCER,
-        )
-        .count()
+        .filter_by(organization_id=organization_id, role_code=PRODUCER)
+        .all()
     )
+    return sum(1 for m in rows if _membership_holds_seat(m))
 
 
 def resolve_seat_limits(
@@ -214,17 +223,16 @@ def assert_can_activate_role(
     if bucket == "platform":
         return snap
 
-    if existing is not None and existing.active and (existing.role_code or "").upper() == role:
+    holding = existing is not None and _membership_holds_seat(existing)
+    if holding and (existing.role_code or "").upper() == role:
         return snap
 
     if bucket == "internal":
-        # If switching from PRODUCER → internal, producer seat freed; check internal
         used = snap.internal.used
-        if existing is not None and existing.active:
+        if holding:
             prev = _role_bucket(existing.role_code or BROKER)
             if prev == "internal":
                 return snap  # already counted
-            # prev producer/platform → need internal slot
         if snap.internal.limit is not None and used >= snap.internal.limit:
             raise SeatLimitError(
                 f"internal_seats exhausted ({used}/{snap.internal.limit})"
@@ -233,7 +241,7 @@ def assert_can_activate_role(
 
     # producer
     used = snap.producer.used
-    if existing is not None and existing.active:
+    if holding:
         prev = _role_bucket(existing.role_code or BROKER)
         if prev == "producer":
             return snap
@@ -253,7 +261,9 @@ def activate_membership(
     display_name: str | None = None,
     enforce_seats: bool = True,
 ) -> OrgMembership:
-    """Create/update membership with optional seat enforcement (F5)."""
+    """Create/update membership with optional seat enforcement (F5/F7)."""
+    from corredores.services.org_access_admin import set_membership_status
+
     role = (role_code or BROKER).upper()
     row = (
         session.query(OrgMembership)
@@ -273,14 +283,14 @@ def activate_membership(
             organization_id=organization_id,
             display_name=display_name,
             role_code=role,
-            active=True,
         )
+        set_membership_status(row, MEMBERSHIP_STATUS_ACTIVE)
         session.add(row)
     else:
-        row.active = True
         row.role_code = role
         if display_name:
             row.display_name = display_name
+        set_membership_status(row, MEMBERSHIP_STATUS_ACTIVE)
     session.flush()
     return row
 

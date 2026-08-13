@@ -40,7 +40,7 @@ PLANS: dict[str, SaasPlan] = {
     "oficina": SaasPlan(
         code="oficina",
         name="Oficina",
-        price_monthly_usd=99,
+        price_monthly_usd=129,
         audience="Con mi equipo",
         seats_included=15,
         tagline="Correduría pequeña/mediana: el equipo interno sobre la misma cartera.",
@@ -57,7 +57,7 @@ PLANS: dict[str, SaasPlan] = {
     "broker_red": SaasPlan(
         code="broker_red",
         name="Broker / Red",
-        price_monthly_usd=159,
+        price_monthly_usd=229,
         audience="Administro agentes",
         seats_included=15,
         tagline="Broker que administra agentes: consolidación y cartera por productor.",
@@ -92,6 +92,8 @@ PLANS: dict[str, SaasPlan] = {
 _PLAN_ALIASES: dict[str, str] = {
     "esencial": "individual",
     "profesional": "oficina",
+    "office": "oficina",
+    # EN1 C1 uses "broker"; ESB canonical remains broker_red.
 }
 
 DEFAULT_PLAN_CODE = "oficina"

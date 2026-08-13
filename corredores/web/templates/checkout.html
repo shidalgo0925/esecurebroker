@@ -3,80 +3,420 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Activar suscripción · ESecureBroker</title>
+  <title>Pago · ESecureBroker</title>
   <link rel="icon" href="/static/brand/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/auth.css?v=20260812plan2" />
+  <link rel="stylesheet" href="/static/auth.css?v=20260812pay7" />
 </head>
-<body class="auth-body">
-  <div class="auth-stage">
-    <div class="auth-login-wrap auth-register-wrap">
-      <div class="auth-login-brand">
-        <a class="auth-brand-link" href="/">
-          <img src="/static/brand/crest.svg" width="44" height="44" alt="" />
-          <span class="auth-wordmark">ESecure<span>Broker</span></span>
-        </a>
-      </div>
+<body class="auth-body{% if is_dev_env %} auth-env-dev{% endif %} auth-checkout-page">
+  <div class="pay-shell pay-shell-wide">
+    <header class="pay-top">
+      <a class="pay-brand" href="/">
+        <img src="/static/brand/crest.svg" width="36" height="36" alt="" />
+        <span class="auth-wordmark">ESecure<span>Broker</span></span>
+      </a>
+      <nav class="pay-steps" aria-label="Progreso">
+        <span>Cuenta</span>
+        <span aria-hidden="true">›</span>
+        <span class="is-current">Pago</span>
+        <span aria-hidden="true">›</span>
+        <span>Confirmación</span>
+      </nav>
+      <p class="pay-top-meta">{% if is_dev_env %}DEV{% else %}Checkout seguro{% endif %}</p>
+    </header>
 
-      <h1 class="auth-title">Activa tu suscripción</h1>
-      <p class="auth-lead">Un paso más y abres el expediente de {{ org_name }}.</p>
+    <main class="pay-layout">
+      <section class="pay-main" aria-labelledby="pay-panel-title">
+        <h1 id="pay-panel-title">Pago</h1>
+        <p class="pay-main-lead">Elige un método e ingresa los datos para activar <strong>{{ org_name }}</strong>.</p>
 
-      {% if canceled %}
-      <p class="auth-error" role="alert">El pago se canceló. Puedes intentarlo de nuevo.</p>
-      {% endif %}
-      {% if error %}
-      <p class="auth-error" role="alert">{{ error }}</p>
-      {% endif %}
-
-      <div class="auth-checkout-box">
-        <strong>{{ plan.name }}</strong>
-        <p class="auth-checkout-tag">{{ plan.tagline }}</p>
-        <p class="auth-checkout-price">${{ plan.price_monthly_usd }}<span> / mes</span></p>
-      </div>
-
-      <form class="auth-form" method="post" action="/checkout">
-        {% if plan_options %}
-        <label for="plan">Plan</label>
-        <select
-          id="plan"
-          name="plan"
-          class="auth-select"
-          onchange="if (this.value) window.location = '/checkout?plan=' + encodeURIComponent(this.value);"
-        >
-          {% for pl in plan_options %}
-          <option value="{{ pl.code }}"{% if pl.code == plan.code %} selected{% endif %}>
-            {{ pl.name }} · {{ pl.price_label }}{% if pl.price_suffix %}{{ pl.price_suffix }}{% endif %}
-          </option>
-          {% endfor %}
-        </select>
-        {% else %}
-        <input type="hidden" name="plan" value="{{ plan.code }}" />
+        {% if canceled %}
+        <p class="auth-error" role="alert">El pago se canceló. Puedes intentarlo de nuevo.</p>
         {% endif %}
-        {% if en1_commerce %}
-        <label for="promo_code">Código promocional</label>
-        <input id="promo_code" name="promo_code" type="text" value="{{ promo_code or '' }}" autocomplete="off" placeholder="Ej. ESBDEV100" />
-        <button type="submit">Confirmar suscripción</button>
-        <p class="auth-note">
-          La activación se registra en el sistema comercial (EN1) vía ESecureBroker.
-          Un total $0 con promo válida también genera transacción y entitlement.
-        </p>
-        {% elif stripe_ready %}
-        <button type="submit">Pagar con tarjeta</button>
-        <p class="auth-note">Serás redirigido a Stripe Checkout. Suscripción mensual en USD.</p>
-        {% else %}
-        <button type="submit">Confirmar y activar plan</button>
-        <p class="auth-note">
-          Modo puente (comercio EN1 aún no habilitado en este servidor).
-          Al confirmar se activa la suscripción local de prueba.
-        </p>
+        {% if error %}
+        <p class="auth-error" role="alert">{{ error }}</p>
         {% endif %}
-      </form>
 
-      <a class="auth-back" href="/#precios">Ver detalle de planes</a>
-    </div>
-    <footer class="auth-foot">Suscripción ESecureBroker</footer>
+        <form class="pay-form" method="post" action="/checkout" id="pay-form" enctype="multipart/form-data">
+          {% if plan_options %}
+          <div class="pay-inline-plan">
+            <label for="plan">Plan</label>
+            <select
+              id="plan"
+              name="plan"
+              class="auth-select"
+              onchange="if (this.value) window.location = '/checkout?plan=' + encodeURIComponent(this.value);"
+            >
+              {% for pl in plan_options %}
+              <option value="{{ pl.code }}"{% if pl.code == plan.code %} selected{% endif %}>
+                {{ pl.name }} · {{ pl.price_label }}{% if pl.price_suffix %}{{ pl.price_suffix }}{% endif %}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          {% else %}
+          <input type="hidden" name="plan" value="{{ plan.code }}" />
+          {% endif %}
+
+          {% if en1_commerce %}
+          <h2 class="pay-section-title">Método de pago</h2>
+          <div class="pay-tiles" role="radiogroup" aria-label="Métodos de pago">
+            <label class="pay-tile is-available" data-method="promo">
+              <input type="radio" name="pay_method" value="promo"{% if pay_method == 'promo' %} checked{% endif %} />
+              <span class="pay-tile-icon" aria-hidden="true">%</span>
+              <span class="pay-tile-name">Código promo</span>
+              <span class="pay-tile-status is-ok">Disponible</span>
+            </label>
+            <label class="pay-tile" data-method="card">
+              <input type="radio" name="pay_method" value="card"{% if pay_method == 'card' %} checked{% endif %} />
+              <span class="pay-tile-icon" aria-hidden="true">TC</span>
+              <span class="pay-tile-name">Tarjeta</span>
+              <span class="pay-tile-status">Pronto</span>
+            </label>
+            <label class="pay-tile is-available" data-method="transfer">
+              <input type="radio" name="pay_method" value="transfer"{% if pay_method == 'transfer' %} checked{% endif %} />
+              <span class="pay-tile-icon" aria-hidden="true">TB</span>
+              <span class="pay-tile-name">Transferencia</span>
+              <span class="pay-tile-status is-ok">Disponible</span>
+            </label>
+            <label class="pay-tile is-available" data-method="yappy">
+              <input type="radio" name="pay_method" value="yappy"{% if pay_method == 'yappy' %} checked{% endif %} />
+              <span class="pay-tile-icon" aria-hidden="true">Y</span>
+              <span class="pay-tile-name">Yappy</span>
+              <span class="pay-tile-status is-ok">Disponible</span>
+            </label>
+          </div>
+
+          <div id="pay-detail-promo" class="pay-detail{% if pay_method != 'promo' %} is-hidden{% endif %}"{% if pay_method != 'promo' %} hidden{% endif %}>
+            <h3>Código promocional</h3>
+            <p class="pay-detail-hint">Escribe el código. El descuento se refleja en el resumen solo cuando hay texto.</p>
+            <div class="pay-detail-row">
+              <label for="promo_code">Código</label>
+              <input
+                id="promo_code"
+                name="promo_code"
+                type="text"
+                value="{{ promo_code or '' }}"
+                autocomplete="off"
+                autocapitalize="characters"
+                spellcheck="false"
+                placeholder="Ingresa tu código"
+              />
+            </div>
+          </div>
+
+          <div id="pay-detail-transfer" class="pay-detail{% if pay_method != 'transfer' %} is-hidden{% endif %}"{% if pay_method != 'transfer' %} hidden{% endif %}>
+            <h3>Transferencia bancaria</h3>
+            <p class="pay-detail-hint">
+              Transfiere el total a esta cuenta y sube el comprobante. Sin comprobante no puedes continuar.
+              Queda sujeto a verificación; si no es válido se inhabilita la cuenta y te contactamos.
+            </p>
+            <dl class="pay-bank-list">
+              <div>
+                <dt>Banco</dt>
+                <dd>{{ bank.bank }}</dd>
+              </div>
+              <div>
+                <dt>Tipo de cuenta</dt>
+                <dd>{{ bank.account_type }}</dd>
+              </div>
+              <div>
+                <dt>Número de cuenta</dt>
+                <dd class="mono pay-copy" data-copy="{{ bank.account_number }}">{{ bank.account_number }}</dd>
+              </div>
+            </dl>
+            <div class="pay-detail-row" style="margin-top:1rem">
+              <label for="payment_ref_transfer">Referencia (opcional)</label>
+              <input
+                id="payment_ref_transfer"
+                class="js-payment-ref"
+                type="text"
+                value="{% if pay_method == 'transfer' %}{{ payment_ref or '' }}{% endif %}"
+                autocomplete="off"
+                placeholder="Número de referencia, si lo tienes"
+                data-for="transfer"
+              />
+            </div>
+          </div>
+
+          <div id="pay-detail-yappy" class="pay-detail{% if pay_method != 'yappy' %} is-hidden{% endif %}"{% if pay_method != 'yappy' %} hidden{% endif %}>
+            <h3>Yappy</h3>
+            <p class="pay-detail-hint">
+              Envía el total por Yappy y sube el comprobante. Sin comprobante no puedes continuar.
+              Queda sujeto a verificación; si no es válido se inhabilita la cuenta y te contactamos.
+            </p>
+            <dl class="pay-bank-list">
+              <div>
+                <dt>Beneficiario</dt>
+                <dd>{{ bank.yappy_name }}</dd>
+              </div>
+              <div>
+                <dt>Yappy al</dt>
+                <dd class="mono pay-copy" data-copy="{{ bank.yappy_phone }}">{{ bank.yappy_phone }}</dd>
+              </div>
+            </dl>
+            <div class="pay-detail-row" style="margin-top:1rem">
+              <label for="payment_ref_yappy">Número desde el que enviaste (opcional)</label>
+              <input
+                id="payment_ref_yappy"
+                class="js-payment-ref"
+                type="text"
+                value="{% if pay_method == 'yappy' %}{{ payment_ref or '' }}{% endif %}"
+                autocomplete="off"
+                placeholder="Ej. 6184-0000"
+                data-for="yappy"
+              />
+            </div>
+          </div>
+
+          <div id="pay-detail-receipt" class="pay-detail{% if pay_method not in ['transfer', 'yappy'] %} is-hidden{% endif %}"{% if pay_method not in ['transfer', 'yappy'] %} hidden{% endif %}>
+            <h3>Comprobante <span class="pay-req">obligatorio</span></h3>
+            <p class="pay-detail-hint">
+              Foto o PDF del comprobante. Por ahora no validamos el contenido automáticamente:
+              queda pendiente de revisión. Más adelante la IA podrá leerlo.
+            </p>
+            <div class="pay-detail-row">
+              <label for="comprobante">Archivo</label>
+              <input
+                id="comprobante"
+                name="comprobante"
+                type="file"
+                accept="image/*,.pdf,application/pdf"
+                class="pay-file"
+              />
+            </div>
+            <p class="pay-file-name" id="pay-file-name" hidden></p>
+          </div>
+          <input type="hidden" name="payment_ref" id="payment_ref" value="{{ payment_ref or '' }}" />
+
+          <div id="pay-detail-soon" class="pay-detail is-hidden" hidden>
+            <h3 id="pay-soon-title">Método no disponible aún</h3>
+            <p class="pay-detail-hint">
+              Esta forma de pago se habilitará pronto.
+              Por ahora usa <strong>Código promo</strong>, <strong>Transferencia</strong> o <strong>Yappy</strong>.
+            </p>
+          </div>
+
+          <div class="pay-actions">
+            <button type="submit" class="pay-submit" id="pay-submit">Pagar ahora</button>
+            <a class="pay-secondary" href="/#precios">Volver a planes</a>
+          </div>
+          <p class="auth-note">Al pagar aceptas activar el plan seleccionado para {{ org_name }}.</p>
+
+          {% elif stripe_ready %}
+          <button type="submit" class="pay-submit">Pagar con tarjeta</button>
+          <p class="auth-note">Serás redirigido a Stripe Checkout.</p>
+          {% else %}
+          <button type="submit" class="pay-submit">Confirmar y activar plan</button>
+          <p class="auth-note">Modo puente local.</p>
+          {% endif %}
+        </form>
+      </section>
+
+      <aside class="pay-aside" aria-labelledby="pay-summary-title">
+        <div class="pay-aside-card">
+          <p class="pay-kicker">Resumen del pedido</p>
+          <h2 id="pay-summary-title">{{ plan.name }}</h2>
+          <p class="pay-org">{{ org_name }}</p>
+          <p class="pay-aside-tag">{{ plan.tagline }}</p>
+
+          <dl class="pay-totals" data-price="{{ plan.price_monthly_usd }}">
+            <div>
+              <dt>Subtotal mensual</dt>
+              <dd id="pay-subtotal">${{ plan.price_monthly_usd }}.00</dd>
+            </div>
+            <div id="pay-discount-row" class="is-hidden" hidden>
+              <dt>Descuento promo</dt>
+              <dd class="is-discount" id="pay-discount">−$0.00</dd>
+            </div>
+            <div class="is-total">
+              <dt>Total hoy</dt>
+              <dd id="pay-total">${{ plan.price_monthly_usd }}.00</dd>
+            </div>
+          </dl>
+          <p class="pay-summary-note" id="pay-note">
+            Sin código el total es el precio del plan. El descuento solo aparece al escribir un código.
+          </p>
+          <div class="pay-aside-bank" id="pay-aside-transfer" hidden>
+            <p class="pay-kicker">Transferencia</p>
+            <p>{{ bank.bank }} · {{ bank.account_type }}</p>
+            <p class="mono">{{ bank.account_number }}</p>
+          </div>
+          <div class="pay-aside-bank" id="pay-aside-yappy" hidden>
+            <p class="pay-kicker">Yappy</p>
+            <p>{{ bank.yappy_name }}</p>
+            <p class="mono">{{ bank.yappy_phone }}</p>
+          </div>
+        </div>
+      </aside>
+    </main>
   </div>
+
+  {% if en1_commerce %}
+  <script>
+  (function () {
+    var price = Number(document.querySelector(".pay-totals").getAttribute("data-price") || "0");
+    var discountRow = document.getElementById("pay-discount-row");
+    var discountEl = document.getElementById("pay-discount");
+    var totalEl = document.getElementById("pay-total");
+    var noteEl = document.getElementById("pay-note");
+    var promoInput = document.getElementById("promo_code");
+    var refHidden = document.getElementById("payment_ref");
+    var refTransfer = document.getElementById("payment_ref_transfer");
+    var refYappy = document.getElementById("payment_ref_yappy");
+    var fileInput = document.getElementById("comprobante");
+    var fileNameEl = document.getElementById("pay-file-name");
+    var detailPromo = document.getElementById("pay-detail-promo");
+    var detailTransfer = document.getElementById("pay-detail-transfer");
+    var detailYappy = document.getElementById("pay-detail-yappy");
+    var detailReceipt = document.getElementById("pay-detail-receipt");
+    var detailSoon = document.getElementById("pay-detail-soon");
+    var asideTransfer = document.getElementById("pay-aside-transfer");
+    var asideYappy = document.getElementById("pay-aside-yappy");
+    var soonTitle = document.getElementById("pay-soon-title");
+    var submitBtn = document.getElementById("pay-submit");
+    var form = document.getElementById("pay-form");
+    var names = { card: "Tarjeta", transfer: "Transferencia", yappy: "Yappy", promo: "Código promo" };
+
+    function money(n) { return "$" + n.toFixed(2); }
+
+    function activeRefInput(method) {
+      if (method === "transfer") return refTransfer;
+      if (method === "yappy") return refYappy;
+      return null;
+    }
+
+    function hasReceipt() {
+      return fileInput && fileInput.files && fileInput.files.length > 0 && fileInput.files[0].size > 0;
+    }
+
+    function syncFileLabel() {
+      if (!fileNameEl) return;
+      if (hasReceipt()) {
+        fileNameEl.hidden = false;
+        fileNameEl.textContent = "Archivo: " + fileInput.files[0].name;
+      } else {
+        fileNameEl.hidden = true;
+        fileNameEl.textContent = "";
+      }
+    }
+
+    function syncTotals() {
+      var code = (promoInput.value || "").trim();
+      var selected = document.querySelector('input[name="pay_method"]:checked');
+      var method = selected ? selected.value : "promo";
+      if (method === "promo" && code) {
+        discountRow.hidden = false;
+        discountRow.classList.remove("is-hidden");
+        discountEl.textContent = "−" + money(price);
+        totalEl.textContent = money(0);
+        noteEl.textContent = "Descuento provisional. Se confirma al pagar si EN1 acepta el código.";
+      } else {
+        discountRow.hidden = true;
+        discountRow.classList.add("is-hidden");
+        totalEl.textContent = money(price);
+        if (method === "transfer" || method === "yappy") {
+          noteEl.textContent = "Comprobante obligatorio. Activación sujeta a verificación del pago.";
+        } else {
+          noteEl.textContent = "Sin código el total es el precio del plan. El descuento solo aparece al escribir un código.";
+        }
+      }
+    }
+
+    function syncMethod() {
+      var selected = document.querySelector('input[name="pay_method"]:checked');
+      var method = selected ? selected.value : "promo";
+      document.querySelectorAll(".pay-tile").forEach(function (el) {
+        el.classList.toggle("is-selected", el.getAttribute("data-method") === method);
+      });
+      var isPromo = method === "promo";
+      var isTransfer = method === "transfer";
+      var isYappy = method === "yappy";
+      var needsReceipt = isTransfer || isYappy;
+      var isSoon = method === "card";
+
+      detailPromo.hidden = !isPromo;
+      detailPromo.classList.toggle("is-hidden", !isPromo);
+      detailTransfer.hidden = !isTransfer;
+      detailTransfer.classList.toggle("is-hidden", !isTransfer);
+      detailYappy.hidden = !isYappy;
+      detailYappy.classList.toggle("is-hidden", !isYappy);
+      detailReceipt.hidden = !needsReceipt;
+      detailReceipt.classList.toggle("is-hidden", !needsReceipt);
+      detailSoon.hidden = !isSoon;
+      detailSoon.classList.toggle("is-hidden", !isSoon);
+      asideTransfer.hidden = !isTransfer;
+      asideYappy.hidden = !isYappy;
+
+      if (needsReceipt) {
+        submitBtn.textContent = "Enviar comprobante";
+      } else if (isPromo) {
+        submitBtn.textContent = "Pagar ahora";
+      } else {
+        soonTitle.textContent = names[method] + " — próximamente";
+        submitBtn.textContent = "Pagar ahora";
+      }
+
+      submitBtn.disabled = isSoon;
+      promoInput.required = isPromo;
+      fileInput.required = needsReceipt;
+      fileInput.disabled = !needsReceipt;
+      if (!isPromo) promoInput.value = "";
+      if (!isTransfer) refTransfer.value = "";
+      if (!isYappy) refYappy.value = "";
+      if (!needsReceipt) {
+        fileInput.value = "";
+        syncFileLabel();
+      }
+      refHidden.value = "";
+      syncTotals();
+    }
+
+    document.querySelectorAll('input[name="pay_method"]').forEach(function (radio) {
+      radio.addEventListener("change", syncMethod);
+    });
+    promoInput.addEventListener("input", syncTotals);
+    fileInput.addEventListener("change", syncFileLabel);
+
+    form.addEventListener("submit", function (e) {
+      var selected = document.querySelector('input[name="pay_method"]:checked');
+      var method = selected ? selected.value : "";
+      if (method === "card" || !method) {
+        e.preventDefault();
+        syncMethod();
+        return;
+      }
+      if (method === "promo" && !(promoInput.value || "").trim()) {
+        e.preventDefault();
+        promoInput.focus();
+        return;
+      }
+      if (method === "transfer" || method === "yappy") {
+        if (!hasReceipt()) {
+          e.preventDefault();
+          fileInput.focus();
+          alert("Debes subir el comprobante de pago para continuar.");
+          return;
+        }
+        var refEl = activeRefInput(method);
+        refHidden.value = refEl ? (refEl.value || "").trim() : "";
+      }
+    });
+
+    document.querySelectorAll(".pay-copy").forEach(function (el) {
+      el.title = "Clic para copiar";
+      el.style.cursor = "pointer";
+      el.addEventListener("click", function () {
+        var v = el.getAttribute("data-copy") || el.textContent;
+        if (navigator.clipboard) navigator.clipboard.writeText(v);
+      });
+    });
+
+    syncMethod();
+  })();
+  </script>
+  {% endif %}
 </body>
 </html>

@@ -112,40 +112,9 @@ def register_broker(
         new_correlation_id,
     )
 
-    en1_subject: str | None = None
-    en1_org_id: str | None = None
-    en1_sub_id: str | None = None
-    provider = "piloto"
-
-    if en1_commerce_enabled():
-        # Fail-closed: no crear cuenta local fingiendo que EN1 respondió.
-        client = En1CommercialClient()
-        correlation_id = new_correlation_id()
-        try:
-            ident = client.resolve_or_create_identity(
-                email=email_n,
-                display_name=name,
-                phone=phone,
-                correlation_id=correlation_id,
-                idempotency_key=f"identity:{email_n}",
-            )
-            intent = client.create_commercial_intent(
-                subject_id=ident.subject_id,
-                org_name=agency,
-                tax_id=tax_id,
-                plan_code=plan.code,
-                correlation_id=correlation_id,
-                idempotency_key=f"intent:{email_n}:{plan.code}",
-            )
-        except En1CommerceError as e:
-            raise ValueError(e.user_message) from e
-        en1_subject = ident.subject_id
-        en1_org_id = intent.organization_id
-        en1_sub_id = intent.subscription_id
-        provider = "en1"
-
-    # Sesión ESB: subject local estable; en1_subject queda en org/sub mirror.
+    # Sesión ESB: crear org local primero; bootstrap EN1 con esb_organization_id.
     subject = actor_id_for_username(email_n)
+
     account = BrokerAccount(
         email=email_n,
         password_hash=hash_password(password),
@@ -156,7 +125,7 @@ def register_broker(
     org = Organization(
         name=agency[:200],
         active=True,
-        external_en1_org_id=en1_org_id,
+        external_en1_org_id=None,
     )
     session.add(account)
     session.add(org)
@@ -175,13 +144,40 @@ def register_broker(
         organization_id=org.id,
         plan_code=plan.code,
         status="pending",
-        billing_provider=provider,
-        # Mirror provisional: EN1 subscription_id hasta columna dedicada
-        stripe_subscription_id=en1_sub_id,
-        stripe_customer_id=en1_subject,
+        billing_provider="piloto",
+        stripe_customer_id=None,
+        stripe_subscription_id=None,
     )
     session.add(sub)
     session.flush()
+
+    if en1_commerce_enabled():
+        # Fail-closed: si EN1 falla, no dejar cuenta a medias — rollback local.
+        client = En1CommercialClient()
+        correlation_id = new_correlation_id()
+        try:
+            boot = client.bootstrap(
+                email=email_n,
+                full_name=name,
+                organization_name=agency,
+                plan_code=plan.code,
+                phone=phone,
+                external_subject_id=subject,
+                esb_organization_id=org.id,
+                correlation_id=correlation_id,
+                idempotency_key=f"esb:bootstrap:{org.id}:{email_n}:{plan.code}",
+            )
+        except En1CommerceError as e:
+            session.rollback()
+            raise ValueError(e.user_message) from e
+        org.external_en1_org_id = boot.customer_id
+        sub.billing_provider = "en1"
+        sub.stripe_customer_id = boot.customer_id
+        sub.stripe_subscription_id = boot.contract_id
+        session.add(org)
+        session.add(sub)
+        session.flush()
+
     return account, org, sub
 
 

@@ -164,8 +164,8 @@ SETTING_DEFS: list[dict[str, Any]] = [
         "category": "saas",
         "label": "Comercio EN1 M2M habilitado",
         "help_text": (
-            "Si true, checkout/promo/activación van a EN1 DEV vía API (sin simular). "
-            "Requiere contrato CODITO + base URL + token M2M. Si false: puente piloto local."
+            "Si true, registro/checkout usan EN1 C1 M2M (bootstrap/checkout/entitlement). "
+            "Fail-closed: sin fallback silencioso a piloto. Requiere base URL + X-API-Key."
         ),
         "value_type": "bool",
         "is_secret": False,
@@ -183,8 +183,8 @@ SETTING_DEFS: list[dict[str, Any]] = [
     {
         "key": "saas.en1_m2m_token",
         "category": "saas",
-        "label": "EN1 M2M token",
-        "help_text": "Secreto backend; nunca en frontend.",
+        "label": "EN1 M2M X-API-Key",
+        "help_text": "Secreto backend (X-API-Key); nunca en frontend, logs ni commits.",
         "value_type": "secret",
         "is_secret": True,
         "default": "",

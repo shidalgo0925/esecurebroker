@@ -4,7 +4,17 @@
 {% block content %}
 <section class="page-head">
   <h1 class="page-title">Configuración</h1>
-  <p class="page-sub">Correo, estados de cuenta automáticos e integraciones · <b>{{ org_name }}</b></p>
+  <p class="page-sub">Equipo, correo, estados de cuenta e integraciones · <b>{{ org_name }}</b></p>
+</section>
+
+<section class="poliza-panel" style="margin-bottom:1.25rem">
+  <h2 class="poliza-panel-title">Equipo y acceso</h2>
+  <p class="meta">Administra quién trabaja en la correduría (ADR-008).</p>
+  <div class="wizard-actions" style="margin-top:0.75rem;flex-wrap:wrap;gap:0.5rem">
+    <a class="btn-primary" href="/configuracion/colaboradores">Colaboradores</a>
+    <a class="btn-secondary" href="/configuracion/roles">Roles y permisos</a>
+    <a class="btn-secondary" href="/productores">Productores</a>
+  </div>
 </section>
 
 {% if flash == 'auto_ok' %}

@@ -105,6 +105,10 @@ def ensure_membership(
     display_name: str | None = None,
     role_code: str = "BROKER",
 ) -> OrgMembership:
+    """Ensure ACTIVE membership. Prefer seats.activate_membership for seat-aware paths."""
+    from corredores.domain.membership_roles import MEMBERSHIP_STATUS_ACTIVE
+    from corredores.services.org_access_admin import set_membership_status
+
     row = (
         session.query(OrgMembership)
         .filter_by(subject_id=subject_id, organization_id=organization_id)
@@ -116,14 +120,16 @@ def ensure_membership(
             organization_id=organization_id,
             display_name=display_name,
             role_code=role_code,
-            active=True,
         )
+        set_membership_status(row, MEMBERSHIP_STATUS_ACTIVE)
         session.add(row)
         session.flush()
         return row
-    row.active = True
+    set_membership_status(row, MEMBERSHIP_STATUS_ACTIVE)
     if display_name:
         row.display_name = display_name
+    if role_code:
+        row.role_code = role_code
     session.flush()
     return row
 

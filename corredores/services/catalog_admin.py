@@ -161,17 +161,16 @@ def upsert_line(
     else:
         existing = session.query(InsuranceLine).filter_by(code=code_n).one_or_none()
         if existing:
-            existing.name = name_n[:120]
-            existing.operational_in_p0 = bool(operational_in_p0)
-            row = existing
-        else:
-            row = InsuranceLine(
-                code=code_n,
-                name=name_n[:120],
-                operational_in_p0=bool(operational_in_p0),
+            raise ValueError(
+                f"ya existe el ramo {code_n}. Usa Editar en la tabla, o elige otro código."
             )
-            session.add(row)
-            session.flush()
+        row = InsuranceLine(
+            code=code_n,
+            name=name_n[:120],
+            operational_in_p0=bool(operational_in_p0),
+        )
+        session.add(row)
+        session.flush()
     session.add(
         AuditEvent(
             organization_id=organization_id,
@@ -184,6 +183,45 @@ def upsert_line(
     )
     session.flush()
     return row
+
+
+def delete_line(
+    session: Session,
+    *,
+    organization_id: str,
+    line_id: str,
+    actor_id: str | None = None,
+) -> None:
+    """Delete insurance line if not referenced by policies/quotes/rules."""
+    from corredores.domain.models import Policy, QuoteRequest
+
+    row = session.get(InsuranceLine, line_id)
+    if row is None:
+        raise ValueError("ramo no encontrado")
+    if row.code == "AUTO":
+        raise ValueError("AUTO es ramo base del sistema; no se puede eliminar.")
+    used_pol = session.query(Policy.id).filter_by(insurance_line_id=row.id).first()
+    if used_pol:
+        raise ValueError("no se puede eliminar: hay pólizas con este ramo")
+    used_qr = session.query(QuoteRequest.id).filter_by(insurance_line_id=row.id).first()
+    if used_qr:
+        raise ValueError("no se puede eliminar: hay cotizaciones con este ramo")
+    # Drop orphan commission rules for this line (all orgs)
+    session.query(CommissionRule).filter_by(insurance_line_id=row.id).delete(
+        synchronize_session=False
+    )
+    session.add(
+        AuditEvent(
+            organization_id=organization_id,
+            actor_id=actor_id,
+            entity_type="InsuranceLine",
+            entity_id=row.id,
+            action="DELETED",
+            detail_json=f'{{"code":"{row.code}"}}',
+        )
+    )
+    session.delete(row)
+    session.flush()
 
 
 # —— % comisión Cia por ramo (por org) ——

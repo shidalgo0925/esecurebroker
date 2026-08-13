@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}{{ member.display_name }} · Colaborador{% endblock %}
+{% block topbar %}Configuración · Colaborador{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1 class="page-title">{{ member.display_name }}</h1>
+  <p class="page-sub">{{ member.email or '—' }} · {{ member.role_label }} · {{ member.status }} · <b>{{ org_name }}</b></p>
+</section>
+
+{% if flash %}<p class="flash-ok">Actualizado ({{ flash }}).</p>{% endif %}
+{% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+{% if invite_url %}
+<p class="flash-ok">Enlace de invitación:<br><a class="mono" href="{{ invite_url }}">{{ invite_url }}</a></p>
+{% endif %}
+
+<section class="poliza-panel" style="margin-bottom:1rem">
+  <h2 class="poliza-panel-title">Acceso</h2>
+  <p class="meta">Alcance: {{ member.scope }} · Productor: {{ 'Sí' if member.is_producer else 'No' }}</p>
+  <form method="post" action="/configuracion/colaboradores/{{ membership.id }}/rol" class="catalog-form" style="margin-top:0.75rem">
+    <div class="catalog-row">
+      <label class="catalog-field code">Cambiar rol
+        <select name="role_code">
+          {% for code, label in role_options %}
+          <option value="{{ code }}" {% if code == member.role_code %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <div class="wizard-actions"><button class="btn-primary" type="submit">Guardar rol</button></div>
+    </div>
+  </form>
+</section>
+
+<section class="poliza-panel">
+  <h2 class="poliza-panel-title">Acciones</h2>
+  <div class="wizard-actions" style="flex-wrap:wrap;gap:0.5rem">
+    {% if member.status == 'INVITED' %}
+    <form method="post" action="/configuracion/colaboradores/{{ membership.id }}/reenviar">
+      <button class="btn-secondary" type="submit">Reenviar invitación</button>
+    </form>
+    {% endif %}
+    {% if member.status == 'ACTIVE' %}
+    <form method="post" action="/configuracion/colaboradores/{{ membership.id }}/desactivar" onsubmit="return confirm('¿Desactivar acceso?');">
+      <button class="btn-secondary" type="submit">Desactivar</button>
+    </form>
+    {% endif %}
+    {% if member.status == 'INACTIVE' %}
+    <form method="post" action="/configuracion/colaboradores/{{ membership.id }}/activar">
+      <button class="btn-primary" type="submit">Reactivar</button>
+    </form>
+    {% endif %}
+    {% if member.status != 'REVOKED' %}
+    <form method="post" action="/configuracion/colaboradores/{{ membership.id }}/revocar" onsubmit="return confirm('¿Revocar acceso de forma permanente?');">
+      <button class="btn-secondary" type="submit">Revocar</button>
+    </form>
+    {% endif %}
+  </div>
+  <p class="hint" style="margin-top:0.75rem">No se elimina el historial. La revocación invalida refresh tokens móviles.</p>
+</section>
+
+<p class="hint" style="margin-top:1rem"><a href="/configuracion/colaboradores">← Colaboradores</a></p>
+{% endblock %}

@@ -4,30 +4,35 @@
 {% block content %}
 <section class="page-head">
   <h1 class="page-title">Ramos</h1>
-  <p class="page-sub">Catálogo de líneas de seguro (editable) · afecta a todas las orgs · <b>{{ org_name }}</b></p>
+  <p class="page-sub">
+    CRUD de líneas de seguro · catálogo global (todas las orgs) · <b>{{ org_name }}</b>
+  </p>
 </section>
 
-{% if flash %}<p class="flash-ok">Guardado</p>{% endif %}
+{% if flash == 'deleted' %}<p class="flash-ok">Ramo eliminado</p>
+{% elif flash %}<p class="flash-ok">Ramo guardado</p>{% endif %}
 {% if error %}<p class="form-error">{{ error }}</p>{% endif %}
 
 {% if not edit_row %}
 <section class="poliza-panel catalog-editor">
   <h2 class="poliza-panel-title">Nuevo ramo</h2>
+  <p class="hint" style="margin:0 0 0.75rem">Código único (ej. <span class="mono">FIANZA</span>). Márcalo Operativo si debe usarse en pólizas/cotizador.</p>
   <form class="catalog-form" method="post" action="/ramos">
     <input type="hidden" name="line_id" value="" />
+    <input type="hidden" name="action" value="save" />
     <div class="catalog-row">
       <label class="catalog-field code">Código
-        <input name="code" class="mono" required maxlength="40" placeholder="CAR" />
+        <input name="code" class="mono" required maxlength="40" placeholder="FIANZA" autofocus />
       </label>
       <label class="catalog-field name">Nombre
-        <input name="name" required maxlength="120" placeholder="Todo Riesgo Contratista" />
+        <input name="name" required maxlength="120" placeholder="Fianzas / Cumplimiento" />
       </label>
       <label class="check-row">
-        <input type="checkbox" name="operational" value="1" />
+        <input type="checkbox" name="operational" value="1" checked />
         <span>Operativo</span>
       </label>
       <div class="wizard-actions">
-        <button class="btn-primary" type="submit">Agregar</button>
+        <button class="btn-primary" type="submit">Crear ramo</button>
       </div>
     </div>
   </form>
@@ -44,6 +49,7 @@
         <td colspan="4">
           <form class="catalog-form" method="post" action="/ramos">
             <input type="hidden" name="line_id" value="{{ l.id }}" />
+            <input type="hidden" name="action" value="save" />
             <div class="catalog-row">
               <label class="catalog-field code">Código
                 <input name="code" class="mono" required maxlength="40" value="{{ l.code }}" autofocus />
@@ -69,16 +75,36 @@
         <td class="cli-id">{{ l.code }}</td>
         <td class="cli-name">{{ l.name }}</td>
         <td>{{ 'Sí' if l.operational_in_p0 else 'No' }}</td>
-        <td class="cli-action"><a class="open-link" href="/ramos?edit={{ l.id }}#row-{{ l.id }}">Editar</a></td>
+        <td class="cli-action">
+          <a class="open-link" href="/ramos?edit={{ l.id }}#row-{{ l.id }}">Editar</a>
+          {% if l.code != 'AUTO' %}
+          <form class="inline-del" method="post" action="/ramos" onsubmit="return confirm('¿Eliminar ramo {{ l.code }}?');">
+            <input type="hidden" name="line_id" value="{{ l.id }}" />
+            <input type="hidden" name="action" value="delete" />
+            <button type="submit" class="link-danger">Eliminar</button>
+          </form>
+          {% endif %}
+        </td>
       </tr>
       {% endif %}
     {% else %}
-      <tr><td colspan="4" class="empty-row">Sin ramos — agregá uno arriba.</td></tr>
+      <tr><td colspan="4" class="empty-row">Sin ramos — creá uno arriba.</td></tr>
     {% endfor %}
     </tbody>
   </table>
 </div>
-<p class="hint" style="margin-top:0.75rem">Las tasas % Cia por ramo se editan en <a href="/comisiones">Comisiones</a>.</p>
+<p class="hint" style="margin-top:0.75rem">
+  Ruta: <strong>Gestión → Ramos</strong> ·
+  Tasas % Cia por ramo en <a href="/comisiones">Comisiones</a>.
+</p>
+<style>
+  .inline-del { display: inline; margin-left: 0.75rem; }
+  .inline-del .link-danger {
+    background: none; border: 0; padding: 0; color: #f87171;
+    cursor: pointer; font: inherit; text-decoration: underline;
+  }
+  .cli-action { white-space: nowrap; }
+</style>
 <script>
 (function () {
   var id = location.hash && location.hash.slice(1);

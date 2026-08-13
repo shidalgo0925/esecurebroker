@@ -227,6 +227,9 @@ def is_public_path(path: str) -> bool:
         return True
     if path.startswith("/webhooks/"):
         return True
+    # Collaborator invite acceptance (ADR-008 F7)
+    if path.startswith("/invitacion/"):
+        return True
     # Mobile API uses Bearer tokens — never HTML cookie redirects.
     if path.startswith("/api/mobile/"):
         return True

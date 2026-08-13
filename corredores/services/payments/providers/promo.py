@@ -1,4 +1,4 @@
-"""PromoCodeProvider — Milestone 1. Delega validación+ledger a EN1 (sin bypass local)."""
+"""PromoCodeProvider — C1 checkout wrapper (sin bypass local)."""
 
 from __future__ import annotations
 
@@ -17,27 +17,27 @@ class PromoCodeProvider:
     def charge(
         self,
         *,
-        subscription_id: str,
-        organization_id: str,
+        customer_id: str,
+        plan_code: str,
         promo_code: str,
         correlation_id: str,
         idempotency_key: str,
         **_: Any,
     ) -> ProviderChargeResult:
-        result = self._client.validate_promo_and_record_payment(
-            subscription_id=subscription_id,
-            organization_id=organization_id,
+        result = self._client.checkout(
+            customer_id=customer_id,
+            plan_code=plan_code,
             promo_code=promo_code,
             correlation_id=correlation_id,
             idempotency_key=idempotency_key,
         )
         return ProviderChargeResult(
             ok=True,
-            payment_id=result.payment_id,
-            status=result.status,
+            payment_id=result.subscription_id,
+            status=result.subscription_status.upper(),
             method=self.method,
             metadata={
-                "original_amount": result.original_amount,
+                "original_amount": result.list_amount,
                 "discount_amount": result.discount_amount,
                 "final_amount": result.final_amount,
                 "promo_code": result.promo_code,

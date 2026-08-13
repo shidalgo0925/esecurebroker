@@ -253,24 +253,31 @@ def home(request: Request):
     from datetime import datetime, timezone
 
     from corredores.db import SessionLocal
+    from corredores.domain.models import Organization
     from corredores.services.runtime_settings import runtime
     from corredores.services.saas_plans import plans_for_landing, start_href
     from corredores.services.saas_signup import get_subscription, subscription_allows_access
-    from corredores.web.auth_session import read_session
+    from corredores.web.auth_session import clear_session_cookie, read_session
 
     principal = read_session(request)
+    clear_orphan_cookie = False
     if principal is not None and principal.organization_id:
         # Suscripción pendiente: no empujar a /hoy (el gate de billing
         # rebotaría a checkout y "Cambiar de plan" quedaría atrapado).
         with SessionLocal() as db:
-            sub = get_subscription(db, principal.organization_id)
-            if subscription_allows_access(sub):
-                return RedirectResponse("/hoy", status_code=303)
-        # Fall through → landing con #precios para cambiar de plan.
+            org = db.get(Organization, principal.organization_id)
+            if org is None or not org.active:
+                # Cookie huérfana tras borrar cia/usuario en DEV → landing limpia.
+                clear_orphan_cookie = True
+            else:
+                sub = get_subscription(db, principal.organization_id)
+                if subscription_allows_access(sub):
+                    return RedirectResponse("/hoy", status_code=303)
+        # Fall through → landing (precios / re-registro).
     elif principal is not None:
         return RedirectResponse("/orgs/seleccionar", status_code=303)
     cfg = runtime()
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         request,
         "landing.html",
         {
@@ -287,6 +294,9 @@ def home(request: Request):
             ),
         },
     )
+    if clear_orphan_cookie:
+        clear_session_cookie(response)
+    return response
 
 
 @router.get("/bienvenida", response_class=HTMLResponse)
@@ -445,10 +455,13 @@ def checkout_get(
         session.commit()
 
     plan_options = [pl for pl in plans_for_landing() if not pl["contact_sales"]]
+    from corredores.services.saas_bank_details import bank_details_for_checkout
+
     return templates.TemplateResponse(
         request,
         "checkout.html",
         {
+            **_env_flags(),
             "plan": p,
             "org_name": org.name,
             "stripe_ready": stripe_configured() and not en1_commerce_enabled(),
@@ -457,20 +470,58 @@ def checkout_get(
             "error": None,
             "promo_code": "",
             "plan_options": plan_options,
+            "bank": bank_details_for_checkout(),
+            "pay_method": "promo",
+            "payment_ref": "",
         },
     )
 
 
+def _checkout_ctx(
+    *,
+    plan,
+    org_name: str,
+    plan_options,
+    error: str | None = None,
+    promo_code: str = "",
+    pay_method: str = "promo",
+    payment_ref: str = "",
+    canceled: bool = False,
+    en1_commerce: bool = True,
+    stripe_ready: bool = False,
+) -> dict:
+    from corredores.services.saas_bank_details import bank_details_for_checkout
+
+    return {
+        **_env_flags(),
+        "plan": plan,
+        "org_name": org_name,
+        "stripe_ready": stripe_ready,
+        "en1_commerce": en1_commerce,
+        "canceled": canceled,
+        "error": error,
+        "promo_code": promo_code,
+        "plan_options": plan_options,
+        "bank": bank_details_for_checkout(),
+        "pay_method": pay_method,
+        "payment_ref": payment_ref,
+    }
+
+
 @router.post("/checkout")
-def checkout_post(
+async def checkout_post(
     request: Request,
     plan: str = Form(default="oficina"),
     promo_code: str = Form(default=""),
+    pay_method: str = Form(default="promo"),
+    payment_ref: str = Form(default=""),
+    comprobante: UploadFile | None = File(default=None),
     session: Session = Depends(get_session),
 ):
     from corredores.services.en1_commercial import en1_commerce_enabled
     from corredores.services.payments import PaymentService
     from corredores.services.saas_billing import confirm_piloto_payment, start_checkout
+    from corredores.services.saas_payment_receipts import save_saas_payment_receipt
     from corredores.services.saas_plans import require_plan
     from corredores.services.saas_signup import get_subscription
     from corredores.web.auth_session import read_session
@@ -480,8 +531,14 @@ def checkout_post(
         return RedirectResponse(f"/registro?plan={require_plan(plan).code}", status_code=303)
     org = resolve_org(session, request)
     p = require_plan(plan)
+    method = (pay_method or "promo").strip().lower()
 
     if en1_commerce_enabled():
+        import json as json_lib
+
+        from corredores.domain.models import AuditEvent, BrokerAccount
+        from corredores.services.saas_plans import plans_for_landing
+
         sub = get_subscription(session, org.id)
         if sub is None:
             return RedirectResponse(f"/registro?plan={p.code}", status_code=303)
@@ -489,30 +546,130 @@ def checkout_post(
             sub.plan_code = p.code
             session.add(sub)
             session.commit()
+        plan_options = [pl for pl in plans_for_landing() if not pl["contact_sales"]]
+
+        if method in {"transfer", "yappy"}:
+            ref = (payment_ref or "").strip()[:120]
+            raw = b""
+            fname = ""
+            ctype = None
+            if comprobante is not None and (comprobante.filename or "").strip():
+                raw = await comprobante.read()
+                fname = comprobante.filename or "comprobante"
+                ctype = comprobante.content_type
+            if not raw:
+                return templates.TemplateResponse(
+                    request,
+                    "checkout.html",
+                    _checkout_ctx(
+                        plan=p,
+                        org_name=org.name,
+                        plan_options=plan_options,
+                        error="Debes subir el comprobante de pago. Sin comprobante no puedes continuar.",
+                        pay_method=method,
+                        payment_ref=ref,
+                    ),
+                    status_code=400,
+                )
+            try:
+                receipt = save_saas_payment_receipt(
+                    organization_id=org.id,
+                    method=method,
+                    filename=fname,
+                    content=raw,
+                    content_type=ctype,
+                )
+            except ValueError as exc:
+                return templates.TemplateResponse(
+                    request,
+                    "checkout.html",
+                    _checkout_ctx(
+                        plan=p,
+                        org_name=org.name,
+                        plan_options=plan_options,
+                        error=str(exc),
+                        pay_method=method,
+                        payment_ref=ref,
+                    ),
+                    status_code=400,
+                )
+            session.add(
+                AuditEvent(
+                    organization_id=org.id,
+                    actor_id=principal.username,
+                    entity_type="OrgSubscription",
+                    entity_id=sub.id,
+                    action="SAAS_PAYMENT_REPORTED",
+                    detail_json=json_lib.dumps(
+                        {
+                            "method": method,
+                            "plan_code": p.code,
+                            "reference": ref or None,
+                            "amount_usd": p.price_monthly_usd,
+                            "receipt": receipt,
+                            "verification_status": "pending",
+                            "note": "Sujeto a verificación manual; si no es válido se inhabilita y se contacta al cliente.",
+                        },
+                        ensure_ascii=False,
+                    ),
+                )
+            )
+            session.commit()
+            return RedirectResponse("/checkout/pending-payment", status_code=303)
+
+        if method != "promo":
+            return templates.TemplateResponse(
+                request,
+                "checkout.html",
+                _checkout_ctx(
+                    plan=p,
+                    org_name=org.name,
+                    plan_options=plan_options,
+                    error="Ese método de pago aún no está disponible. Usa promo, transferencia o Yappy.",
+                    pay_method="promo",
+                ),
+                status_code=400,
+            )
+
+        if not (promo_code or "").strip():
+            return templates.TemplateResponse(
+                request,
+                "checkout.html",
+                _checkout_ctx(
+                    plan=p,
+                    org_name=org.name,
+                    plan_options=plan_options,
+                    error="Ingresa un código promocional para completar el pago (DEV).",
+                    pay_method="promo",
+                ),
+                status_code=400,
+            )
+        acc = (
+            session.query(BrokerAccount)
+            .filter_by(email=(principal.username or "").strip().lower())
+            .one_or_none()
+        )
         result = PaymentService().process_promo_activation(
             session,
             organization=org,
             local_subscription=sub,
             promo_code=promo_code,
+            actor_email=principal.username,
+            actor_name=(acc.display_name if acc else None) or principal.username,
         )
         if not result.ok:
-            from corredores.services.saas_plans import plans_for_landing
-
-            plan_options = [pl for pl in plans_for_landing() if not pl["contact_sales"]]
             return templates.TemplateResponse(
                 request,
                 "checkout.html",
-                {
-                    "plan": p,
-                    "org_name": org.name,
-                    "stripe_ready": False,
-                    "en1_commerce": True,
-                    "canceled": False,
-                    "error": result.user_message
+                _checkout_ctx(
+                    plan=p,
+                    org_name=org.name,
+                    plan_options=plan_options,
+                    error=result.user_message
                     or "No pudimos completar la activación de tu cuenta.",
-                    "promo_code": promo_code,
-                    "plan_options": plan_options,
-                },
+                    promo_code=promo_code,
+                    pay_method="promo",
+                ),
                 status_code=400,
             )
         return RedirectResponse("/checkout/success", status_code=303)
@@ -528,6 +685,34 @@ def checkout_post(
     # Puente piloto (solo si comercio EN1 deshabilitado — no es SoR definitivo)
     confirm_piloto_payment(session, org.id, p.code)
     return RedirectResponse("/checkout/success", status_code=303)
+
+
+@router.get("/checkout/pending-payment", response_class=HTMLResponse)
+def checkout_pending_payment(
+    request: Request,
+    session: Session = Depends(get_session),
+):
+    from corredores.services.saas_bank_details import bank_details_for_checkout
+    from corredores.services.saas_plans import require_plan
+    from corredores.services.saas_signup import get_subscription
+    from corredores.web.auth_session import read_session
+
+    principal = read_session(request)
+    if principal is None or not principal.organization_id:
+        return RedirectResponse("/login", status_code=303)
+    org = resolve_org(session, request)
+    sub = get_subscription(session, org.id)
+    p = require_plan(sub.plan_code if sub else "oficina")
+    return templates.TemplateResponse(
+        request,
+        "checkout_pending.html",
+        {
+            **_env_flags(),
+            "org_name": org.name,
+            "plan_name": p.name,
+            "bank": bank_details_for_checkout(),
+        },
+    )
 
 
 @router.get("/checkout/success", response_class=HTMLResponse)
@@ -3103,19 +3288,32 @@ def ramos(request: Request, session: Session = Depends(get_session)):
 @router.post("/ramos")
 def ramos_post(
     request: Request,
-    code: str = Form(...),
-    name: str = Form(...),
+    code: str = Form(""),
+    name: str = Form(""),
     line_id: str = Form(""),
     operational: str = Form(""),
+    action: str = Form("save"),
     session: Session = Depends(get_session),
 ):
     from urllib.parse import quote
 
-    from corredores.services.catalog_admin import upsert_line
+    from corredores.services.catalog_admin import delete_line, upsert_line
 
     org = resolve_org(session)
     actor = current_actor(request)
+    act = (action or "save").strip().lower()
     try:
+        if act == "delete":
+            lid = (line_id or "").strip()
+            if not lid:
+                raise ValueError("ramo no indicado")
+            delete_line(
+                session,
+                organization_id=org.id,
+                line_id=lid,
+                actor_id=actor.actor_id,
+            )
+            return RedirectResponse("/ramos?ok=deleted", status_code=303)
         row = upsert_line(
             session,
             organization_id=org.id,

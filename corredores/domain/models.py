@@ -502,10 +502,10 @@ class StatementDelivery(Base, TimestampMixin):
 
 
 class OrgMembership(Base, TimestampMixin):
-    """Subject ↔ Organization (ADR-007). Piloto uses actor_id; EN1 will map subjects later.
+    """Subject ↔ Organization (ADR-007/008).
 
-    role_code (ADR-008): OWNER|ADMIN|BROKER|PRODUCER|COLLECTIONS|PLATFORM.
-    F1 recognizes codes only — RBAC enforcement is F2+. BROKER = legacy/transitional.
+    role_code: system OWNER|ADMIN|BROKER|PRODUCER|COLLECTIONS|PLATFORM or custom org role code.
+    status (F7): INVITED|ACTIVE|INACTIVE|REVOKED — source of truth; ``active`` synced (ACTIVE only).
     """
 
     __tablename__ = "org_memberships"
@@ -516,9 +516,75 @@ class OrgMembership(Base, TimestampMixin):
     subject_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
     # Optional display for piloto; EN1 will own profile later
     display_name: Mapped[Optional[str]] = mapped_column(String(200))
+    email: Mapped[Optional[str]] = mapped_column(String(200), index=True)
     role_code: Mapped[str] = mapped_column(String(64), nullable=False, default="BROKER")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="ACTIVE", index=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    producer_profile_id: Mapped[Optional[str]] = mapped_column(
+        ForeignKey("producer_profiles.id"), nullable=True, index=True
+    )
+    invited_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    invited_by_subject_id: Mapped[Optional[str]] = mapped_column(String(128))
+    accepted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    revoked_by_subject_id: Mapped[Optional[str]] = mapped_column(String(128))
+    last_access_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     external_en1_membership_id: Mapped[Optional[str]] = mapped_column(String(64), unique=True)
+
+
+class OrgRole(Base, TimestampMixin):
+    """System (organization_id NULL) or custom tenant role (ADR-008 F7)."""
+
+    __tablename__ = "org_roles"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "code", name="uq_org_role_org_code"),
+        Index("ix_org_roles_system_code", "code", unique=False),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[Optional[str]] = mapped_column(
+        ForeignKey("organizations.id"), nullable=True, index=True
+    )
+    code: Mapped[str] = mapped_column(String(64), nullable=False)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text)
+    system_role: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    default_scope: Mapped[str] = mapped_column(String(32), nullable=False, default="ORGANIZATION")
+
+
+class OrgRolePermission(Base, TimestampMixin):
+    """Permission grant on a Role (primarily custom roles)."""
+
+    __tablename__ = "org_role_permissions"
+    __table_args__ = (
+        UniqueConstraint("role_id", "permission_code", name="uq_org_role_permission"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    role_id: Mapped[str] = mapped_column(ForeignKey("org_roles.id"), index=True, nullable=False)
+    permission_code: Mapped[str] = mapped_column(String(64), nullable=False)
+
+
+class OrgInvitation(Base, TimestampMixin):
+    """Opaque invite token (hashed) for collaborator onboarding (ADR-008 F7)."""
+
+    __tablename__ = "org_invitations"
+    __table_args__ = (
+        Index("ix_org_invitations_org_email", "organization_id", "email"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    membership_id: Mapped[str] = mapped_column(ForeignKey("org_memberships.id"), index=True)
+    email: Mapped[str] = mapped_column(String(200), nullable=False)
+    role_code: Mapped[str] = mapped_column(String(64), nullable=False)
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="PENDING")  # PENDING|ACCEPTED|REVOKED|EXPIRED
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_by_subject_id: Mapped[Optional[str]] = mapped_column(String(128))
+    accepted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
 
 class ProducerProfile(Base, TimestampMixin):

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pago reportado · ESecureBroker</title>
+  <link rel="icon" href="/static/brand/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/auth.css?v=20260812pay5" />
+</head>
+<body class="auth-body{% if is_dev_env %} auth-env-dev{% endif %}">
+  <div class="auth-stage">
+    <div class="auth-login-wrap auth-register-wrap">
+      <div class="auth-login-brand">
+        <img src="/static/brand/crest.svg" width="44" height="44" alt="" />
+        <span class="auth-wordmark">ESecure<span>Broker</span></span>
+      </div>
+      <h1 class="auth-title">Comprobante recibido</h1>
+      <p class="auth-lead">
+        Recibimos el comprobante de <strong>{{ org_name }}</strong> ({{ plan_name }}).
+        Está sujeto a verificación. Si todo cuadra, activamos el plan;
+        si no es válido, inhabilitamos el acceso y te contactamos.
+      </p>
+      <div class="pay-detail" style="text-align:left;margin:1.25rem 0">
+        <h3 style="margin:0 0 0.5rem;font-size:1rem">Transferencia</h3>
+        <dl class="pay-bank-list">
+          <div><dt>Banco</dt><dd>{{ bank.bank }}</dd></div>
+          <div><dt>Tipo</dt><dd>{{ bank.account_type }}</dd></div>
+          <div><dt>Cuenta</dt><dd class="mono">{{ bank.account_number }}</dd></div>
+        </dl>
+      </div>
+      <div class="pay-detail" style="text-align:left;margin:0 0 1.25rem">
+        <h3 style="margin:0 0 0.5rem;font-size:1rem">Yappy</h3>
+        <dl class="pay-bank-list">
+          <div><dt>Beneficiario</dt><dd>{{ bank.yappy_name }}</dd></div>
+          <div><dt>Yappy al</dt><dd class="mono">{{ bank.yappy_phone }}</dd></div>
+        </dl>
+      </div>
+      <a class="auth-cta" href="/checkout">Volver al checkout</a>
+      <p class="auth-note" style="margin-top:1.25rem">También puedes cerrar sesión y volver más tarde.</p>
+      <p class="auth-note"><a href="/logout">Cerrar sesión</a></p>
+    </div>
+  </div>
+</body>
+</html>

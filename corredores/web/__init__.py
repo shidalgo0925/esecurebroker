@@ -13,6 +13,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from corredores.config import settings
 from corredores.web.auth_session import is_public_path, read_session
 from corredores.web.deps import bind_request, reset_request
+from corredores.web.org_admin_routes import router as org_admin_router
 from corredores.web.routes import router
 
 TEMPLATES = Path(__file__).parent / "templates"
@@ -48,17 +49,25 @@ class PilotoAuthMiddleware(BaseHTTPMiddleware):
         if principal.organization_id and not path.startswith("/checkout"):
             try:
                 from corredores.db import SessionLocal
+                from corredores.domain.models import Organization
                 from corredores.services.saas_signup import (
                     get_subscription,
                     subscription_allows_access,
                 )
                 from corredores.services.tenant import is_platform_admin
+                from corredores.web.auth_session import clear_session_cookie
 
                 with SessionLocal() as db:
                     if is_platform_admin(
                         db, principal.actor_id, username=principal.username
                     ):
                         return await call_next(request)
+                    org = db.get(Organization, principal.organization_id)
+                    if org is None or not org.active:
+                        # Sesión apunta a org borrada → limpiar y volver al landing.
+                        resp = RedirectResponse("/", status_code=303)
+                        clear_session_cookie(resp)
+                        return resp
                     sub = get_subscription(db, principal.organization_id)
                     if not subscription_allows_access(sub):
                         plan = sub.plan_code if sub else "profesional"
@@ -70,11 +79,22 @@ class PilotoAuthMiddleware(BaseHTTPMiddleware):
 
 def ensure_saas_tables() -> None:
     from corredores.db import engine
-    from corredores.domain.models import BrokerAccount, MobileRefreshToken, OrgSubscription
+    from corredores.domain.models import (
+        BrokerAccount,
+        MobileRefreshToken,
+        OrgInvitation,
+        OrgRole,
+        OrgRolePermission,
+        OrgSubscription,
+    )
 
     BrokerAccount.__table__.create(bind=engine, checkfirst=True)
     OrgSubscription.__table__.create(bind=engine, checkfirst=True)
     MobileRefreshToken.__table__.create(bind=engine, checkfirst=True)
+    # ADR-008 F7 — prefer alembic; create_all checkfirst as safety net on DEV boots
+    OrgRole.__table__.create(bind=engine, checkfirst=True)
+    OrgRolePermission.__table__.create(bind=engine, checkfirst=True)
+    OrgInvitation.__table__.create(bind=engine, checkfirst=True)
 
 
 def ensure_runtime_settings() -> None:
@@ -121,6 +141,7 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestContextMiddleware)
     app.mount("/static", StaticFiles(directory=str(STATIC)), name="static")
     app.include_router(router)
+    app.include_router(org_admin_router)
     app.include_router(mobile_router)
     return app
 

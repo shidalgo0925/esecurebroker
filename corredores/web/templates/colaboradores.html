@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Colaboradores · ESecureBroker{% endblock %}
+{% block topbar %}Configuración · Colaboradores{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1 class="page-title">Colaboradores</h1>
+  <p class="page-sub">Accesos de la correduría · <b>{{ org_name }}</b></p>
+</section>
+
+{% if flash == 'invited' %}<p class="flash-ok">Invitación creada.</p>{% endif %}
+{% if flash == 'revoked' %}<p class="flash-ok">Acceso revocado.</p>{% endif %}
+{% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+{% if invite_url %}
+<p class="flash-ok">Enlace de invitación (DEV — compártelo con el colaborador):<br>
+  <a class="mono" href="{{ invite_url }}">{{ invite_url }}</a>
+</p>
+{% endif %}
+
+<section class="poliza-panel" style="margin-bottom:1.25rem">
+  <h2 class="poliza-panel-title">Cupos del plan</h2>
+  <p class="meta">
+    Internos: {{ seats.internal_seats.used }}{% if seats.internal_seats.limit is not none %} / {{ seats.internal_seats.limit }}{% else %} / ∞{% endif %}
+    · Productores: {{ seats.producer_seats.used }}{% if seats.producer_seats.limit is not none %} / {{ seats.producer_seats.limit }}{% else %} / ∞{% endif %}
+    · fuente {{ seats.source }}
+  </p>
+  <p class="hint"><a href="/checkout">Administrar plan</a> · <a href="/configuracion/roles">Roles y permisos</a></p>
+</section>
+
+<section class="poliza-panel catalog-editor" style="margin-bottom:1.25rem">
+  <h2 class="poliza-panel-title">Agregar colaborador</h2>
+  <form class="catalog-form" method="post" action="/configuracion/colaboradores/invitar">
+    <div class="catalog-row">
+      <label class="catalog-field name">Nombre
+        <input name="display_name" required maxlength="200" placeholder="María López" />
+      </label>
+      <label class="catalog-field name">Correo
+        <input name="email" type="email" required maxlength="200" placeholder="maria@correduria.com" />
+      </label>
+      <label class="catalog-field code">Rol
+        <select name="role_code" required>
+          {% for code, label in role_options %}
+          <option value="{{ code }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <div class="wizard-actions">
+        <button class="btn-primary" type="submit">Invitar</button>
+      </div>
+    </div>
+  </form>
+</section>
+
+<div class="table-card">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Nombre</th><th>Correo</th><th>Rol</th><th>Alcance</th><th>Estado</th><th>Productor</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for m in members %}
+      <tr>
+        <td class="cli-name">{{ m.display_name }}</td>
+        <td class="mono">{{ m.email or '—' }}</td>
+        <td>{{ m.role_label }}</td>
+        <td>{{ m.scope }}</td>
+        <td>{{ m.status }}</td>
+        <td>{{ 'Sí' if m.is_producer else 'No' }}</td>
+        <td class="cli-action"><a class="open-link" href="/configuracion/colaboradores/{{ m.id }}">Ver</a></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="7" class="empty-row">Sin colaboradores.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="hint" style="margin-top:0.75rem"><a href="/configuracion">← Configuración</a></p>
+{% endblock %}

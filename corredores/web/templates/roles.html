@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Roles y permisos · ESecureBroker{% endblock %}
+{% block topbar %}Configuración · Roles{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1 class="page-title">Roles y permisos</h1>
+  <p class="page-sub">Roles de sistema (protegidos) y personalizados · <b>{{ org_name }}</b></p>
+</section>
+
+{% if flash %}<p class="flash-ok">Guardado.</p>{% endif %}
+{% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+
+<p style="margin:0 0 1rem"><a class="btn-primary" href="/configuracion/roles/nuevo">+ Crear rol</a></p>
+
+<section class="poliza-panel" style="margin-bottom:1.25rem">
+  <h2 class="poliza-panel-title">Roles del sistema</h2>
+  <table class="data-table">
+    <thead><tr><th>Código</th><th>Nombre</th><th>Alcance</th><th></th></tr></thead>
+    <tbody>
+    {% for r in system_roles %}
+      <tr>
+        <td class="mono">{{ r.code }}</td>
+        <td>{{ r.name }}</td>
+        <td>{{ r.default_scope }}</td>
+        <td class="cli-action"><a class="open-link" href="/configuracion/roles/{{ r.id }}">Ver</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="poliza-panel">
+  <h2 class="poliza-panel-title">Roles personalizados</h2>
+  <table class="data-table">
+    <thead><tr><th>Código</th><th>Nombre</th><th>Alcance</th><th>Estado</th><th></th></tr></thead>
+    <tbody>
+    {% for r in custom_roles %}
+      <tr>
+        <td class="mono">{{ r.code }}</td>
+        <td>{{ r.name }}</td>
+        <td>{{ r.default_scope }}</td>
+        <td>{{ 'Activo' if r.active else 'Inactivo' }}</td>
+        <td class="cli-action"><a class="open-link" href="/configuracion/roles/{{ r.id }}">Editar</a></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5" class="empty-row">Sin roles personalizados.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+<p class="hint" style="margin-top:0.75rem"><a href="/configuracion/colaboradores">Colaboradores</a> · <a href="/configuracion">Configuración</a></p>
+{% endblock %}

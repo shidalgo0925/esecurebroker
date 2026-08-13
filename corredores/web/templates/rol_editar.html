@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}{% if role %}{{ role.name }}{% else %}Nuevo rol{% endif %} · ESecureBroker{% endblock %}
+{% block topbar %}Configuración · Rol{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1 class="page-title">{% if role %}{{ role.name }}{% else %}Nuevo rol{% endif %}</h1>
+  <p class="page-sub">{% if readonly %}Rol de sistema (solo lectura){% else %}Rol personalizado{% endif %} · <b>{{ org_name }}</b></p>
+</section>
+
+{% if flash %}<p class="flash-ok">Guardado.</p>{% endif %}
+{% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+
+<form method="post" action="{% if role %}/configuracion/roles/{{ role.id }}{% else %}/configuracion/roles/crear{% endif %}">
+  <section class="poliza-panel" style="margin-bottom:1rem">
+    <div class="catalog-row" style="flex-wrap:wrap;gap:1rem">
+      {% if not role %}
+      <label class="catalog-field code">Código
+        <input name="code" class="mono" required maxlength="64" placeholder="ASISTENTE_RENOV" {% if readonly %}disabled{% endif %} />
+      </label>
+      {% endif %}
+      <label class="catalog-field name">Nombre
+        <input name="name" required maxlength="120" value="{{ role.name if role else '' }}" {% if readonly %}readonly{% endif %} />
+      </label>
+      <label class="catalog-field name">Descripción
+        <input name="description" maxlength="500" value="{{ role.description or '' if role else '' }}" {% if readonly %}readonly{% endif %} />
+      </label>
+      <label class="catalog-field code">Alcance
+        <select name="default_scope" {% if readonly %}disabled{% endif %}>
+          <option value="ORGANIZATION" {% if role and role.default_scope == 'ORGANIZATION' %}selected{% endif %}>Organización</option>
+          <option value="ASSIGNED_PORTFOLIO" {% if role and role.default_scope == 'ASSIGNED_PORTFOLIO' %}selected{% endif %}>Cartera asignada</option>
+        </select>
+      </label>
+      {% if role and not readonly %}
+      <label class="check-row">
+        <input type="checkbox" name="active" value="1" {% if role.active %}checked{% endif %} />
+        <span>Activo</span>
+      </label>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="poliza-panel">
+    <h2 class="poliza-panel-title">Permisos</h2>
+    {% for group_name, codes in permission_groups %}
+    <h3 style="margin:1rem 0 0.35rem;font-size:0.95rem">{{ group_name }}</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(16rem,1fr));gap:0.35rem">
+      {% for code in codes %}
+      <label class="check-row">
+        <input type="checkbox" name="permissions" value="{{ code }}"
+          {% if code in selected %}checked{% endif %}
+          {% if readonly %}disabled{% endif %} />
+        <span class="mono">{{ code }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </section>
+
+  {% if not readonly %}
+  <div class="wizard-actions" style="margin-top:1rem">
+    <a class="btn-secondary" href="/configuracion/roles">Cancelar</a>
+    <button class="btn-primary" type="submit">Guardar</button>
+  </div>
+  {% else %}
+  <p class="hint" style="margin-top:1rem">Los roles de sistema no se editan. Crea un rol personalizado para variantes.</p>
+  <p class="hint"><a href="/configuracion/roles">← Roles</a></p>
+  {% endif %}
+</form>
+{% endblock %}

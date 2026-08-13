@@ -32,12 +32,16 @@ from corredores.domain.models import (
     PortfolioAssignment,
     ProducerProfile,
 )
+from corredores.domain.permissions_catalog import SYSTEM_ROLE_PERMISSIONS
 from corredores.services.producer_portfolio import ROLE_PRIMARY, TARGET_POLICY
 from corredores.services.tenant import assert_membership, is_platform_admin, membership_for_org
 
 SCOPE_ORGANIZATION = "ORGANIZATION"
 SCOPE_ASSIGNED_PORTFOLIO = "ASSIGNED_PORTFOLIO"
 SCOPE_PLATFORM = "PLATFORM"
+
+# Back-compat alias — canonical matrix lives in permissions_catalog (F7)
+_ROLE_PERMISSIONS = SYSTEM_ROLE_PERMISSIONS
 
 
 class AccessDenied(Exception):
@@ -46,114 +50,6 @@ class AccessDenied(Exception):
     def __init__(self, message: str = "forbidden", *, not_found: bool = False):
         super().__init__(message)
         self.not_found = not_found  # True → callers should return 404 (anti-IDOR)
-
-
-# --- permissions catalog (extensible; not exhaustive ACL) ---
-
-_READ_CORE = (
-    "me:read",
-    "organizations:list",
-    "organizations:select",
-    "today:read",
-    "customers:list",
-    "customers:search",
-    "customers:read",
-    "customers:360",
-    "policies:list",
-    "policies:read",
-)
-
-_WRITE_CORE = (
-    "customers:create",
-    "customers:update",
-    "policies:create",
-    "policies:update",
-)
-
-_ROLE_PERMISSIONS: dict[str, tuple[str, ...]] = {
-    OWNER: _READ_CORE
-    + _WRITE_CORE
-    + (
-        "collections:read",
-        "collections:manage",
-        "renewals:read",
-        "renewals:update",
-        "claims:read",
-        "claims:update",
-        "documents:read",
-        "documents:manage",
-        "activities:read",
-        "activities:create",
-        "producers:read",
-        "producers:manage",
-        "reports:read",
-        "settings:manage",
-    ),
-    ADMIN: _READ_CORE
-    + _WRITE_CORE
-    + (
-        "collections:read",
-        "collections:manage",
-        "renewals:read",
-        "renewals:update",
-        "claims:read",
-        "claims:update",
-        "documents:read",
-        "documents:manage",
-        "activities:read",
-        "activities:create",
-        "producers:read",
-        "producers:manage",
-        "reports:read",
-        "settings:manage",
-    ),
-    BROKER: _READ_CORE
-    + _WRITE_CORE
-    + (
-        "collections:read",
-        "renewals:read",
-        "renewals:update",
-        "claims:read",
-        "claims:update",
-        "documents:read",
-        "documents:manage",
-        "activities:read",
-        "activities:create",
-        "reports:read",
-    ),
-    COLLECTIONS: _READ_CORE
-    + (
-        "collections:read",
-        "collections:manage",
-        "renewals:read",
-        "claims:read",
-        "documents:read",
-        "activities:read",
-        "activities:create",
-        "reports:read",
-    ),
-    PRODUCER: _READ_CORE
-    + _WRITE_CORE
-    + (
-        "collections:read",
-        "renewals:read",
-        "renewals:update",
-        "claims:read",
-        "claims:update",
-        "documents:read",
-        "documents:manage",
-        "activities:read",
-        "activities:create",
-        "reports:read",
-    ),
-    PLATFORM: _READ_CORE
-    + (
-        "platform:admin",
-        "producers:read",
-        "reports:read",
-        "settings:manage",
-    ),
-}
 
 
 @dataclass(frozen=True)
@@ -173,20 +69,51 @@ class AccessContext:
         return code in self.permissions
 
 
-def permissions_for_role(role_code: str, *, is_platform: bool = False) -> list[str]:
+def permissions_for_role(
+    role_code: str,
+    *,
+    is_platform: bool = False,
+    session: Session | None = None,
+    organization_id: str | None = None,
+) -> list[str]:
     role = (role_code or BROKER).upper()
-    base = list(_ROLE_PERMISSIONS.get(role, _ROLE_PERMISSIONS[BROKER]))
-    if is_platform or role == PLATFORM:
-        if "platform:admin" not in base:
-            base.append("platform:admin")
-    return sorted(set(base))
+    if role in _ROLE_PERMISSIONS:
+        base = list(_ROLE_PERMISSIONS.get(role, _ROLE_PERMISSIONS[BROKER]))
+        if is_platform or role == PLATFORM:
+            if "platform:admin" not in base:
+                base.append("platform:admin")
+        return sorted(set(base))
+    if session is not None and organization_id:
+        from corredores.services.org_access_admin import permissions_for_org_role
+
+        return permissions_for_org_role(
+            session,
+            organization_id=organization_id,
+            role_code=role,
+            is_platform=is_platform,
+        )
+    return sorted(set(_ROLE_PERMISSIONS[BROKER]))
 
 
-def scope_for_role(role_code: str, *, is_platform: bool = False) -> str:
+def scope_for_role(
+    role_code: str,
+    *,
+    is_platform: bool = False,
+    session: Session | None = None,
+    organization_id: str | None = None,
+) -> str:
     role = (role_code or BROKER).upper()
     if is_platform and role == PLATFORM:
         return SCOPE_PLATFORM
-    return DEFAULT_SCOPE_BY_ROLE.get(role, SCOPE_ORGANIZATION)
+    if role in DEFAULT_SCOPE_BY_ROLE:
+        return DEFAULT_SCOPE_BY_ROLE[role]
+    if session is not None and organization_id:
+        from corredores.services.org_access_admin import scope_for_org_role
+
+        return scope_for_org_role(
+            session, organization_id=organization_id, role_code=role
+        )
+    return SCOPE_ORGANIZATION
 
 
 def find_producer_profile_for_subject(
@@ -195,8 +122,13 @@ def find_producer_profile_for_subject(
     organization_id: str,
     subject_id: str,
     username: str,
+    membership: OrgMembership | None = None,
 ) -> ProducerProfile | None:
-    """Best-effort link Membership → ProducerProfile (F2; no membership.profile_id column yet)."""
+    """Link Membership → ProducerProfile (FK first; email heuristic fallback)."""
+    if membership is not None and membership.producer_profile_id:
+        prof = session.get(ProducerProfile, membership.producer_profile_id)
+        if prof is not None and prof.organization_id == organization_id:
+            return prof
     uname = (username or "").strip().lower()
     if uname:
         party = (
@@ -217,7 +149,6 @@ def find_producer_profile_for_subject(
             )
             if prof is not None:
                 return prof
-    # Single PRODUCER profile in org matching display heuristics — skip (too magic)
     return None
 
 
@@ -243,20 +174,33 @@ def resolve_access_context(
     else:
         raise AccessDenied("no membership")
 
-    scope = scope_for_role(role, is_platform=is_plat)
+    scope = scope_for_role(
+        role,
+        is_platform=is_plat,
+        session=session,
+        organization_id=organization_id,
+    )
     # Platform acting inside an org: operational scope ORGANIZATION for data
     if role == PLATFORM or (is_plat and membership is None):
         scope = SCOPE_ORGANIZATION
         role = PLATFORM if membership is None else role
 
-    perms = frozenset(permissions_for_role(role, is_platform=is_plat))
+    perms = frozenset(
+        permissions_for_role(
+            role,
+            is_platform=is_plat,
+            session=session,
+            organization_id=organization_id,
+        )
+    )
     producer_id: str | None = None
-    if role == PRODUCER:
+    if role == PRODUCER or (membership and membership.producer_profile_id):
         prof = find_producer_profile_for_subject(
             session,
             organization_id=organization_id,
             subject_id=subject_id,
             username=username,
+            membership=membership,
         )
         producer_id = prof.id if prof else None
 
