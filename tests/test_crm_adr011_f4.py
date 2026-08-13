@@ -133,6 +133,27 @@ def test_crm_html_routes(session, world, monkeypatch):
     assert "/crm/prospectos/" in r3.headers.get("location", "")
 
 
+def test_crm_quick_create_without_phone_email(session, world, monkeypatch):
+    monkeypatch.setattr(settings, "auth_enabled", False)
+    client = TestClient(create_app())
+    r = client.post(
+        "/crm/rapido",
+        data={
+            "stage_code": "NEW",
+            "contact_name": "Solo Nombre",
+            "title": "Oportunidad mínima",
+            "email": "",
+            "phone": "",
+            "estimated_premium": "0.00",
+        },
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+    loc = r.headers.get("location", "")
+    assert "/crm/oportunidades/" in loc
+    assert "error=" not in loc
+
+
 def test_crm_quick_create_and_list(session, world, monkeypatch):
     monkeypatch.setattr(settings, "auth_enabled", False)
     client = TestClient(create_app())

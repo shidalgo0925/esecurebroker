@@ -102,7 +102,8 @@ def _err_redirect(path: str, exc: Exception) -> RedirectResponse:
         msg = "cliente ambiguo — vinculá desde detalle"
     else:
         msg = str(exc) or "error"
-    return RedirectResponse(f"{path}?error={quote(msg)}", status_code=303)
+    sep = "&" if "?" in path else "?"
+    return RedirectResponse(f"{path}{sep}error={quote(msg)}", status_code=303)
 
 
 # --- Pipeline Kanban ---
@@ -226,17 +227,21 @@ def crm_quick_create(
     org = resolve_org(session, request)
     _require_crm(session, request, manage=True)
     access = _ctx_access(session, request)
+    stage = (stage_code or "NEW").upper()
     try:
         name = (contact_name or "").strip()
         if not name:
             raise CrmError("contacto requerido")
+        opp_title = (title or "").strip()
+        if not opp_title:
+            raise CrmError("oportunidad requerida")
         parts = name.split(None, 1)
         first = parts[0]
         last = parts[1] if len(parts) > 1 else None
         em = (email or "").strip() or None
         ph = (phone or "").strip() or None
-        if not em and not ph:
-            raise CrmError("indicá correo o teléfono")
+        prem_raw = (estimated_premium or "").strip()
+        prem = _money(prem_raw) if prem_raw and prem_raw not in {"0", "0.0", "0.00"} else None
         prosp = create_prospect(
             session,
             access,
@@ -247,19 +252,20 @@ def crm_quick_create(
             email=em,
             phone=ph,
             actor_id=_actor(request),
+            require_contact_channel=False,
         )
         opp = create_opportunity(
             session,
             access,
             organization_id=org.id,
-            title=title,
+            title=opp_title,
             prospect_id=prosp.id,
-            estimated_premium=_money(estimated_premium),
-            stage_code=(stage_code or "NEW").upper(),
+            estimated_premium=prem,
+            stage_code=stage,
             actor_id=_actor(request),
         )
     except (CrmError, AccessDenied, ValueError) as exc:
-        return _err_redirect("/crm", exc)
+        return _err_redirect(f"/crm?quick={quote(stage)}", exc)
     return RedirectResponse(
         f"/crm/oportunidades/{opp.id}?ok={quote('Oportunidad creada')}",
         status_code=303,

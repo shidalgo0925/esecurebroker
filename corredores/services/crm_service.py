@@ -112,6 +112,7 @@ def _validate_prospect_contact(
     phone: str | None,
     mobile: str | None,
     email: str | None,
+    require_channel: bool = True,
 ) -> None:
     if prospect_type not in PROSPECT_TYPES:
         raise CrmError("prospect_type inválido")
@@ -121,7 +122,7 @@ def _validate_prospect_contact(
     else:
         if not company_name:
             raise CrmError("company_name requerido para empresa")
-    if not (phone or mobile or email):
+    if require_channel and not (phone or mobile or email):
         raise CrmError("se requiere al menos un medio de contacto (phone, mobile o email)")
 
 
@@ -221,6 +222,7 @@ def create_prospect(
     office_id: str | None = None,
     notes: str | None = None,
     actor_id: str | None = None,
+    require_contact_channel: bool = True,
 ) -> CrmProspect:
     _require_manage(ctx)
     pt = (prospect_type or PROSPECT_PERSON).upper()
@@ -234,6 +236,7 @@ def create_prospect(
         phone=ph,
         mobile=mb,
         email=em,
+        require_channel=require_contact_channel,
     )
     # PRODUCER defaults assignment to self
     if ctx and ctx.producer_profile_id and not assigned_producer_id:

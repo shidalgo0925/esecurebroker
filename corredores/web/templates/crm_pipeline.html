@@ -70,6 +70,7 @@
 
     {% if col.open_quick %}
     <form id="quick-{{ col.code }}" class="odoo-quick-create" method="post" action="/crm/rapido">
+      {% if error %}<p class="form-error" style="margin:0 0 0.35rem">{{ error }}</p>{% endif %}
       <input type="hidden" name="stage_code" value="{{ col.code }}" />
       <label>Contacto
         <input name="contact_name" required placeholder="Nombre del contacto" autofocus />
@@ -77,20 +78,19 @@
       <label>Oportunidad
         <input name="title" required placeholder="Ej. Auto familiar / Fianza…" />
       </label>
-      <label>Correo electrónico
+      <label>Correo electrónico <span class="meta">(opcional)</span>
         <input name="email" type="email" placeholder="correo@ejemplo.com" />
       </label>
-      <label>Teléfono
+      <label>Teléfono <span class="meta">(opcional)</span>
         <input name="phone" placeholder="6000-0000" />
       </label>
-      <label>Ingreso esperado
+      <label>Ingreso esperado <span class="meta">(opcional)</span>
         <input name="estimated_premium" class="mono" inputmode="decimal" placeholder="0.00" />
       </label>
       <div class="odoo-quick-actions">
         <button class="btn-primary" type="submit">Agregar</button>
         <a class="btn-secondary" href="/crm{% if show_lost %}?include_lost=1{% endif %}">Cancelar</a>
       </div>
-      <p class="hint">Correo o teléfono obligatorio.</p>
     </form>
     {% endif %}
 
