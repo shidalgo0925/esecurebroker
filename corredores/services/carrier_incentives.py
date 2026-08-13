@@ -117,6 +117,43 @@ def list_active_plans(session: Session, organization_id: str) -> list[CarrierInc
     )
 
 
+def list_org_plans_with_progress(
+    session: Session, organization_id: str, *, include_inactive: bool = True
+) -> list[dict[str, Any]]:
+    """Dashboard Metas: todos los planes de incentivo de la org + progreso oficial.
+
+    Solo CONFIRMED cuenta en confirmed_amount (ADR-009). No mezclar con comisión.
+    """
+    q = session.query(CarrierIncentivePlan).filter_by(organization_id=organization_id)
+    if not include_inactive:
+        q = q.filter_by(status=PLAN_ACTIVE)
+    plans = q.order_by(
+        CarrierIncentivePlan.status.asc(),
+        CarrierIncentivePlan.period_end.asc(),
+        CarrierIncentivePlan.name.asc(),
+    ).all()
+    rows: list[dict[str, Any]] = []
+    for plan in plans:
+        carrier = session.get(Carrier, plan.carrier_id)
+        try:
+            progress = compute_progress(
+                session, organization_id=organization_id, plan_id=plan.id
+            )
+        except IncentiveError:
+            progress = None
+        rows.append(
+            {
+                "plan": plan,
+                "carrier": carrier,
+                "carrier_name": carrier.name if carrier else "—",
+                "progress": progress,
+                "href": f"/aseguradoras/{plan.carrier_id}/beneficios/{plan.id}",
+                "list_href": f"/aseguradoras/{plan.carrier_id}/beneficios",
+            }
+        )
+    return rows
+
+
 def create_plan(
     session: Session,
     *,

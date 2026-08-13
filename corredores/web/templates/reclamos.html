@@ -9,6 +9,9 @@
       {% if q or status %} · {{ result_count }} resultado{% if result_count != 1 %}s{% endif %}{% endif %}
     </p>
   </div>
+  <div class="stack-actions">
+    <a class="btn-secondary" href="/reportes/reclamos/imprimir" target="_blank">PDF</a>
+  </div>
 </section>
 
 <form class="filter-bar" method="get" action="/reclamos">

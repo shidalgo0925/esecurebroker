@@ -2,12 +2,18 @@
 {% block title %}Comisiones · ESecureBroker{% endblock %}
 {% block topbar %}Gestión · Comisiones{% endblock %}
 {% block content %}
-<section class="page-head">
-  <h1 class="page-title">Comisiones</h1>
-  <p class="page-sub">
-    Editable · <b>{{ plan.organization_name }}</b> ·
-    convenio <b>{{ plan.agreement_reference }}</b>
-  </p>
+<section class="page-head row-between">
+  <div>
+    <h1 class="page-title">Comisiones</h1>
+    <p class="page-sub">
+      Editable · <b>{{ plan.organization_name }}</b> ·
+      convenio <b>{{ plan.agreement_reference }}</b>
+    </p>
+  </div>
+  <div class="stack-actions">
+    <a class="btn-secondary" href="/reportes/comisiones/imprimir" target="_blank">PDF</a>
+    <a class="btn-secondary" href="/reportes/comisiones.csv">CSV</a>
+  </div>
 </section>
 
 {% if flash %}<p class="flash-ok">{{ flash }}</p>{% endif %}

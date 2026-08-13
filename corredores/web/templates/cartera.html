@@ -10,11 +10,14 @@
     </p>
   </div>
   <div class="stack-actions">
+    <a class="btn-secondary" href="/reportes/cartera/imprimir" target="_blank">PDF</a>
     <a class="btn-secondary" href="/reportes/cartera.csv">CSV</a>
     <a class="btn-secondary" href="/cobranza">Cobranza</a>
     <a class="btn-primary" href="/polizas">Pólizas</a>
   </div>
 </section>
+
+{% include "_cartera_dash_nav.html" %}
 
 <div class="report-tiles cartera-kpis">
   <a class="report-tile" href="/polizas?status=ACTIVE">

@@ -11,6 +11,7 @@
     </p>
   </div>
   <div class="stack-actions">
+    <a class="btn-secondary" href="/reportes/morosidad/imprimir" target="_blank">PDF</a>
     <a class="btn-secondary" href="/morosidad/imprimir{% if aging %}?aging={{ aging }}{% endif %}" target="_blank">Imprimir</a>
     <a class="btn-secondary" href="/reportes/morosidad.csv{% if aging %}?aging={{ aging }}{% endif %}">CSV</a>
     <a class="btn-secondary" href="/cobranza?vencimiento=vencido">Cobranza</a>

@@ -9,7 +9,10 @@
       {% if q or status %} · {{ result_count }} resultado{% if result_count != 1 %}s{% endif %}{% endif %}
     </p>
   </div>
-  <a class="btn-secondary" href="/reportes/renovaciones.csv">Exportar CSV</a>
+  <div class="stack-actions">
+    <a class="btn-secondary" href="/reportes/renovaciones/imprimir" target="_blank">PDF</a>
+    <a class="btn-secondary" href="/reportes/renovaciones.csv">Exportar CSV</a>
+  </div>
 </section>
 
 <form class="filter-bar" method="get" action="/renovaciones">

@@ -7,13 +7,16 @@
     <h1 class="page-title">Reportes</h1>
     <p class="page-sub">Informes operativos · <b>{{ org_name }}</b> · {{ today }}</p>
   </div>
+  <div class="stack-actions">
+    <a class="btn-secondary" href="/cartera">Dashboard</a>
+  </div>
 </section>
 
-<div class="report-tiles">
-  <a class="report-tile" href="/polizas?status=ACTIVE">
-    <div class="money-amt">{{ summary.policies_active }}</div>
-    <div class="money-title">PÓLIZAS ACTIVAS</div>
-  </a>
+{% include "_reportes_nav.html" %}
+
+{% if vista == 'cobros' %}
+<p class="dash-tabs-lede">Cobranza y recaudación: saldo abierto, morosidad y pagos del período.</p>
+<div class="report-tiles cartera-kpis dash-pane-kpis">
   <a class="report-tile" href="/cobranza">
     <div class="money-amt">${{ summary.balance_open|money }}</div>
     <div class="money-title">SALDO ABIERTO</div>
@@ -23,64 +26,24 @@
     <div class="money-title">MOROSIDAD</div>
     <div class="meta" style="margin-top:0.45rem">Aging · top deudores · CSV</div>
   </a>
-  <a class="report-tile" href="/renovaciones">
-    <div class="money-amt">{{ summary.renewals_open }}</div>
-    <div class="money-title">RENOVACIONES</div>
-  </a>
-  <div class="report-tile">
+  <div class="report-tile tone-money">
     <div class="money-amt">${{ summary.payments_mtd_amount|money }}</div>
     <div class="money-title">PAGOS DEL MES</div>
     <div class="meta">{{ summary.payments_mtd }} movimientos</div>
   </div>
-  <a class="report-tile" href="/comisiones">
-    <div class="money-amt">${{ summary.commissions_amount|money }}</div>
-    <div class="money-title">COMISIONES</div>
-    <div class="meta">{{ summary.commissions_count }} calculadas</div>
+  <a class="report-tile" href="/reportes?vista=descargas">
+    <div class="money-title">CSV COBRANZA</div>
+    <div class="meta" style="margin-top:0.45rem">Descargas →</div>
   </a>
 </div>
 
-<section style="margin-top:1rem">
-  <h2 class="section-title">Descargas CSV</h2>
-  <div class="table-card">
-    <table class="data-table">
-      <thead><tr><th>Informe</th><th>Para qué</th><th></th></tr></thead>
-      <tbody>
-        <tr><td class="cli-name">Cartera</td><td>Inventario de pólizas</td><td class="cli-action"><a class="open-link" href="/reportes/cartera.csv">CSV</a></td></tr>
-        <tr><td class="cli-name">Cobranza</td><td>Cuotas abiertas por banda</td><td class="cli-action"><a class="open-link" href="/reportes/cobranza.csv">CSV</a></td></tr>
-        <tr><td class="cli-name">Morosidad</td><td>Vencidos + días + aging</td><td class="cli-action"><a class="open-link" href="/reportes/morosidad.csv">CSV</a></td></tr>
-        <tr><td class="cli-name">Renovaciones</td><td>Oportunidades abiertas</td><td class="cli-action"><a class="open-link" href="/reportes/renovaciones.csv">CSV</a></td></tr>
-        <tr><td class="cli-name">Pagos del mes</td><td>Recaudación del período</td><td class="cli-action"><a class="open-link" href="/reportes/pagos.csv">CSV</a></td></tr>
-        <tr><td class="cli-name">Comisiones</td><td>Cia + split interno</td><td class="cli-action"><a class="open-link" href="/reportes/comisiones.csv">CSV</a></td></tr>
-        <tr><td class="cli-name">Cotizaciones</td><td>Pedidos y primas por cia</td><td class="cli-action"><a class="open-link" href="/reportes/cotizaciones.csv">CSV</a></td></tr>
-      </tbody>
-    </table>
-  </div>
-</section>
-
-<div class="dash-split" style="margin-top:1rem">
+<div class="dash-split">
   <section>
-    <h2 class="section-title">Vista previa · Cartera</h2>
-    <div class="table-card">
-      <table class="data-table">
-        <thead><tr><th>Póliza</th><th>Cliente</th><th>Cia</th><th>Prima</th></tr></thead>
-        <tbody>
-        {% for p in preview.policies %}
-          <tr>
-            <td class="cli-id"><a href="/polizas/{{ p.id }}">{{ p.number }}</a></td>
-            <td class="cli-name">{{ p.client }}</td>
-            <td>{{ p.carrier }}</td>
-            <td class="mono">{% if p.premium %}${{ p.premium|money }}{% else %}—{% endif %}</td>
-          </tr>
-        {% else %}
-          <tr><td colspan="4" class="empty-row">Sin pólizas.</td></tr>
-        {% endfor %}
-        </tbody>
-      </table>
+    <div class="block-head">
+      <h2 class="section-title" style="margin:0">Vista previa · Cobranza</h2>
+      <a class="see-all" href="/cobranza">Cobranza →</a>
     </div>
-  </section>
-  <section>
-    <h2 class="section-title">Vista previa · Cobranza</h2>
-    <div class="table-card">
+    <div class="table-card dash-pane-card">
       <table class="data-table">
         <thead><tr><th>Banda</th><th>Cliente</th><th>Vence</th><th>Saldo</th></tr></thead>
         <tbody>
@@ -99,28 +62,11 @@
     </div>
   </section>
   <section>
-    <h2 class="section-title">Vista previa · Renovaciones</h2>
-    <div class="table-card">
-      <table class="data-table">
-        <thead><tr><th>Póliza</th><th>Cliente</th><th>Estado</th><th>Fecha</th></tr></thead>
-        <tbody>
-        {% for r in preview.renewals %}
-          <tr>
-            <td class="cli-id">{{ r.policy }}</td>
-            <td class="cli-name">{{ r.client }}</td>
-            <td><span class="kind-pill">{{ r.status }}</span></td>
-            <td class="mono">{{ r.target or '—' }}</td>
-          </tr>
-        {% else %}
-          <tr><td colspan="4" class="empty-row">Sin renovaciones.</td></tr>
-        {% endfor %}
-        </tbody>
-      </table>
+    <div class="block-head">
+      <h2 class="section-title" style="margin:0">Vista previa · Pagos del mes</h2>
+      <a class="see-all" href="/cobranza">Ver pagos →</a>
     </div>
-  </section>
-  <section>
-    <h2 class="section-title">Vista previa · Pagos del mes</h2>
-    <div class="table-card">
+    <div class="table-card dash-pane-card">
       <table class="data-table">
         <thead><tr><th>Fecha</th><th>Póliza</th><th>Método</th><th>Monto</th></tr></thead>
         <tbody>
@@ -139,4 +85,248 @@
     </div>
   </section>
 </div>
+
+{% elif vista == 'produccion' %}
+<p class="dash-tabs-lede">Cartera emitida: pólizas activas, renovaciones y comisiones ordinarias.</p>
+<div class="report-tiles cartera-kpis dash-pane-kpis">
+  <a class="report-tile" href="/polizas?status=ACTIVE">
+    <div class="money-amt">{{ summary.policies_active }}</div>
+    <div class="money-title">PÓLIZAS ACTIVAS</div>
+  </a>
+  <a class="report-tile" href="/renovaciones">
+    <div class="money-amt">{{ summary.renewals_open }}</div>
+    <div class="money-title">RENOVACIONES</div>
+  </a>
+  <a class="report-tile" href="/comisiones">
+    <div class="money-amt">${{ summary.commissions_amount|money }}</div>
+    <div class="money-title">COMISIONES</div>
+    <div class="meta">{{ summary.commissions_count }} calculadas</div>
+  </a>
+  <a class="report-tile" href="/cartera/produccion">
+    <div class="money-title">DASHBOARD</div>
+    <div class="meta" style="margin-top:0.45rem">Producción →</div>
+  </a>
+</div>
+
+<div class="dash-split">
+  <section>
+    <div class="block-head">
+      <h2 class="section-title" style="margin:0">Vista previa · Cartera</h2>
+      <a class="see-all" href="/polizas">Pólizas →</a>
+    </div>
+    <div class="table-card dash-pane-card">
+      <table class="data-table">
+        <thead><tr><th>Póliza</th><th>Cliente</th><th>Cia</th><th>Prima</th></tr></thead>
+        <tbody>
+        {% for p in preview.policies %}
+          <tr>
+            <td class="cli-id"><a href="/polizas/{{ p.id }}">{{ p.number }}</a></td>
+            <td class="cli-name">{{ p.client }}</td>
+            <td>{{ p.carrier }}</td>
+            <td class="mono">{% if p.premium %}${{ p.premium|money }}{% else %}—{% endif %}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4" class="empty-row">Sin pólizas.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <section>
+    <div class="block-head">
+      <h2 class="section-title" style="margin:0">Vista previa · Renovaciones</h2>
+      <a class="see-all" href="/renovaciones">Renovaciones →</a>
+    </div>
+    <div class="table-card dash-pane-card">
+      <table class="data-table">
+        <thead><tr><th>Póliza</th><th>Cliente</th><th>Estado</th><th>Fecha</th></tr></thead>
+        <tbody>
+        {% for r in preview.renewals %}
+          <tr>
+            <td class="cli-id">{{ r.policy }}</td>
+            <td class="cli-name">{{ r.client }}</td>
+            <td><span class="kind-pill">{{ r.status }}</span></td>
+            <td class="mono">{{ r.target or '—' }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4" class="empty-row">Sin renovaciones.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+{% elif vista == 'metas' %}
+<p class="dash-tabs-lede">
+  Acuerdos de incentivo con aseguradoras (ADR-009). Distinto de la comisión ordinaria.
+</p>
+<div class="report-tiles cartera-kpis dash-pane-kpis">
+  <div class="report-tile">
+    <div class="money-amt">{{ metas.plans_total }}</div>
+    <div class="money-title">PLANES</div>
+    <div class="meta">{{ metas.plans_active }} activos</div>
+  </div>
+  <div class="report-tile tone-money">
+    <div class="money-amt">${{ metas.confirmed_total|money }}</div>
+    <div class="money-title">CONFIRMADO</div>
+    <div class="meta">solo CONFIRMED</div>
+  </div>
+  <div class="report-tile">
+    <div class="money-amt">${{ metas.benefit_total|money }}</div>
+    <div class="money-title">BENEFICIO</div>
+    <div class="meta">estimado / devengado</div>
+  </div>
+  <a class="report-tile" href="/cartera/metas">
+    <div class="money-title">VER EN DASHBOARD</div>
+    <div class="meta" style="margin-top:0.45rem">Metas →</div>
+  </a>
+</div>
+
+<section class="dash-block">
+  <div class="block-head">
+    <h2 class="section-title" style="margin:0">Planes por compañía</h2>
+    <a class="see-all" href="/aseguradoras">Aseguradoras →</a>
+  </div>
+  {% if metas_rows %}
+  <div class="table-card dash-pane-card">
+    <table class="data-table">
+      <thead>
+        <tr><th>Compañía</th><th>Plan</th><th>Confirmado</th><th>Meta</th><th>%</th><th>Beneficio</th><th></th></tr>
+      </thead>
+      <tbody>
+      {% for row in metas_rows %}
+        {% set p = row.plan %}
+        {% set g = row.progress %}
+        <tr>
+          <td class="cli-name">{{ row.carrier_name }}</td>
+          <td>{{ p.name }}</td>
+          <td class="mono">{% if g %}${{ '%.2f'|format(g.confirmed_amount) }}{% else %}—{% endif %}</td>
+          <td class="mono">{% if g and g.target_amount is not none %}${{ '%.2f'|format(g.target_amount) }}{% else %}—{% endif %}</td>
+          <td class="mono">{% if g and g.progress_pct is not none %}{{ g.progress_pct }}%{% else %}—{% endif %}</td>
+          <td class="mono">
+            {% if g %}
+              {% if g.benefit_stage == 'EARNED' %}${{ '%.2f'|format(g.earned_benefit) }}
+              {% else %}${{ '%.2f'|format(g.estimated_benefit) }}{% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td class="cli-action"><a class="open-link" href="{{ row.href }}">Abrir</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-useful dash-pane-empty">
+    <p>Sin planes de incentivo.</p>
+    <p class="meta">Créalos en <a href="/aseguradoras">Aseguradoras → Beneficios</a>.</p>
+  </div>
+  {% endif %}
+</section>
+
+{% else %}
+{# descargas #}
+<p class="dash-tabs-lede">PDF con logo e identidad de la correduría · CSV para análisis externo.</p>
+<section class="dash-block">
+  <h2 class="section-title">Descargas</h2>
+  <div class="table-card dash-pane-card">
+    <table class="data-table">
+      <thead><tr><th>Informe</th><th>Para qué</th><th></th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="cli-name">Cartera</td>
+          <td>Inventario de pólizas · con logo e identidad</td>
+          <td class="cli-action">
+            <a class="open-link open-link-strong" href="/reportes/cartera/imprimir">PDF</a>
+            · <a class="open-link" href="/reportes/cartera.csv">CSV</a>
+          </td>
+        </tr>
+        <tr>
+          <td class="cli-name">Cobranza</td>
+          <td>Cuotas abiertas por banda</td>
+          <td class="cli-action">
+            <a class="open-link open-link-strong" href="/reportes/cobranza/imprimir">PDF</a>
+            · <a class="open-link" href="/reportes/cobranza.csv">CSV</a>
+          </td>
+        </tr>
+        <tr>
+          <td class="cli-name">Morosidad</td>
+          <td>Vencidos + días + aging</td>
+          <td class="cli-action">
+            <a class="open-link open-link-strong" href="/reportes/morosidad/imprimir">PDF</a>
+            · <a class="open-link" href="/reportes/morosidad.csv">CSV</a>
+          </td>
+        </tr>
+        <tr>
+          <td class="cli-name">Renovaciones</td>
+          <td>Oportunidades abiertas</td>
+          <td class="cli-action">
+            <a class="open-link open-link-strong" href="/reportes/renovaciones/imprimir">PDF</a>
+            · <a class="open-link" href="/reportes/renovaciones.csv">CSV</a>
+          </td>
+        </tr>
+        <tr>
+          <td class="cli-name">Pagos del mes</td>
+          <td>Recaudación del período</td>
+          <td class="cli-action">
+            <a class="open-link open-link-strong" href="/reportes/pagos/imprimir">PDF</a>
+            · <a class="open-link" href="/reportes/pagos.csv">CSV</a>
+          </td>
+        </tr>
+        <tr>
+          <td class="cli-name">Comisiones</td>
+          <td>Cia + split interno</td>
+          <td class="cli-action">
+            <a class="open-link open-link-strong" href="/reportes/comisiones/imprimir">PDF</a>
+            · <a class="open-link" href="/reportes/comisiones.csv">CSV</a>
+          </td>
+        </tr>
+        <tr>
+          <td class="cli-name">Cotizaciones</td>
+          <td>Pedidos y primas por cia</td>
+          <td class="cli-action">
+            <a class="open-link open-link-strong" href="/reportes/cotizaciones/imprimir">PDF</a>
+            · <a class="open-link" href="/reportes/cotizaciones.csv">CSV</a>
+          </td>
+        </tr>
+        <tr>
+          <td class="cli-name">Clientes</td>
+          <td>Directorio</td>
+          <td class="cli-action">
+            <a class="open-link open-link-strong" href="/reportes/clientes/imprimir">PDF</a>
+          </td>
+        </tr>
+        <tr>
+          <td class="cli-name">Reclamos</td>
+          <td>Bandeja de siniestros</td>
+          <td class="cli-action">
+            <a class="open-link open-link-strong" href="/reportes/reclamos/imprimir">PDF</a>
+          </td>
+        </tr>
+        <tr>
+          <td class="cli-name">Oportunidades</td>
+          <td>CRM abierto</td>
+          <td class="cli-action">
+            <a class="open-link open-link-strong" href="/reportes/oportunidades/imprimir">PDF</a>
+          </td>
+        </tr>
+        <tr>
+          <td class="cli-name">Metas</td>
+          <td>Incentivos cia (ADR-009)</td>
+          <td class="cli-action">
+            <a class="open-link open-link-strong" href="/reportes/metas/imprimir">PDF</a>
+          </td>
+        </tr>
+        <tr>
+          <td class="cli-name">Referidos</td>
+          <td>Directorio + devengado</td>
+          <td class="cli-action">
+            <a class="open-link open-link-strong" href="/reportes/referidos/imprimir">PDF</a>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
 {% endblock %}

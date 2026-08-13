@@ -51,6 +51,17 @@ class Organization(Base, TimestampMixin):
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     external_en1_org_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, unique=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Identidad de correduría (Configuración) — cabecera de PDF / documentos
+    legal_name: Mapped[Optional[str]] = mapped_column(String(200))
+    trade_name: Mapped[Optional[str]] = mapped_column(String(200))
+    tax_id: Mapped[Optional[str]] = mapped_column(String(64))
+    phone: Mapped[Optional[str]] = mapped_column(String(40))
+    email: Mapped[Optional[str]] = mapped_column(String(200))
+    website: Mapped[Optional[str]] = mapped_column(String(200))
+    address: Mapped[Optional[str]] = mapped_column(Text)
+    slogan: Mapped[Optional[str]] = mapped_column(String(240))
+    document_footer: Mapped[Optional[str]] = mapped_column(String(500))
+    logo_relpath: Mapped[Optional[str]] = mapped_column(String(500))
 
 
 class Party(Base, TimestampMixin):

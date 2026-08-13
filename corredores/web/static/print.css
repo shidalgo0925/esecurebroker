@@ -48,6 +48,23 @@ body.print-doc {
   align-items: flex-start;
   gap: 1rem;
   margin-bottom: 1.25rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--line);
+}
+.print-identity-brand {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  min-width: 0;
+}
+.print-logo {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: #fff;
+  flex-shrink: 0;
 }
 .print-brand {
   font-family: "Newsreader", Georgia, serif;
@@ -55,8 +72,39 @@ body.print-doc {
   font-weight: 600;
 }
 .print-brand span { color: #3d5a80; }
-.print-meta { text-align: right; color: var(--muted); font-size: 11px; }
+.print-meta { text-align: right; color: var(--muted); font-size: 11px; max-width: 42%; }
 .print-meta .mono { font-family: "IBM Plex Mono", monospace; }
+.print-footer {
+  margin-top: 1.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 10px;
+}
+.print-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.print-table th,
+.print-table td {
+  border-bottom: 1px solid var(--line);
+  padding: 0.4rem 0.35rem;
+  text-align: left;
+  vertical-align: top;
+}
+.print-table th {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  font-weight: 700;
+}
+.print-table .mono { font-family: "IBM Plex Mono", monospace; }
+@media print {
+  .print-toolbar { display: none !important; }
+  body.print-doc { padding: 0.4in 0.5in; }
+}
 h1.doc-title {
   font-family: "Newsreader", Georgia, serif;
   font-size: 1.5rem;

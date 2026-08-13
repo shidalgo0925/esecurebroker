@@ -29,6 +29,7 @@ from corredores.services.excel_import import (
     link_emission_roles,
     run_assisted_import,
 )
+from corredores.config import settings
 from corredores.services.excel_xlsx import (
     load_asegurados_xlsx,
     load_emisiones_xlsx,
@@ -37,7 +38,9 @@ from corredores.services.excel_xlsx import (
 )
 
 
-STAGING = Path("/opt/corredores/var/imports")
+def _imports_root() -> Path:
+    """Staging under the same var/ tree as documents_root (DEV≠PROD)."""
+    return Path(settings.documents_root).resolve().parent / "imports"
 
 
 @dataclass
@@ -147,7 +150,7 @@ def profiles_by_module() -> dict[str, list[ImportProfile]]:
 
 
 def _stage_dir(token: str) -> Path:
-    d = STAGING / token
+    d = _imports_root() / token
     d.mkdir(parents=True, exist_ok=True)
     return d
 
@@ -167,7 +170,7 @@ def new_token() -> str:
 
 
 def _find_staged(token: str, key: str) -> Path | None:
-    d = STAGING / token
+    d = _imports_root() / token
     if not d.exists():
         return None
     matches = list(d.glob(f"{key}__*"))
@@ -449,7 +452,7 @@ def commit_profile(
     session.flush()
     # cleanup staging (best effort)
     try:
-        shutil.rmtree(STAGING / token, ignore_errors=True)
+        shutil.rmtree(_imports_root() / token, ignore_errors=True)
     except Exception:
         pass
 

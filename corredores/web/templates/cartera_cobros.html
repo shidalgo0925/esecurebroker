@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Cobros · Dashboard · ESecureBroker{% endblock %}
+{% block topbar %}Cartera · Dashboard · Cobros{% endblock %}
+{% block content %}
+<section class="page-head row-between">
+  <div>
+    <h1 class="page-title">Cobros</h1>
+    <p class="page-sub">Recaudación y cartera abierta · <b>{{ org_name }}</b> · {{ dash.as_of }}</p>
+  </div>
+  <div class="stack-actions">
+    <a class="btn-secondary" href="/reportes/cobranza/imprimir" target="_blank">PDF</a>
+    <a class="btn-secondary" href="/reportes/pagos/imprimir" target="_blank">PDF pagos</a>
+    <a class="btn-secondary" href="/cobranza">Cobranza</a>
+    <a class="btn-primary" href="/cobranza/pagos/nuevo">Registrar pago</a>
+  </div>
+</section>
+
+{% include "_cartera_dash_nav.html" %}
+
+{# KPIs de cobranza operativa (pagos reales de póliza, no incentivos cia). #}
+<div class="report-tiles cartera-kpis dash-pane-kpis">
+  <a class="report-tile tone-money" href="/reportes">
+    <div class="money-amt">${{ dash.payments_mtd|money }}</div>
+    <div class="money-title">RECAUDADO MES</div>
+    <div class="meta">{{ dash.payments_mtd_n }} pagos</div>
+  </a>
+  <a class="report-tile" href="/cobranza">
+    <div class="money-amt">${{ dash.open_balance|money }}</div>
+    <div class="money-title">SALDO ABIERTO</div>
+    <div class="meta">{{ dash.open_installments }} cuotas</div>
+  </a>
+  <a class="report-tile tone-risk" href="/morosidad">
+    <div class="money-amt">${{ dash.overdue_balance|money }}</div>
+    <div class="money-title">VENCIDO</div>
+    <div class="meta">{{ dash.overdue_installments }} cuotas</div>
+  </a>
+  <a class="report-tile" href="/cobranza?filtro=promesas">
+    <div class="money-amt">{{ dash.promises_active }}</div>
+    <div class="money-title">PROMESAS ACTIVAS</div>
+    <div class="meta">{{ dash.promises_broken }} rotas</div>
+  </a>
+</div>
+
+{% set money_due = dash.overdue_balance %}
+{% set money_pending = dash.open_balance - dash.overdue_balance %}
+{% set money_paid = dash.payments_mtd %}
+{% set money_max = [money_due, money_pending, money_paid, 1]|max %}
+{% set aging_amounts = dash.aging|map(attribute='amount')|list %}
+{% set aging_max = (aging_amounts + [1])|max %}
+{% set trend_amounts = dash.payments_trend|map(attribute='amount')|list %}
+{% set tmax = (trend_amounts + [1])|max %}
+
+<div class="chart-grid dash-pane-grid">
+  <section class="chart-card dash-pane-card">
+    <h2 class="chart-title">Dinero en juego</h2>
+    <div class="hbar-list">
+      <div class="hbar-row">
+        <span class="hbar-label">Vencido</span>
+        <div class="hbar-track"><span class="hbar-fill tone-risk" style="width:{{ ((money_due / money_max) * 100)|round(1) if money_due > 0 else 0 }}%"></span></div>
+        <span class="hbar-val mono warn">${{ money_due|money }}</span>
+      </div>
+      <div class="hbar-row">
+        <span class="hbar-label">Por vencer</span>
+        <div class="hbar-track"><span class="hbar-fill tone-money" style="width:{{ ((money_pending / money_max) * 100)|round(1) if money_pending > 0 else 0 }}%"></span></div>
+        <span class="hbar-val mono">${{ money_pending|money }}</span>
+      </div>
+      <div class="hbar-row">
+        <span class="hbar-label">Recaudado mes</span>
+        <div class="hbar-track"><span class="hbar-fill tone-0" style="width:{{ ((money_paid / money_max) * 100)|round(1) if money_paid > 0 else 0 }}%"></span></div>
+        <span class="hbar-val mono">${{ money_paid|money }}</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="chart-card dash-pane-card">
+    <h2 class="chart-title">Aging</h2>
+    <div class="aging-grid">
+      {% for a in dash.aging %}
+      <a class="aging-card {% if a.amount > 0 %}has-debt{% endif %}" href="{{ a.href }}">
+        <div class="aging-label">{{ a.label }}</div>
+        <div class="money-amt">${{ a.amount|money }}</div>
+        <div class="meta">{{ a.count }} cuota{{ 's' if a.count != 1 else '' }}</div>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="chart-card dash-pane-card">
+    <h2 class="chart-title">Recaudación (6 meses)</h2>
+    <div class="vbar-chart">
+      {% for p in dash.payments_trend %}
+      <div class="vbar-col" title="{{ p.label }} · {{ p.count }} pagos">
+        <div class="vbar-track">
+          <span class="vbar-fill" style="height:{{ ((p.amount / tmax) * 100)|round(1) if p.amount > 0 else 0 }}%"></span>
+        </div>
+        <span class="vbar-label">{{ p.label[-2:] }}</span>
+      </div>
+      {% else %}
+      <p class="meta">Sin pagos en el período.</p>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+
+<section class="dash-block">
+  <div class="block-head">
+    <h2 class="section-title" style="margin:0">Top vencidos</h2>
+    <a class="see-all" href="/morosidad">Morosidad →</a>
+  </div>
+  <div class="table-card">
+    <table class="data-table">
+      <thead>
+        <tr><th>Días</th><th>Póliza</th><th>Cliente</th><th>Cia</th><th>Saldo</th><th></th></tr>
+      </thead>
+      <tbody>
+      {% for r in dash.top_overdue[:12] %}
+        <tr>
+          <td class="mono"><b>{{ r.days_overdue }}</b></td>
+          <td class="cli-id"><a href="/polizas/{{ r.policy_id }}">{{ r.policy_number }}</a></td>
+          <td class="cli-name">{{ r.client_name }}</td>
+          <td>{{ r.carrier_name }}</td>
+          <td class="mono">${{ r.balance|money }}</td>
+          <td class="cli-action"><a class="open-link" href="/cobranza/pagos/nuevo?installment_id={{ r.installment_id }}">Cobrar</a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="empty-row">Sin vencidos.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

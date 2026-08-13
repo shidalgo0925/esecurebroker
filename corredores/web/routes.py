@@ -169,6 +169,77 @@ POLIZA_STEPS = [
 ]
 
 
+def _resolve_back(request: Request, active: str, extra: dict) -> tuple[str | None, str]:
+    """Botón de retorno global: override explícito o jerarquía por ruta/activo."""
+    if "back_href" in extra:
+        href = extra.get("back_href")
+        if not href:
+            return None, ""
+        return str(href), str(extra.get("back_label") or "← Volver")
+
+    path = (request.url.path or "/").rstrip("/") or "/"
+
+    # Sub-rutas con padre claro
+    if path.startswith("/cartera/") and path != "/cartera":
+        return "/cartera", "← Dashboard"
+    if "/beneficios/" in path:
+        # /aseguradoras/{id}/beneficios/{plan_id}
+        parts = [p for p in path.split("/") if p]
+        if len(parts) >= 4 and parts[0] == "aseguradoras" and parts[2] == "beneficios":
+            return f"/aseguradoras/{parts[1]}/beneficios", "← Beneficios"
+    if path.endswith("/beneficios"):
+        return "/aseguradoras", "← Aseguradoras"
+    if path.startswith("/polizas/") and path not in {"/polizas/nueva"}:
+        return "/polizas", "← Pólizas"
+    if path.startswith("/clientes/") and path not in {"/clientes/nuevo"}:
+        return "/clientes", "← Clientes"
+    if path.startswith("/oportunidades/"):
+        return "/oportunidades", "← CRM"
+    if path.startswith("/productores/"):
+        return "/productores", "← Productores"
+    if path.startswith("/importaciones/"):
+        return "/importaciones", "← Importaciones"
+    if path.startswith("/configuracion/"):
+        return "/configuracion", "← Configuración"
+    if path.startswith("/cobranza/"):
+        return "/cobranza", "← Cobranza"
+    if path.startswith("/captura/"):
+        return "/hoy", "← Hoy"
+    if path.startswith("/reportes/") and "/imprimir" in path:
+        return "/reportes?vista=descargas", "← Reportes"
+    if path.startswith("/reportes"):
+        return "/hoy", "← Hoy"
+
+    by_active = {
+        # Incluso Hoy lleva retorno (pedido: todas las pantallas).
+        "hoy": ("/cartera", "← Dashboard"),
+        "radar": ("/hoy", "← Hoy"),
+        "cartera": ("/hoy", "← Hoy"),
+        "clientes": ("/hoy", "← Hoy"),
+        "polizas": ("/hoy", "← Hoy"),
+        "cobranza": ("/hoy", "← Hoy"),
+        "morosidad": ("/cobranza", "← Cobranza"),
+        "renovaciones": ("/hoy", "← Hoy"),
+        "reclamos": ("/hoy", "← Hoy"),
+        "oportunidades": ("/hoy", "← Hoy"),
+        "cotizador": ("/hoy", "← Hoy"),
+        "referidos": ("/hoy", "← Hoy"),
+        "aseguradoras": ("/hoy", "← Hoy"),
+        "ramos": ("/aseguradoras", "← Aseguradoras"),
+        "productores": ("/hoy", "← Hoy"),
+        "comisiones": ("/hoy", "← Hoy"),
+        "importaciones": ("/hoy", "← Hoy"),
+        "documentos": ("/hoy", "← Hoy"),
+        "oportunidades_ia": ("/hoy", "← Hoy"),
+        "reportes": ("/hoy", "← Hoy"),
+        "configuracion": ("/hoy", "← Hoy"),
+        "mantenimiento": ("/hoy", "← Hoy"),
+        "ayuda": ("/hoy", "← Hoy"),
+    }
+    href, label = by_active.get(active, ("/hoy", "← Hoy"))
+    return href, label
+
+
 def _ctx(request: Request, active: str, **extra):
     actor = current_actor(request)
     collapsed = request.cookies.get("sidebar") == "collapsed"
@@ -200,6 +271,7 @@ def _ctx(request: Request, active: str, **extra):
     from corredores.config import settings as app_settings
 
     app_env = (app_settings.app_env or "dev").strip().lower()
+    back_href, back_label = _resolve_back(request, active, extra)
     base = {
         "request": request,
         "nav_groups": NAV_GROUPS,
@@ -215,8 +287,13 @@ def _ctx(request: Request, active: str, **extra):
         "can_switch_org": can_switch_org,
         "app_env": app_env,
         "is_dev_env": app_env in {"dev", "test", "local"},
+        "back_href": back_href,
+        "back_label": back_label,
     }
     base.update(extra)
+    # Re-aplicar resolución si el caller pasó override en extra (ya contemplado)
+    if "back_href" in extra:
+        base["back_href"], base["back_label"] = _resolve_back(request, active, extra)
     return base
 
 
@@ -1026,6 +1103,78 @@ def cartera(request: Request, session: Session = Depends(get_session)):
             org_name=org.name,
             dash=dash,
             charts_json=json.dumps(dash.charts),
+            pane="resumen",
+        ),
+    )
+
+
+@router.get("/cartera/cobros", response_class=HTMLResponse)
+def cartera_cobros(request: Request, session: Session = Depends(get_session)):
+    """Dashboard · Cobros — recaudación / aging / vencidos (operativo)."""
+    org = resolve_org(session)
+    dash = build_portfolio_dashboard(session, org.id)
+    return templates.TemplateResponse(
+        request,
+        "cartera_cobros.html",
+        _ctx(request, "cartera", org_name=org.name, dash=dash, pane="cobros"),
+    )
+
+
+@router.get("/cartera/produccion", response_class=HTMLResponse)
+def cartera_produccion(request: Request, session: Session = Depends(get_session)):
+    """Dashboard · Producción — prima / cia / ramo (≠ incentivos ADR-009)."""
+    org = resolve_org(session)
+    dash = build_portfolio_dashboard(session, org.id)
+    return templates.TemplateResponse(
+        request,
+        "cartera_produccion.html",
+        _ctx(request, "cartera", org_name=org.name, dash=dash, pane="produccion"),
+    )
+
+
+@router.get("/cartera/metas", response_class=HTMLResponse)
+def cartera_metas(request: Request, session: Session = Depends(get_session)):
+    """Dashboard · Metas — ADR-009 Carrier Incentive Plans (beneficios cia)."""
+    from decimal import Decimal
+
+    from corredores.services.carrier_incentives import list_org_plans_with_progress
+
+    org = resolve_org(session)
+    rows = list_org_plans_with_progress(session, org.id)
+    confirmed = Decimal("0")
+    pending = Decimal("0")
+    benefit = Decimal("0")
+    active_n = 0
+    for row in rows:
+        plan = row["plan"]
+        if plan.status == "ACTIVE":
+            active_n += 1
+        g = row.get("progress")
+        if g is None:
+            continue
+        confirmed += g.confirmed_amount or Decimal("0")
+        pending += g.pending_amount or Decimal("0")
+        if g.benefit_stage == "EARNED":
+            benefit += g.earned_benefit or Decimal("0")
+        else:
+            benefit += g.estimated_benefit or Decimal("0")
+    summary = {
+        "plans_total": len(rows),
+        "plans_active": active_n,
+        "confirmed_total": confirmed,
+        "pending_total": pending,
+        "benefit_total": benefit,
+    }
+    return templates.TemplateResponse(
+        request,
+        "cartera_metas.html",
+        _ctx(
+            request,
+            "cartera",
+            org_name=org.name,
+            rows=rows,
+            summary=summary,
+            pane="metas",
         ),
     )
 
@@ -3939,10 +4088,43 @@ def oportunidades_ia(request: Request):
 
 
 @router.get("/reportes", response_class=HTMLResponse)
-def reportes(request: Request, session: Session = Depends(get_session)):
+def reportes(
+    request: Request,
+    vista: str = Query(default="cobros"),
+    session: Session = Depends(get_session),
+):
+    from decimal import Decimal
+
+    from corredores.services.carrier_incentives import list_org_plans_with_progress
+
     org = resolve_org(session)
     summary = build_report_summary(session, org.id)
     preview = report_preview_rows(session, org.id)
+    vista_n = (vista or "cobros").strip().lower()
+    if vista_n not in {"cobros", "produccion", "metas", "descargas"}:
+        vista_n = "cobros"
+
+    metas_rows = list_org_plans_with_progress(session, org.id) if vista_n == "metas" else []
+    confirmed = Decimal("0")
+    benefit = Decimal("0")
+    active_n = 0
+    for row in metas_rows:
+        if row["plan"].status == "ACTIVE":
+            active_n += 1
+        g = row.get("progress")
+        if g is None:
+            continue
+        confirmed += g.confirmed_amount or Decimal("0")
+        if g.benefit_stage == "EARNED":
+            benefit += g.earned_benefit or Decimal("0")
+        else:
+            benefit += g.estimated_benefit or Decimal("0")
+    metas = {
+        "plans_total": len(metas_rows),
+        "plans_active": active_n,
+        "confirmed_total": confirmed,
+        "benefit_total": benefit,
+    }
     return templates.TemplateResponse(
         request,
         "reportes.html",
@@ -3953,8 +4135,103 @@ def reportes(request: Request, session: Session = Depends(get_session)):
             summary=summary,
             preview=preview,
             today=date.today(),
+            vista=vista_n,
+            metas=metas,
+            metas_rows=metas_rows,
+            back_href="/hoy",
+            back_label="← Hoy",
         ),
     )
+
+
+def _reportes_imprimir_response(request: Request, session: Session, key: str):
+    """PDF/print genérico con identidad de la correduría."""
+    from datetime import datetime
+
+    from corredores.services.org_identity import get_identity
+    from corredores.services.reports import PRINT_REPORT_KEYS, build_print_report
+
+    org = resolve_org(session)
+    key_n = (key or "").strip().lower()
+    if key_n not in PRINT_REPORT_KEYS:
+        raise HTTPException(404, "reporte no encontrado")
+    try:
+        report = build_print_report(session, org.id, key_n)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    identity = get_identity(session, org.id)
+    return templates.TemplateResponse(
+        request,
+        "print_reporte.html",
+        {
+            "request": request,
+            "org_name": org.name,
+            "identity": identity,
+            "report": report,
+            "as_of": date.today().isoformat(),
+            "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        },
+    )
+
+
+@router.get("/reportes/cartera/imprimir", response_class=HTMLResponse)
+def reportes_cartera_imprimir(request: Request, session: Session = Depends(get_session)):
+    return _reportes_imprimir_response(request, session, "cartera")
+
+
+@router.get("/reportes/cobranza/imprimir", response_class=HTMLResponse)
+def reportes_cobranza_imprimir(request: Request, session: Session = Depends(get_session)):
+    return _reportes_imprimir_response(request, session, "cobranza")
+
+
+@router.get("/reportes/morosidad/imprimir", response_class=HTMLResponse)
+def reportes_morosidad_imprimir(request: Request, session: Session = Depends(get_session)):
+    return _reportes_imprimir_response(request, session, "morosidad")
+
+
+@router.get("/reportes/renovaciones/imprimir", response_class=HTMLResponse)
+def reportes_renovaciones_imprimir(request: Request, session: Session = Depends(get_session)):
+    return _reportes_imprimir_response(request, session, "renovaciones")
+
+
+@router.get("/reportes/pagos/imprimir", response_class=HTMLResponse)
+def reportes_pagos_imprimir(request: Request, session: Session = Depends(get_session)):
+    return _reportes_imprimir_response(request, session, "pagos")
+
+
+@router.get("/reportes/comisiones/imprimir", response_class=HTMLResponse)
+def reportes_comisiones_imprimir(request: Request, session: Session = Depends(get_session)):
+    return _reportes_imprimir_response(request, session, "comisiones")
+
+
+@router.get("/reportes/cotizaciones/imprimir", response_class=HTMLResponse)
+def reportes_cotizaciones_imprimir(request: Request, session: Session = Depends(get_session)):
+    return _reportes_imprimir_response(request, session, "cotizaciones")
+
+
+@router.get("/reportes/clientes/imprimir", response_class=HTMLResponse)
+def reportes_clientes_imprimir(request: Request, session: Session = Depends(get_session)):
+    return _reportes_imprimir_response(request, session, "clientes")
+
+
+@router.get("/reportes/reclamos/imprimir", response_class=HTMLResponse)
+def reportes_reclamos_imprimir(request: Request, session: Session = Depends(get_session)):
+    return _reportes_imprimir_response(request, session, "reclamos")
+
+
+@router.get("/reportes/oportunidades/imprimir", response_class=HTMLResponse)
+def reportes_oportunidades_imprimir(request: Request, session: Session = Depends(get_session)):
+    return _reportes_imprimir_response(request, session, "oportunidades")
+
+
+@router.get("/reportes/metas/imprimir", response_class=HTMLResponse)
+def reportes_metas_imprimir(request: Request, session: Session = Depends(get_session)):
+    return _reportes_imprimir_response(request, session, "metas")
+
+
+@router.get("/reportes/referidos/imprimir", response_class=HTMLResponse)
+def reportes_referidos_imprimir(request: Request, session: Session = Depends(get_session)):
+    return _reportes_imprimir_response(request, session, "referidos")
 
 
 @router.get("/reportes/cartera.csv")
@@ -4042,6 +4319,7 @@ def reportes_morosidad_csv(
 @router.get("/configuracion", response_class=HTMLResponse)
 def configuracion(request: Request, session: Session = Depends(get_session)):
     from corredores.services.mail import mail_status
+    from corredores.services.org_identity import get_identity
     from corredores.services.runtime_settings import runtime
     from corredores.services.statement_delivery import recent_deliveries
 
@@ -4076,6 +4354,7 @@ def configuracion(request: Request, session: Session = Depends(get_session)):
             request,
             "configuracion",
             org_name=org.name,
+            identity=get_identity(session, org.id),
             mail=mail,
             deliveries=deliveries,
             party_names=party_names,
@@ -4091,6 +4370,113 @@ def configuracion(request: Request, session: Session = Depends(get_session)):
     )
 
 
+@router.post("/configuracion/identidad")
+def configuracion_identidad_post(
+    request: Request,
+    name: str = Form(...),
+    legal_name: str = Form(""),
+    trade_name: str = Form(""),
+    tax_id: str = Form(""),
+    phone: str = Form(""),
+    email: str = Form(""),
+    website: str = Form(""),
+    address: str = Form(""),
+    slogan: str = Form(""),
+    document_footer: str = Form(""),
+    session: Session = Depends(get_session),
+):
+    from urllib.parse import quote
+
+    from corredores.services.org_identity import update_identity
+
+    org = resolve_org(session)
+    try:
+        update_identity(
+            session,
+            org.id,
+            name=name,
+            legal_name=legal_name,
+            trade_name=trade_name,
+            tax_id=tax_id,
+            phone=phone,
+            email=email,
+            website=website,
+            address=address,
+            slogan=slogan,
+            document_footer=document_footer,
+        )
+        session.commit()
+    except ValueError as exc:
+        return RedirectResponse(
+            f"/configuracion?ok=identity_err&detail={quote(str(exc))}",
+            status_code=303,
+        )
+    return RedirectResponse("/configuracion?ok=identity_ok", status_code=303)
+
+
+@router.post("/configuracion/identidad/logo")
+async def configuracion_identidad_logo(
+    request: Request,
+    session: Session = Depends(get_session),
+):
+    from urllib.parse import quote
+
+    from corredores.services.org_identity import save_logo
+
+    org = resolve_org(session)
+    form = await request.form()
+    upload = form.get("logo")
+    if upload is None or not hasattr(upload, "read"):
+        return RedirectResponse(
+            "/configuracion?ok=identity_err&detail=selecciona+un+archivo",
+            status_code=303,
+        )
+    content = await upload.read()
+    filename = getattr(upload, "filename", None) or "logo.png"
+    try:
+        save_logo(session, org.id, filename=filename, content=content)
+        session.commit()
+    except ValueError as exc:
+        return RedirectResponse(
+            f"/configuracion?ok=identity_err&detail={quote(str(exc))}",
+            status_code=303,
+        )
+    return RedirectResponse("/configuracion?ok=logo_ok", status_code=303)
+
+
+@router.post("/configuracion/identidad/logo/eliminar")
+def configuracion_identidad_logo_clear(
+    request: Request, session: Session = Depends(get_session)
+):
+    from corredores.services.org_identity import clear_logo
+
+    org = resolve_org(session)
+    clear_logo(session, org.id)
+    session.commit()
+    return RedirectResponse("/configuracion?ok=logo_cleared", status_code=303)
+
+
+@router.get("/configuracion/identidad/logo")
+def configuracion_identidad_logo_get(
+    request: Request, session: Session = Depends(get_session)
+):
+    from corredores.services.org_identity import get_identity, logo_absolute_path
+
+    org = resolve_org(session)
+    identity = get_identity(session, org.id)
+    path = logo_absolute_path(identity) if identity else None
+    if path is None:
+        raise HTTPException(404, "sin logo")
+    media = {
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".webp": "image/webp",
+        ".svg": "image/svg+xml",
+    }.get(path.suffix.lower(), "application/octet-stream")
+    return FileResponse(path, media_type=media, filename=path.name)
+
+
 @router.post("/configuracion/estados-auto")
 def configuracion_estados_auto(
     request: Request,
@@ -4100,6 +4486,7 @@ def configuracion_estados_auto(
     from urllib.parse import quote
 
     from corredores.services.mail import mail_configured, mail_status
+    from corredores.services.org_identity import get_identity
     from corredores.services.runtime_settings import runtime
     from corredores.services.statement_delivery import recent_deliveries, run_auto_statement_send
 
@@ -4141,6 +4528,7 @@ def configuracion_estados_auto(
                 request,
                 "configuracion",
                 org_name=org.name,
+                identity=get_identity(session, org.id),
                 mail=mail_status(),
                 deliveries=deliveries,
                 party_names=party_names,

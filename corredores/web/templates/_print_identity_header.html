@@ -1,0 +1,28 @@
+{# Cabecera de documento PDF/print con identidad de la correduría #}
+<header class="print-header print-identity">
+  <div class="print-identity-brand">
+    {% if identity and identity.has_logo %}
+    <img class="print-logo" src="/configuracion/identidad/logo" alt="" />
+    {% endif %}
+    <div>
+      <div class="print-brand">{{ identity.display_name if identity else org_name }}</div>
+      {% if identity and identity.legal_name and identity.legal_name != identity.display_name %}
+      <div class="doc-sub">{{ identity.legal_name }}</div>
+      {% endif %}
+      {% if identity and identity.tax_id %}
+      <div class="doc-sub mono">RUC / ID · {{ identity.tax_id }}</div>
+      {% endif %}
+      {% if identity and identity.slogan %}
+      <div class="doc-sub">{{ identity.slogan }}</div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="print-meta">
+    <div>Generado <span class="mono">{{ generated_at }}</span></div>
+    {% if as_of %}<div>Corte <span class="mono">{{ as_of }}</span></div>{% endif %}
+    {% if identity and identity.phone %}<div>{{ identity.phone }}</div>{% endif %}
+    {% if identity and identity.email %}<div>{{ identity.email }}</div>{% endif %}
+    {% if identity and identity.website %}<div>{{ identity.website }}</div>{% endif %}
+    {% if identity and identity.address %}<div>{{ identity.address }}</div>{% endif %}
+  </div>
+</header>

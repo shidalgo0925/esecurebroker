@@ -4,7 +4,82 @@
 {% block content %}
 <section class="page-head">
   <h1 class="page-title">Configuración</h1>
-  <p class="page-sub">Equipo, correo, estados de cuenta e integraciones · <b>{{ org_name }}</b></p>
+  <p class="page-sub">Identidad, equipo, correo e integraciones · <b>{{ org_name }}</b></p>
+</section>
+
+{% if flash == 'identity_ok' %}
+<p class="flash-ok">Identidad de la empresa guardada.</p>
+{% elif flash == 'logo_ok' %}
+<p class="flash-ok">Logo actualizado.</p>
+{% elif flash == 'logo_cleared' %}
+<p class="flash-ok">Logo eliminado.</p>
+{% elif flash == 'identity_err' %}
+<p class="form-error">{{ flash_detail or 'No se pudo guardar la identidad' }}</p>
+{% endif %}
+
+{# Identidad de correduría — alimenta cabecera de reportes PDF #}
+<section class="poliza-panel catalog-editor" style="margin-bottom:1.25rem">
+  <h2 class="poliza-panel-title">Identidad de la empresa</h2>
+  <p class="meta">Nombre, datos de contacto y logo para documentos y reportes PDF.</p>
+
+  <div class="identity-layout" style="display:grid;grid-template-columns:7.5rem 1fr;gap:1.25rem;margin-top:1rem;align-items:start">
+    <div class="identity-logo-box">
+      {% if identity and identity.has_logo %}
+      <img src="/configuracion/identidad/logo?v={{ today }}" alt="Logo" class="identity-logo-preview" />
+      {% else %}
+      <div class="identity-logo-empty">Sin logo</div>
+      {% endif %}
+      <form method="post" action="/configuracion/identidad/logo" enctype="multipart/form-data" style="margin-top:0.55rem">
+        <label class="meta" style="display:block;margin-bottom:0.35rem">Subir logo (PNG/JPG/SVG)</label>
+        <input type="file" name="logo" accept=".png,.jpg,.jpeg,.webp,.svg,image/*" required />
+        <button class="btn-secondary" type="submit" style="margin-top:0.45rem;width:100%">Actualizar logo</button>
+      </form>
+      {% if identity and identity.has_logo %}
+      <form method="post" action="/configuracion/identidad/logo/eliminar" style="margin-top:0.35rem" onsubmit="return confirm('¿Quitar el logo?');">
+        <button class="btn-secondary" type="submit" style="width:100%">Quitar logo</button>
+      </form>
+      {% endif %}
+    </div>
+
+    <form method="post" action="/configuracion/identidad" class="catalog-form">
+      <div class="catalog-row" style="flex-wrap:wrap;gap:0.75rem">
+        <label class="catalog-field name">Nombre comercial
+          <input name="name" required maxlength="200" value="{{ identity.name if identity else org_name }}" />
+        </label>
+        <label class="catalog-field name">Razón social
+          <input name="legal_name" maxlength="200" value="{{ identity.legal_name or '' }}" />
+        </label>
+        <label class="catalog-field name">Nombre de fantasía
+          <input name="trade_name" maxlength="200" value="{{ identity.trade_name or '' }}" />
+        </label>
+        <label class="catalog-field code">RUC / ID fiscal
+          <input name="tax_id" maxlength="64" value="{{ identity.tax_id or '' }}" />
+        </label>
+        <label class="catalog-field code">Teléfono
+          <input name="phone" maxlength="40" value="{{ identity.phone or '' }}" />
+        </label>
+        <label class="catalog-field name">Email
+          <input name="email" type="email" maxlength="200" value="{{ identity.email or '' }}" />
+        </label>
+        <label class="catalog-field name">Sitio web
+          <input name="website" maxlength="200" value="{{ identity.website or '' }}" />
+        </label>
+        <label class="catalog-field name" style="flex:1 1 100%">Dirección
+          <input name="address" value="{{ identity.address or '' }}" />
+        </label>
+        <label class="catalog-field name" style="flex:1 1 100%">Eslogan
+          <input name="slogan" maxlength="240" value="{{ identity.slogan or '' }}" />
+        </label>
+        <label class="catalog-field name" style="flex:1 1 100%">Pie de documentos PDF
+          <input name="document_footer" maxlength="500" value="{{ identity.document_footer or '' }}" placeholder="Texto al pie de reportes impresos" />
+        </label>
+      </div>
+      <div class="wizard-actions" style="margin-top:0.85rem">
+        <button class="btn-primary" type="submit">Guardar identidad</button>
+        <a class="btn-secondary" href="/reportes/cartera/imprimir">Vista PDF cartera</a>
+      </div>
+    </form>
+  </div>
 </section>
 
 <section class="poliza-panel" style="margin-bottom:1.25rem">

@@ -1,0 +1,15 @@
+{# Pestañas del Dashboard (dossier): una sola barra — sin tarjetas de acceso debajo. #}
+<nav class="dash-tabs" aria-label="Secciones del dashboard">
+  <a class="dash-tab {% if pane == 'resumen' %}is-active{% endif %}" href="/cartera">
+    <span class="dash-tab-label">Resumen</span>
+  </a>
+  <a class="dash-tab {% if pane == 'cobros' %}is-active{% endif %}" href="/cartera/cobros">
+    <span class="dash-tab-label">Cobros</span>
+  </a>
+  <a class="dash-tab {% if pane == 'produccion' %}is-active{% endif %}" href="/cartera/produccion">
+    <span class="dash-tab-label">Producción</span>
+  </a>
+  <a class="dash-tab {% if pane == 'metas' %}is-active{% endif %}" href="/cartera/metas">
+    <span class="dash-tab-label">Metas</span>
+  </a>
+</nav>

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reporte de cartera · {{ identity.display_name if identity else org_name }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/print.css?v=identity1" />
+</head>
+<body class="print-doc">
+  <div class="print-toolbar">
+    <button type="button" class="btn-print" onclick="window.print()">Imprimir / PDF</button>
+    <a href="/reportes?vista=descargas">← Reportes</a>
+    <a href="/configuracion">Identidad</a>
+  </div>
+
+  {% include "_print_identity_header.html" %}
+
+  <h1 class="doc-title">Reporte de cartera</h1>
+  <p class="doc-sub">Inventario de pólizas · {{ rows|length }} registro{{ 's' if rows|length != 1 else '' }}.</p>
+
+  <div class="kpis">
+    <div class="kpi">
+      <div class="amt">{{ active_n }}</div>
+      <div class="lbl">Activas</div>
+    </div>
+    <div class="kpi">
+      <div class="amt">{{ rows|length }}</div>
+      <div class="lbl">Total pólizas</div>
+    </div>
+    <div class="kpi">
+      <div class="amt">${{ premium_total|money }}</div>
+      <div class="lbl">Prima (suma)</div>
+    </div>
+  </div>
+
+  <table class="print-table">
+    <thead>
+      <tr>
+        <th>Póliza</th>
+        <th>Estado</th>
+        <th>Cliente</th>
+        <th>Cia</th>
+        <th>Ramo</th>
+        <th>Vigencia</th>
+        <th>Prima</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td class="mono">{{ r.number }}</td>
+        <td>{{ r.status }}</td>
+        <td>{{ r.client }}</td>
+        <td>{{ r.carrier }}</td>
+        <td class="mono">{{ r.line }}</td>
+        <td class="mono">{{ r.effective }} → {{ r.expiration }}</td>
+        <td class="mono">{% if r.premium is not none %}${{ r.premium|money }}{% else %}—{% endif %}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="7">Sin pólizas en la cartera.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  {% if identity and identity.document_footer %}
+  <footer class="print-footer">{{ identity.document_footer }}</footer>
+  {% else %}
+  <footer class="print-footer">Documento generado por ESecureBroker · uso interno de la correduría.</footer>
+  {% endif %}
+
+  <script>
+    (function () {
+      var q = new URLSearchParams(window.location.search);
+      if (q.get("autoprint") === "1") {
+        window.addEventListener("load", function () { window.print(); });
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{# Pestañas Reportes: Cobros · Producción · Metas · Descargas #}
+<nav class="dash-tabs" aria-label="Secciones de reportes">
+  <a class="dash-tab {% if vista == 'cobros' %}is-active{% endif %}" href="/reportes?vista=cobros">
+    <span class="dash-tab-label">Cobros</span>
+  </a>
+  <a class="dash-tab {% if vista == 'produccion' %}is-active{% endif %}" href="/reportes?vista=produccion">
+    <span class="dash-tab-label">Producción</span>
+  </a>
+  <a class="dash-tab {% if vista == 'metas' %}is-active{% endif %}" href="/reportes?vista=metas">
+    <span class="dash-tab-label">Metas</span>
+  </a>
+  <a class="dash-tab {% if vista == 'descargas' %}is-active{% endif %}" href="/reportes?vista=descargas">
+    <span class="dash-tab-label">Descargas</span>
+  </a>
+</nav>

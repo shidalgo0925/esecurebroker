@@ -306,13 +306,71 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 1rem;
   padding: 0.75rem 1.35rem;
   border-bottom: 1px solid var(--rule);
   background: rgba(251, 250, 246, 0.92);
   backdrop-filter: blur(6px);
 }
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.identity-logo-preview {
+  width: 7.5rem;
+  height: 7.5rem;
+  object-fit: contain;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: #fff;
+  display: block;
+}
+.identity-logo-empty {
+  width: 7.5rem;
+  height: 7.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--line);
+  border-radius: 2px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  background: #faf9f6;
+}
+.identity-logo-box input[type="file"] {
+  display: block;
+  width: 100%;
+  font-size: 0.75rem;
+}
+@media (max-width: 800px) {
+  .identity-layout { grid-template-columns: 1fr !important; }
+}
+.topbar-back {
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  font-weight: 560;
+  color: var(--ink) !important;
+  text-decoration: none !important;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  padding: 0.15rem 0;
+  border-bottom: 1px solid transparent;
+  transition: color .15s ease, border-color .15s ease;
+}
+.topbar-back:hover {
+  color: var(--brass-deep) !important;
+  border-bottom-color: rgba(140, 101, 30, 0.45);
+}
+.topbar-sep {
+  color: var(--line);
+  font-size: 0.85rem;
+  line-height: 1;
+}
 .topbar-title { font-size: 0.82rem; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
-.topbar-meta { font-size: 0.8rem; color: var(--muted); }
+.topbar-meta { font-size: 0.8rem; color: var(--muted); flex-shrink: 0; }
 .main { padding: 22px 28px 40px; max-width: none; }
 
 /* —— Page chrome (clientes-v2) —— */
@@ -1126,6 +1184,185 @@ td.warn { color:#9b2c2c; font-weight:600; }
   margin-top: 0.35rem;
 }
 @media (max-width: 960px) { .dash-split { grid-template-columns: 1fr; } }
+
+/* —— Dashboard tabs (dossier / correduría) —— */
+.dash-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0;
+  margin: 0.15rem 0 1.35rem;
+  padding: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+}
+.dash-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 6.5rem;
+  padding: 0.7rem 1.15rem 0.85rem;
+  text-decoration: none !important;
+  color: var(--muted) !important;
+  border: 0;
+  background: transparent;
+  transition: color .18s ease;
+}
+.dash-tab::after {
+  content: "";
+  position: absolute;
+  left: 0.9rem;
+  right: 0.9rem;
+  bottom: -1px;
+  height: 2px;
+  background: transparent;
+  transition: background .18s ease;
+}
+.dash-tab:hover {
+  color: var(--ink) !important;
+}
+.dash-tab:hover::after {
+  background: rgba(140, 101, 30, 0.35);
+}
+.dash-tab.is-active {
+  color: var(--ink) !important;
+}
+.dash-tab.is-active::after {
+  background: linear-gradient(90deg, var(--brass-deep), var(--brass));
+}
+.dash-tab-label {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 560;
+  letter-spacing: 0.01em;
+  line-height: 1.1;
+}
+.dash-tabs-lede {
+  margin: -0.35rem 0 1.1rem;
+  max-width: 36rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+.dash-pane-kpis { margin-bottom: 1rem; }
+.dash-pane-grid { margin-top: 0.15rem; }
+.dash-pane-card {
+  border-radius: 2px;
+  border-color: var(--line);
+  box-shadow: none;
+}
+.dash-pane-empty {
+  padding: 1.5rem 1.15rem;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: linear-gradient(180deg, #fff 0%, #f7f5ef 100%);
+  color: var(--muted);
+}
+.metas-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+@media (max-width: 900px) {
+  .dash-tab { min-width: 0; flex: 1 1 40%; }
+  .metas-grid { grid-template-columns: 1fr; }
+}
+.meta-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 1.1rem 1.15rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  box-shadow: 0 1px 0 rgba(20, 27, 48, 0.03);
+}
+.meta-card.is-active {
+  border-color: rgba(140, 101, 30, 0.35);
+  background:
+    linear-gradient(180deg, #fffef9 0%, #fff 42%);
+}
+.meta-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+.meta-card-carrier {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brass-deep);
+}
+.meta-card-title {
+  margin: 0.2rem 0 0;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 560;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.meta-card-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.28rem 0.5rem;
+  border-radius: 2px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.meta-card-sub {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.meta-card-nums {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin: 0.15rem 0 0.2rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--line);
+}
+.meta-card-nums .money-amt { font-size: 1.02rem; color: var(--ink); }
+.meta-card-nums .meta {
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 0.15rem;
+}
+.meta-track {
+  height: 3px;
+  border-radius: 0;
+  background: #eceae3;
+}
+.meta-track .hbar-fill {
+  border-radius: 0;
+  min-height: 3px;
+}
+.meta-card-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+.meta-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 0.15rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--line);
+}
+
 .radar-card a, a.radar-card {
   text-decoration: none;
   color: inherit;

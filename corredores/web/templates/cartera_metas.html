@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Metas · Dashboard · ESecureBroker{% endblock %}
+{% block topbar %}Cartera · Dashboard · Metas{% endblock %}
+{% block content %}
+<section class="page-head row-between">
+  <div>
+    <h1 class="page-title">Metas</h1>
+    <p class="page-sub">
+      Acuerdos / beneficios con aseguradoras · <b>{{ org_name }}</b>
+      {# ADR-009: dominio Carrier Incentive Plans — ≠ comisión ordinaria #}
+    </p>
+  </div>
+  <div class="stack-actions">
+    <a class="btn-secondary" href="/reportes/metas/imprimir" target="_blank">PDF</a>
+    <a class="btn-secondary" href="/aseguradoras">Aseguradoras</a>
+  </div>
+</section>
+
+{% include "_cartera_dash_nav.html" %}
+
+<p class="dash-tabs-lede">
+  Beneficios por producción o cobranza confirmada con la aseguradora.
+  El estimado no se convierte solo en pagado.
+</p>
+
+{# Resumen org-wide de planes ADR-009 #}
+<div class="report-tiles cartera-kpis dash-pane-kpis">
+  <div class="report-tile">
+    <div class="money-amt">{{ summary.plans_total }}</div>
+    <div class="money-title">PLANES</div>
+    <div class="meta">{{ summary.plans_active }} activos</div>
+  </div>
+  <div class="report-tile tone-money">
+    <div class="money-amt">${{ summary.confirmed_total|money }}</div>
+    <div class="money-title">CONFIRMADO</div>
+    <div class="meta">solo txns CONFIRMED</div>
+  </div>
+  <div class="report-tile">
+    <div class="money-amt">${{ summary.pending_total|money }}</div>
+    <div class="money-title">PEND. CONF.</div>
+    <div class="meta">no suma oficial</div>
+  </div>
+  <div class="report-tile">
+    <div class="money-amt">${{ summary.benefit_total|money }}</div>
+    <div class="money-title">BENEFICIO</div>
+    <div class="meta">estimado / devengado</div>
+  </div>
+</div>
+
+<section class="dash-block">
+  <div class="block-head">
+    <h2 class="section-title" style="margin:0">Planes de incentivo por compañía</h2>
+    <a class="see-all" href="/aseguradoras">Gestionar en Aseguradoras →</a>
+  </div>
+
+  {% if rows %}
+  <div class="metas-grid">
+    {% for row in rows %}
+      {% set p = row.plan %}
+      {% set g = row.progress %}
+      <article class="meta-card dash-pane-card {% if p.status == 'ACTIVE' %}is-active{% endif %}">
+        <header class="meta-card-head">
+          <div>
+            <div class="meta-card-carrier">{{ row.carrier_name }}</div>
+            <h3 class="meta-card-title">{{ p.name }}</h3>
+          </div>
+          <span class="meta-card-badge">{{ p.status }}</span>
+        </header>
+        <p class="meta-card-sub mono">
+          {{ p.metric_type }} · {{ p.period_start }} → {{ p.period_end }}
+        </p>
+        {% if g %}
+        <div class="meta-card-progress">
+          <div class="meta-card-nums">
+            <div>
+              <div class="meta">Confirmado</div>
+              <div class="money-amt">${{ '%.2f'|format(g.confirmed_amount) }}</div>
+            </div>
+            <div>
+              <div class="meta">Meta</div>
+              <div class="money-amt">{% if g.target_amount is not none %}${{ '%.2f'|format(g.target_amount) }}{% else %}—{% endif %}</div>
+            </div>
+            <div>
+              <div class="meta">Beneficio</div>
+              <div class="money-amt">
+                {% if g.benefit_stage == 'EARNED' %}${{ '%.2f'|format(g.earned_benefit) }}
+                {% else %}${{ '%.2f'|format(g.estimated_benefit) }} <span class="meta">est.</span>{% endif %}
+              </div>
+            </div>
+          </div>
+          {% set pct = g.progress_pct if g.progress_pct is not none else 0 %}
+          {% set pct_cap = 100 if pct > 100 else pct %}
+          <div class="hbar-track meta-track" aria-label="{{ pct }}%">
+            <span class="hbar-fill {% if pct >= 100 %}tone-0{% else %}tone-brass{% endif %}" style="width:{{ pct_cap }}%"></span>
+          </div>
+          <div class="meta-card-foot">
+            <span>{% if g.progress_pct is not none %}{{ g.progress_pct }}%{% else %}—{% endif %}</span>
+            <span>{% if g.remaining is not none %}Faltan ${{ '%.2f'|format(g.remaining) }}{% else %}Meta alcanzada o sin tramo{% endif %}</span>
+          </div>
+        </div>
+        {% else %}
+        <p class="meta">Sin progreso calculable.</p>
+        {% endif %}
+        <div class="meta-card-actions">
+          <a class="open-link" href="{{ row.href }}">Abrir plan</a>
+          <a class="open-link" href="{{ row.list_href }}">Todos de esta cia</a>
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-useful dash-pane-empty">
+    <p>Aún no hay planes de incentivo.</p>
+    <p class="meta">Créalos en <a href="/aseguradoras">Aseguradoras → Beneficios</a> (por compañía).</p>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

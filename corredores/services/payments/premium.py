@@ -1,9 +1,12 @@
-"""Payment recording — Domain Truth for MONEY."""
+"""Payment recording — Domain Truth for MONEY (cobranza de primas).
+
+Distinct from SaaS PaymentService in this package.
+"""
 
 from __future__ import annotations
 
 import json
-from datetime import date, datetime, timezone
+from datetime import date
 from decimal import Decimal
 
 from sqlalchemy.orm import Session
