@@ -15,7 +15,7 @@
   <h2 class="poliza-panel-title">Detalle</h2>
   <p class="meta">
     Ref: <span class="mono">{{ row.payment_reference or '—' }}</span> ·
-    Monto: <span class="mono">{% if row.amount_usd is not none %}${{ row.amount_usd }}{% else %}—{% endif %}</span> ·
+    Monto: <span class="mono">{% if row.amount_usd is not none %}${{ row.amount_usd|money }}{% else %}—{% endif %}</span> ·
     Reportó: <span class="mono">{{ row.reported_by or '—' }}</span>
   </p>
   <p class="meta">

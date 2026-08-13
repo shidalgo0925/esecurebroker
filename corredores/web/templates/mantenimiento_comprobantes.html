@@ -39,7 +39,7 @@
         <td>{{ r.method }}</td>
         <td class="mono">{{ r.plan_code }}</td>
         <td class="mono">{{ r.payment_reference or '—' }}</td>
-        <td class="mono">{% if r.amount_usd is not none %}${{ r.amount_usd }}{% else %}—{% endif %}</td>
+        <td class="mono">{% if r.amount_usd is not none %}${{ r.amount_usd|money }}{% else %}—{% endif %}</td>
         <td>{{ r.verification_status }}</td>
         <td class="cli-action"><a class="open-link" href="/mantenimiento/comprobantes/{{ r.id }}">Ver</a></td>
       </tr>
