@@ -58,6 +58,9 @@ def _require_incentives(session: Session, request: Request, manage: bool = False
     access = current_access_context(session, request)
     if access is None:
         return
+    # Platform admin acting inside a tenant org (support / demos).
+    if access.has_permission("platform:admin"):
+        return
     code = "incentives:manage" if manage else "incentives:read"
     try:
         require_permission(access, code)

@@ -186,6 +186,7 @@ SYSTEM_ROLE_PERMISSIONS: dict[str, tuple[str, ...]] = {
         "activities:create",
         "activities:update",
         "reports:read",
+        "incentives:read",
         "settings:read",
     ),
     COLLECTIONS: _READ_CORE
@@ -200,6 +201,7 @@ SYSTEM_ROLE_PERMISSIONS: dict[str, tuple[str, ...]] = {
         "activities:read",
         "activities:create",
         "reports:read",
+        "incentives:read",
     ),
     PRODUCER: _READ_CORE
     + _WRITE_CORE
@@ -215,6 +217,7 @@ SYSTEM_ROLE_PERMISSIONS: dict[str, tuple[str, ...]] = {
         "activities:create",
         "activities:update",
         "reports:read",
+        "incentives:read",
     ),
     PLATFORM: _READ_CORE
     + (
@@ -223,6 +226,8 @@ SYSTEM_ROLE_PERMISSIONS: dict[str, tuple[str, ...]] = {
         "reports:read",
         "members:read",
         "roles:read",
+        "incentives:read",
+        "incentives:manage",
         "settings:read",
         "settings:manage",
     ),
