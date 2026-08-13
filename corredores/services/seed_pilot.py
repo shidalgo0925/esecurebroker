@@ -296,6 +296,11 @@ def seed_pilot(session: Session, *, org_name: str = "ESecureBroker") -> dict:
         split_created = 0
 
     session.flush()
+    # ADR-011 F1 — default CRM catalogs (idempotent)
+    from corredores.services.crm_catalog_seed import ensure_default_crm_catalogs
+
+    crm_catalog = ensure_default_crm_catalogs(session, org.id)
+
     return {
         "organization_id": org.id,
         "lines_created": lines_n,
@@ -306,4 +311,5 @@ def seed_pilot(session: Session, *, org_name: str = "ESecureBroker") -> dict:
         "broker_plan_reference": SPLIT_REF,
         "executive_plan_reference": SPLIT_REF_EXEC,
         "referral_plan_reference": SPLIT_REF,
+        "crm_catalog": crm_catalog,
     }

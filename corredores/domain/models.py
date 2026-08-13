@@ -14,6 +14,7 @@ from typing import Optional
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Date,
     DateTime,
     ForeignKey,
@@ -900,6 +901,189 @@ class CarrierIncentiveEvidence(Base, TimestampMixin):
     original_filename: Mapped[Optional[str]] = mapped_column(String(255))
     notes: Mapped[Optional[str]] = mapped_column(Text)
     uploaded_by: Mapped[Optional[str]] = mapped_column(String(128))
+
+
+# =============================================================================
+# ADR-011 — ESB CRM (new-business). Distinct from RenewalOpportunity / Interaction.
+# Tables prefixed crm_* to avoid collisions with renewal “oportunidades”.
+# =============================================================================
+
+
+class CrmLeadSource(Base, TimestampMixin):
+    """Origen de prospecto — catálogo por Organization (ADR-011)."""
+
+    __tablename__ = "crm_lead_sources"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "code", name="uq_crm_lead_source_org_code"),
+        Index("ix_crm_lead_sources_org", "organization_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    code: Mapped[str] = mapped_column(String(40), nullable=False)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=100)
+
+
+class CrmLostReason(Base, TimestampMixin):
+    """Motivo de oportunidad perdida — catálogo por Organization (ADR-011)."""
+
+    __tablename__ = "crm_lost_reasons"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "code", name="uq_crm_lost_reason_org_code"),
+        Index("ix_crm_lost_reasons_org", "organization_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    code: Mapped[str] = mapped_column(String(40), nullable=False)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=100)
+
+
+class CrmPipelineStage(Base, TimestampMixin):
+    """Etapa de pipeline estándar ESB (P0); futuro: pipelines personalizados."""
+
+    __tablename__ = "crm_pipeline_stages"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "code", name="uq_crm_pipeline_stage_org_code"),
+        UniqueConstraint("organization_id", "sequence", name="uq_crm_pipeline_stage_org_seq"),
+        Index("ix_crm_pipeline_stages_org", "organization_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    code: Mapped[str] = mapped_column(String(40), nullable=False)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    sequence: Mapped[int] = mapped_column(Integer, nullable=False)
+    is_won: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_lost: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_kanban: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+
+class CrmProspect(Base, TimestampMixin):
+    """Interesado comercial — NO es Customer (Party+CLIENT). ADR-011 invariante #1."""
+
+    __tablename__ = "crm_prospects"
+    __table_args__ = (
+        Index("ix_crm_prospects_org_status", "organization_id", "status"),
+        Index("ix_crm_prospects_org_email", "organization_id", "email"),
+        Index("ix_crm_prospects_org_phone", "organization_id", "phone"),
+        Index("ix_crm_prospects_org_mobile", "organization_id", "mobile"),
+        Index("ix_crm_prospects_org_idnum", "organization_id", "identification_number"),
+        Index("ix_crm_prospects_assigned_producer", "organization_id", "assigned_producer_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    prospect_type: Mapped[str] = mapped_column(String(32), nullable=False, default="PERSON")
+    first_name: Mapped[Optional[str]] = mapped_column(String(120))
+    last_name: Mapped[Optional[str]] = mapped_column(String(120))
+    company_name: Mapped[Optional[str]] = mapped_column(String(200))
+    identification_type: Mapped[Optional[str]] = mapped_column(String(40))
+    identification_number: Mapped[Optional[str]] = mapped_column(String(64))
+    phone: Mapped[Optional[str]] = mapped_column(String(40))
+    mobile: Mapped[Optional[str]] = mapped_column(String(40))
+    email: Mapped[Optional[str]] = mapped_column(String(200))
+    source_id: Mapped[Optional[str]] = mapped_column(ForeignKey("crm_lead_sources.id"), index=True)
+    referral_source_id: Mapped[Optional[str]] = mapped_column(ForeignKey("parties.id"), index=True)
+    assigned_producer_id: Mapped[Optional[str]] = mapped_column(
+        ForeignKey("producer_profiles.id"), index=True
+    )
+    assigned_executive_id: Mapped[Optional[str]] = mapped_column(String(128))  # subject_id
+    # Office entity not yet in ESB — nullable soft ref (gap documented ADR-011 F1)
+    office_id: Mapped[Optional[str]] = mapped_column(String(36), index=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="OPEN")
+    notes: Mapped[Optional[str]] = mapped_column(Text)
+    created_by: Mapped[Optional[str]] = mapped_column(String(128))
+    # Set when converted/linked to Customer (Party); Prospect row is retained
+    converted_customer_id: Mapped[Optional[str]] = mapped_column(ForeignKey("parties.id"), index=True)
+
+
+class CrmOpportunity(Base, TimestampMixin):
+    """Oportunidad comercial new-business. ≠ RenewalOpportunity. ≠ Quotation. ≠ Policy.
+
+    May attach to Prospect and/or existing Customer (Party). At least one required (DB check).
+    """
+
+    __tablename__ = "crm_opportunities"
+    __table_args__ = (
+        Index("ix_crm_opp_org_stage", "organization_id", "stage_code"),
+        Index("ix_crm_opp_org_prospect", "organization_id", "prospect_id"),
+        Index("ix_crm_opp_org_customer", "organization_id", "customer_id"),
+        Index("ix_crm_opp_assigned_producer", "organization_id", "assigned_producer_id"),
+        Index("ix_crm_opp_next_activity", "organization_id", "next_activity_at"),
+        CheckConstraint(
+            "prospect_id IS NOT NULL OR customer_id IS NOT NULL",
+            name="ck_crm_opp_prospect_or_customer",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    prospect_id: Mapped[Optional[str]] = mapped_column(ForeignKey("crm_prospects.id"), index=True)
+    customer_id: Mapped[Optional[str]] = mapped_column(ForeignKey("parties.id"), index=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    line_of_business_id: Mapped[Optional[str]] = mapped_column(
+        ForeignKey("insurance_lines.id"), index=True
+    )
+    product_interest: Mapped[Optional[str]] = mapped_column(String(200))
+    carrier_id: Mapped[Optional[str]] = mapped_column(ForeignKey("carriers.id"), index=True)
+    assigned_producer_id: Mapped[Optional[str]] = mapped_column(
+        ForeignKey("producer_profiles.id"), index=True
+    )
+    assigned_executive_id: Mapped[Optional[str]] = mapped_column(String(128))
+    office_id: Mapped[Optional[str]] = mapped_column(String(36), index=True)
+    stage_id: Mapped[Optional[str]] = mapped_column(ForeignKey("crm_pipeline_stages.id"), index=True)
+    stage_code: Mapped[str] = mapped_column(String(40), nullable=False, default="NEW")
+    estimated_premium: Mapped[Optional[Decimal]] = mapped_column(Numeric(14, 2))
+    probability: Mapped[Optional[int]] = mapped_column(Integer)  # 0–100
+    expected_close_date: Mapped[Optional[date]] = mapped_column(Date)
+    next_activity_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    source_id: Mapped[Optional[str]] = mapped_column(ForeignKey("crm_lead_sources.id"), index=True)
+    referral_source_id: Mapped[Optional[str]] = mapped_column(ForeignKey("parties.id"), index=True)
+    lost_reason_id: Mapped[Optional[str]] = mapped_column(ForeignKey("crm_lost_reasons.id"), index=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text)
+    won_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    lost_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    reopened_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    created_by: Mapped[Optional[str]] = mapped_column(String(128))
+
+
+class CrmActivity(Base, TimestampMixin):
+    """Actividad operativa CRM (llamar, WhatsApp, seguimiento…).
+
+    Distinct from `interactions` (activity log / mobile F5A) and `tasks`.
+    OVERDUE may be stored or derived from PENDING + due_at < now (service later).
+    """
+
+    __tablename__ = "crm_activities"
+    __table_args__ = (
+        Index("ix_crm_act_org_status", "organization_id", "status"),
+        Index("ix_crm_act_org_due", "organization_id", "due_at"),
+        Index("ix_crm_act_opportunity", "organization_id", "opportunity_id"),
+        Index("ix_crm_act_prospect", "organization_id", "prospect_id"),
+        Index("ix_crm_act_assignee", "organization_id", "assignee_subject_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    opportunity_id: Mapped[Optional[str]] = mapped_column(
+        ForeignKey("crm_opportunities.id"), index=True
+    )
+    prospect_id: Mapped[Optional[str]] = mapped_column(ForeignKey("crm_prospects.id"), index=True)
+    activity_type: Mapped[str] = mapped_column(String(40), nullable=False, default="FOLLOW_UP")
+    title: Mapped[Optional[str]] = mapped_column(String(200))
+    due_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="PENDING")
+    result: Mapped[Optional[str]] = mapped_column(String(200))
+    notes: Mapped[Optional[str]] = mapped_column(Text)
+    assignee_subject_id: Mapped[Optional[str]] = mapped_column(String(128))
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    created_by: Mapped[Optional[str]] = mapped_column(String(128))
 
 
 class SystemSetting(Base, TimestampMixin):
