@@ -975,6 +975,47 @@ def login_post(
     return response
 
 
+@router.get("/orgs/{organization_id}/logo")
+def orgs_logo(
+    organization_id: str,
+    request: Request,
+    session: Session = Depends(get_session),
+):
+    """Serve correduría brand logo for org picker (auth required; pre-tenant OK)."""
+    from fastapi.responses import FileResponse
+
+    from corredores.domain.models import Organization
+    from corredores.services.org_identity import logo_absolute_path
+    from corredores.services.tenant import list_accessible_organizations
+    from corredores.web.auth_session import read_session
+
+    principal = read_session(request)
+    if principal is None:
+        raise HTTPException(401, "no autenticado")
+    allowed = {
+        r["organization_id"]
+        for r in list_accessible_organizations(
+            session, principal.actor_id, username=principal.username
+        )
+    }
+    if organization_id not in allowed:
+        raise HTTPException(404, "organización no encontrada")
+    org = session.get(Organization, organization_id)
+    if org is None or not org.active:
+        raise HTTPException(404, "organización no encontrada")
+    path = logo_absolute_path(org)
+    if path is None:
+        raise HTTPException(404, "sin logo")
+    media = {
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".webp": "image/webp",
+        ".svg": "image/svg+xml",
+    }.get(path.suffix.lower(), "application/octet-stream")
+    return FileResponse(path, media_type=media, filename=path.name)
+
+
 @router.get("/orgs/seleccionar", response_class=HTMLResponse)
 def orgs_seleccionar(
     request: Request,

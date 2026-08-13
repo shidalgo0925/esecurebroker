@@ -277,6 +277,61 @@ body.auth-body.auth-env-dev .auth-wordmark span {
   filter: none;
 }
 
+/* Org picker — logos de correduría */
+.auth-org-form { gap: 0.75rem; }
+.auth-org-btn {
+  display: flex !important;
+  align-items: center;
+  gap: 0.85rem;
+  width: 100%;
+  text-align: left !important;
+  margin-top: 0 !important;
+  padding: 0.75rem 0.95rem !important;
+}
+.auth-org-logo {
+  flex: 0 0 3rem;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid rgba(26, 20, 8, 0.12);
+  display: grid;
+  place-items: center;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+.auth-org-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  background: #fff;
+}
+.auth-org-initials {
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #1a1408;
+}
+.auth-org-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  min-width: 0;
+}
+.auth-org-name {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.auth-org-stats {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  opacity: 0.78;
+  line-height: 1.3;
+}
+
 .auth-error {
   margin: 0 0 0.25rem;
   padding: 0.65rem 0.8rem;

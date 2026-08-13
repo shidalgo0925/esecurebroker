@@ -43,7 +43,17 @@ class PilotoAuthMiddleware(BaseHTTPMiddleware):
             if request.url.query:
                 next_q = quote(f"{path}?{request.url.query}", safe="/?&=")
             return RedirectResponse(f"/?next={next_q}", status_code=303)
-        if not principal.organization_id and path != "/orgs/seleccionar":
+        # Org picker (and its logos) must work before a tenant is selected.
+        org_logo = (
+            path.startswith("/orgs/")
+            and path.endswith("/logo")
+            and path.count("/") == 3
+        )
+        if (
+            not principal.organization_id
+            and path != "/orgs/seleccionar"
+            and not org_logo
+        ):
             return RedirectResponse("/orgs/seleccionar", status_code=303)
         # Suscripción pendiente → solo checkout (orgs sin fila de sub = legado OK)
         # Dueño de plataforma entra a cualquier org sin bloqueo de billing piloto.

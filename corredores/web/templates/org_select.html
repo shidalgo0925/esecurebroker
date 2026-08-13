@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/auth.css" />
+  <link rel="stylesheet" href="/static/auth.css?v=org-logos1" />
 </head>
 <body class="auth-body">
   <div class="auth-stage">
@@ -22,16 +22,25 @@
         <p>Hola {{ username }}. Elige la organización con la que vas a trabajar.</p>
         {% endif %}
       </div>
-      <form class="auth-form" method="post" action="/orgs/seleccionar">
+      <form class="auth-form auth-org-form" method="post" action="/orgs/seleccionar">
         <input type="hidden" name="next" value="{{ next }}" />
         {% for o in orgs %}
-        <button type="submit" name="organization_id" value="{{ o.organization_id }}" style="text-align:left">
-          {{ o.name }}
-          <span style="display:block;font-size:0.75rem;font-weight:500;opacity:0.75;margin-top:0.35rem">
-            {{ o.role|es }}
-            · {{ o.policies }} póliza{% if o.policies != 1 %}s{% endif %}
-            · {{ o.clients }} cliente{% if o.clients != 1 %}s{% endif %}
-            · {{ o.carriers }} cia{% if o.carriers != 1 %}s{% endif %}
+        <button type="submit" name="organization_id" value="{{ o.organization_id }}" class="auth-org-btn">
+          <span class="auth-org-logo" aria-hidden="true">
+            {% if o.has_logo %}
+            <img src="/orgs/{{ o.organization_id }}/logo" alt="" loading="lazy" />
+            {% else %}
+            <span class="auth-org-initials">{{ o.name[:2]|upper }}</span>
+            {% endif %}
+          </span>
+          <span class="auth-org-meta">
+            <span class="auth-org-name">{{ o.name }}</span>
+            <span class="auth-org-stats">
+              {{ o.role|es }}
+              · {{ o.policies }} póliza{% if o.policies != 1 %}s{% endif %}
+              · {{ o.clients }} cliente{% if o.clients != 1 %}s{% endif %}
+              · {{ o.carriers }} cia{% if o.carriers != 1 %}s{% endif %}
+            </span>
           </span>
         </button>
         {% endfor %}

@@ -81,6 +81,8 @@ def list_accessible_organizations(
         n_pol = session.query(Policy).filter_by(organization_id=org.id).count()
         n_cli = session.query(Party).filter_by(organization_id=org.id).count()
         n_cia = session.query(Carrier).filter_by(organization_id=org.id).count()
+        from corredores.services.org_identity import logo_absolute_path
+
         rows.append(
             {
                 "organization_id": org.id,
@@ -89,6 +91,7 @@ def list_accessible_organizations(
                 "policies": n_pol,
                 "clients": n_cli,
                 "carriers": n_cia,
+                "has_logo": logo_absolute_path(org) is not None,
                 "is_platform_access": admin and m is None,
             }
         )
