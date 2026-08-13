@@ -1,13 +1,15 @@
-# Pointer — no usar ADR-009 para M2M
+# ADR-009 — pointer
 
-**ADR-009** = Caja EN1 (reservado).  
-**M2M / credenciales / operación** = **ADR-037**.
+**Canónico (Easy-Wiki):**
 
-| Canal | Ubicación |
-|-------|-----------|
-| EN1 `develop` | `docs/ADR-037-INTEGRATIONS-M2M-CREDENTIALS-OPERATIONS.md` · **SHA `82e0c75`** |
-| EasyWiki | `00_Gobierno/ADR/ADR-037-INTEGRATIONS-M2M-CREDENTIALS-OPERATIONS.md` |
+`/opt/easynodeone/Easy-Wiki/05_Proyectos/corredores-seguros/adr/ADR-009_carrier_incentive_plans.md`
 
-**Estado ESB:** ACCEPTED FROM ESB (2026-08-12).  
-**Gate PROD M2M:** F1–F3 + E2E con `credential_ref`.  
-**DEV:** no bloquea ESB GO ni ADR-008 F2.
+**Espejo ESB DEV:** `docs/ADR-009_CARRIER_INCENTIVE_PLANS.md`
+
+| Campo | Valor |
+|-------|-------|
+| **Estado** | ACCEPTED / GO |
+| **Tema** | Carrier Incentive Plans / beneficios por producción y cobranza |
+| **Ambiente** | Solo DEV · PROD no tocar |
+
+**No confundir:** M2M / credenciales = **ADR-037** (el archivo wiki `ADR-009_m2m_credentials_operations.md` es SUPERSEDED/pointer).

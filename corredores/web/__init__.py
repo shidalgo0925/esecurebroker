@@ -13,6 +13,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from corredores.config import settings
 from corredores.web.auth_session import is_public_path, read_session
 from corredores.web.deps import bind_request, reset_request
+from corredores.web.carrier_incentive_routes import router as carrier_incentive_router
 from corredores.web.org_admin_routes import router as org_admin_router
 from corredores.web.routes import router
 
@@ -142,6 +143,7 @@ def create_app() -> FastAPI:
     app.mount("/static", StaticFiles(directory=str(STATIC)), name="static")
     app.include_router(router)
     app.include_router(org_admin_router)
+    app.include_router(carrier_incentive_router)
     app.include_router(mobile_router)
     return app
 

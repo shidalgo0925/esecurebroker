@@ -574,6 +574,31 @@ def build_today_home(
             )
         )
 
+    # ADR-009 — metas/beneficios carrier (solo alcance ORGANIZATION; PRODUCER no ve)
+    if policy_ids is None:
+        try:
+            from corredores.services.carrier_incentives import hoy_incentive_alerts
+
+            for al in hoy_incentive_alerts(session, organization_id):
+                urg = "urgent" if al.get("severity") == "danger" else "watch"
+                attention.append(
+                    AttentionCard(
+                        kind="INCENTIVO",
+                        urgency=urg,
+                        title=al.get("title") or "Beneficio aseguradora",
+                        subject="Acuerdo / beneficio",
+                        lines=[al.get("body") or ""],
+                        stamp=_stamp(
+                            kind="OTRO",
+                            urgency=urg,
+                            title=al.get("title") or "",
+                        ),
+                        actions=[("Ver plan", al.get("href") or "/aseguradoras")],
+                    )
+                )
+        except Exception:
+            pass
+
     greeting = "Buenos días"
     if today.weekday() >= 5:
         greeting = "Hola"

@@ -700,6 +700,167 @@ class MobileRefreshToken(Base, TimestampMixin):
     replaced_by_id: Mapped[Optional[str]] = mapped_column(String(36))
 
 
+class CarrierIncentivePlan(Base, TimestampMixin):
+    """ADR-009 — acuerdo Organization→Carrier de beneficio por producción/cobranza.
+
+    Distinto de comisión ordinaria (CommissionRule). Lifecycle de beneficio:
+    ESTIMATED → EARNED (cálculo ESB) vs CLAIMED → RECOGNIZED → PAID (settlement).
+    """
+
+    __tablename__ = "carrier_incentive_plans"
+    __table_args__ = (
+        Index("ix_cip_org_carrier", "organization_id", "carrier_id"),
+        Index("ix_cip_org_status", "organization_id", "status"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    carrier_id: Mapped[str] = mapped_column(ForeignKey("carriers.id"), index=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text)
+    metric_type: Mapped[str] = mapped_column(String(32), nullable=False)  # COLLECTION|PRODUCTION
+    period_type: Mapped[str] = mapped_column(String(32), nullable=False, default="CUSTOM")
+    period_start: Mapped[date] = mapped_column(Date, nullable=False)
+    period_end: Mapped[date] = mapped_column(Date, nullable=False)
+    currency: Mapped[str] = mapped_column(String(8), nullable=False, default="USD")
+    calculation_base: Mapped[str] = mapped_column(String(40), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="DRAFT")
+    # Snapshot lock: when True, tier/scope edits that affect closed settlements are blocked
+    conditions_locked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+
+class CarrierIncentiveScope(Base, TimestampMixin):
+    """Alcance del plan: carrier completo, ramo(s), producto(s), agent code(s)."""
+
+    __tablename__ = "carrier_incentive_scopes"
+    __table_args__ = (
+        Index("ix_cis_plan", "plan_id"),
+        UniqueConstraint(
+            "plan_id",
+            "scope_kind",
+            "insurance_line_id",
+            "carrier_product_id",
+            "agent_code",
+            name="uq_cis_plan_scope_target",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    plan_id: Mapped[str] = mapped_column(ForeignKey("carrier_incentive_plans.id"), index=True)
+    scope_kind: Mapped[str] = mapped_column(String(32), nullable=False)  # CARRIER|LINE|PRODUCT|AGENT_CODE
+    insurance_line_id: Mapped[Optional[str]] = mapped_column(ForeignKey("insurance_lines.id"))
+    carrier_product_id: Mapped[Optional[str]] = mapped_column(ForeignKey("carrier_products.id"))
+    agent_code: Mapped[Optional[str]] = mapped_column(String(64))  # CarrierAgentCode — ≠ Producer
+
+
+class CarrierIncentiveTier(Base, TimestampMixin):
+    """Tramo de beneficio (meta → % o monto fijo)."""
+
+    __tablename__ = "carrier_incentive_tiers"
+    __table_args__ = (
+        UniqueConstraint("plan_id", "sequence", name="uq_cit_plan_sequence"),
+        Index("ix_cit_plan", "plan_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    plan_id: Mapped[str] = mapped_column(ForeignKey("carrier_incentive_plans.id"), index=True)
+    sequence: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    threshold_amount: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
+    benefit_type: Mapped[str] = mapped_column(String(32), nullable=False)  # PERCENTAGE|FIXED_AMOUNT
+    benefit_value: Mapped[Decimal] = mapped_column(Numeric(14, 4), nullable=False)
+    # For PERCENTAGE: value is percent points (2 = 2%). For FIXED: currency amount.
+    calculation_base: Mapped[Optional[str]] = mapped_column(String(40))  # override plan base if set
+
+
+class CarrierIncentiveEligibleTxn(Base, TimestampMixin):
+    """Movimiento trazable que alimenta el acumulado del plan. No DELETE — usar REVERSED."""
+
+    __tablename__ = "carrier_incentive_eligible_txns"
+    __table_args__ = (
+        UniqueConstraint(
+            "plan_id",
+            "source_type",
+            "source_id",
+            name="uq_cie_plan_source",
+        ),
+        Index("ix_cie_plan_status", "plan_id", "confirmation_status"),
+        Index("ix_cie_org_policy", "organization_id", "policy_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    plan_id: Mapped[str] = mapped_column(ForeignKey("carrier_incentive_plans.id"), index=True)
+    policy_id: Mapped[Optional[str]] = mapped_column(ForeignKey("policies.id"), index=True)
+    payment_id: Mapped[Optional[str]] = mapped_column(ForeignKey("payments.id"), index=True)
+    insurance_line_id: Mapped[Optional[str]] = mapped_column(ForeignKey("insurance_lines.id"))
+    carrier_id: Mapped[str] = mapped_column(ForeignKey("carriers.id"), index=True)
+    source_type: Mapped[str] = mapped_column(String(40), nullable=False)  # PAYMENT|PRODUCTION|MANUAL
+    source_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    txn_date: Mapped[date] = mapped_column(Date, nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
+    currency: Mapped[str] = mapped_column(String(8), nullable=False, default="USD")
+    agent_code: Mapped[Optional[str]] = mapped_column(String(64))
+    carrier_receipt_number: Mapped[Optional[str]] = mapped_column(String(120))
+    confirmation_status: Mapped[str] = mapped_column(String(32), nullable=False, default="PENDING")
+    # PENDING → CONFIRMED → REVERSED (never delete)
+    reversed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    reverse_reason: Mapped[Optional[str]] = mapped_column(String(500))
+    notes: Mapped[Optional[str]] = mapped_column(Text)
+
+
+class CarrierIncentiveSettlement(Base, TimestampMixin):
+    """Liquidación del beneficio: CALCULATED→CLAIMED→RECOGNIZED→PAID (+ excepciones)."""
+
+    __tablename__ = "carrier_incentive_settlements"
+    __table_args__ = (
+        Index("ix_ciset_plan_status", "plan_id", "status"),
+        UniqueConstraint("plan_id", "period_label", name="uq_ciset_plan_period"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    plan_id: Mapped[str] = mapped_column(ForeignKey("carrier_incentive_plans.id"), index=True)
+    period_label: Mapped[str] = mapped_column(String(80), nullable=False)  # e.g. 2026 / 2026-H1
+    eligible_amount: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False, default=0)
+    calculated_benefit: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False, default=0)
+    benefit_stage: Mapped[str] = mapped_column(String(32), nullable=False, default="ESTIMATED")
+    # ESTIMATED|EARNED — ESB calc only; never auto → RECOGNIZED
+    claimed_amount: Mapped[Optional[Decimal]] = mapped_column(Numeric(14, 2))
+    claimed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    recognized_amount: Mapped[Optional[Decimal]] = mapped_column(Numeric(14, 2))
+    recognized_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    paid_amount: Mapped[Optional[Decimal]] = mapped_column(Numeric(14, 2))
+    paid_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="CALCULATED")
+    carrier_reference: Mapped[Optional[str]] = mapped_column(String(120))
+    notes: Mapped[Optional[str]] = mapped_column(Text)
+    closed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+
+class CarrierIncentiveEvidence(Base, TimestampMixin):
+    """Evidencia documental asociada a plan o settlement (ruta en disco + metadatos)."""
+
+    __tablename__ = "carrier_incentive_evidence"
+    __table_args__ = (Index("ix_ciev_plan", "plan_id"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    plan_id: Mapped[str] = mapped_column(ForeignKey("carrier_incentive_plans.id"), index=True)
+    settlement_id: Mapped[Optional[str]] = mapped_column(
+        ForeignKey("carrier_incentive_settlements.id"), index=True
+    )
+    document_id: Mapped[Optional[str]] = mapped_column(ForeignKey("documents.id"))
+    evidence_kind: Mapped[str] = mapped_column(String(40), nullable=False, default="OTRO")
+    # CONTRATO|CARTA|CORREO|TABLA|LIQUIDACION|COMPROBANTE|PAGO|OTRO
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    stored_path: Mapped[Optional[str]] = mapped_column(String(500))
+    original_filename: Mapped[Optional[str]] = mapped_column(String(255))
+    notes: Mapped[Optional[str]] = mapped_column(Text)
+    uploaded_by: Mapped[Optional[str]] = mapped_column(String(128))
+
+
 class SystemSetting(Base, TimestampMixin):
     """Configuración operativa editable (mantenimiento) — fuente de verdad en DB.
 

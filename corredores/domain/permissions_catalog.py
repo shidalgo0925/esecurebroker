@@ -54,6 +54,8 @@ PERMISSION_CATALOG: tuple[str, ...] = (
     "members:manage",
     "roles:read",
     "roles:manage",
+    "incentives:read",
+    "incentives:manage",
     "settings:read",
     "settings:manage",
     "platform:admin",
@@ -69,7 +71,19 @@ PERMISSION_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("Gestiones", ("activities:read", "activities:create", "activities:update")),
     ("Productores", ("producers:read", "producers:manage")),
     ("Reportes", ("reports:read",)),
-    ("Administración", ("members:read", "members:manage", "roles:read", "roles:manage", "settings:read", "settings:manage")),
+    (
+        "Administración",
+        (
+            "members:read",
+            "members:manage",
+            "roles:read",
+            "roles:manage",
+            "incentives:read",
+            "incentives:manage",
+            "settings:read",
+            "settings:manage",
+        ),
+    ),
 )
 
 _READ_CORE = (
@@ -121,6 +135,8 @@ SYSTEM_ROLE_PERMISSIONS: dict[str, tuple[str, ...]] = {
         "members:manage",
         "roles:read",
         "roles:manage",
+        "incentives:read",
+        "incentives:manage",
         "settings:read",
         "settings:manage",
     ),
@@ -151,6 +167,8 @@ SYSTEM_ROLE_PERMISSIONS: dict[str, tuple[str, ...]] = {
         "members:manage",
         "roles:read",
         "roles:manage",  # custom roles only — enforced in service
+        "incentives:read",
+        "incentives:manage",
         "settings:read",
         "settings:manage",
     ),

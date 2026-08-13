@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Beneficios · {{ carrier.name }}{% endblock %}
+{% block topbar %}Gestión · Aseguradoras · Beneficios{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1 class="page-title">Acuerdos / Beneficios</h1>
+  <p class="page-sub">{{ carrier.name }} · <b>{{ org_name }}</b> · ADR-009 (≠ comisión ordinaria)</p>
+</section>
+
+{% if flash %}<p class="flash-ok">Guardado ({{ flash }}).</p>{% endif %}
+{% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+
+<section class="poliza-panel catalog-editor" style="margin-bottom:1.25rem">
+  <h2 class="poliza-panel-title">Nuevo plan de incentivo</h2>
+  <form method="post" action="/aseguradoras/{{ carrier.id }}/beneficios" class="catalog-form">
+    <div class="catalog-row" style="flex-wrap:wrap;gap:0.75rem">
+      <label class="catalog-field name">Nombre
+        <input name="name" required maxlength="200" placeholder="Fianzas 2026" />
+      </label>
+      <label class="catalog-field code">Métrica
+        <select name="metric_type">
+          <option value="COLLECTION">Cobranza</option>
+          <option value="PRODUCTION">Producción</option>
+        </select>
+      </label>
+      <label class="catalog-field code">Base de cálculo
+        <select name="calculation_base">
+          <option value="COLLECTED_PREMIUM">Prima cobrada</option>
+          <option value="NET_PREMIUM">Prima neta</option>
+          <option value="TOTAL_PREMIUM">Prima total</option>
+          <option value="ISSUED_PRODUCTION">Producción emitida</option>
+        </select>
+      </label>
+      <label class="catalog-field code">Inicio
+        <input type="date" name="period_start" required />
+      </label>
+      <label class="catalog-field code">Fin
+        <input type="date" name="period_end" required />
+      </label>
+      <label class="catalog-field code">Ramo (opcional)
+        <select name="line_id">
+          <option value="">Toda la aseguradora</option>
+          {% for l in lines %}
+          <option value="{{ l.id }}">{{ l.code }} · {{ l.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="catalog-field code">Meta USD
+        <input name="threshold_amount" class="mono" value="200000" required />
+      </label>
+      <label class="catalog-field code">Beneficio
+        <select name="benefit_type">
+          <option value="PERCENTAGE">Porcentaje</option>
+          <option value="FIXED_AMOUNT">Bono fijo</option>
+        </select>
+      </label>
+      <label class="catalog-field code">Valor
+        <input name="benefit_value" class="mono" value="2" required placeholder="2 = 2%" />
+      </label>
+      <label class="catalog-field name">Descripción
+        <input name="description" maxlength="500" />
+      </label>
+      <div class="wizard-actions">
+        <button class="btn-primary" type="submit">Crear y activar</button>
+      </div>
+    </div>
+  </form>
+</section>
+
+<div class="table-card">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Plan</th><th>Período</th><th>Meta</th><th>Confirmado</th><th>%</th><th>Faltan</th>
+        <th>Beneficio</th><th>Estado</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for row in rows %}
+      {% set p = row.plan %}
+      {% set g = row.progress %}
+      <tr>
+        <td class="cli-name">{{ p.name }}</td>
+        <td class="mono">{{ p.period_start }} → {{ p.period_end }}</td>
+        <td class="mono">{% if g and g.target_amount is not none %}${{ '%.2f'|format(g.target_amount) }}{% else %}—{% endif %}</td>
+        <td class="mono">{% if g %}${{ '%.2f'|format(g.confirmed_amount) }}{% else %}—{% endif %}</td>
+        <td>{% if g and g.progress_pct is not none %}{{ g.progress_pct }}%{% else %}—{% endif %}</td>
+        <td class="mono">{% if g and g.remaining is not none %}${{ '%.2f'|format(g.remaining) }}{% else %}—{% endif %}</td>
+        <td class="mono">
+          {% if g %}
+            {% if g.benefit_stage == 'EARNED' %}${{ '%.2f'|format(g.earned_benefit) }} (devengado)
+            {% else %}${{ '%.2f'|format(g.estimated_benefit) }} (est.){% endif %}
+          {% else %}—{% endif %}
+        </td>
+        <td>{{ p.status }}</td>
+        <td class="cli-action"><a class="open-link" href="/aseguradoras/{{ carrier.id }}/beneficios/{{ p.id }}">Abrir</a></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="9" class="empty-row">Sin planes de incentivo.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="hint" style="margin-top:0.75rem"><a href="/aseguradoras">← Aseguradoras</a></p>
+{% endblock %}

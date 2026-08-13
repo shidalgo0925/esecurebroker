@@ -116,6 +116,15 @@ comprobante  Bandeja verify      API admin JSON     Cutover
 | F5A UI LOCAL | NEXT tras Fase 1–2 estables |
 | Offline / FCM / claims write | Fuera de P0 actual |
 
+### FASE 3b — Incentivos de aseguradora (ADR-009) — P0 DEV
+
+| Ítem | Estado |
+|------|--------|
+| Schema + calc + settlement | DONE |
+| UI Aseguradora → Beneficios | DONE |
+| Alertas en Hoy | DONE |
+| Feed automático Carrier API (F6) | LATER |
+
 ### FASE 4 — Profundidad producto (backlog priorizable)
 
 - Renovaciones / reclamos más ricos  

@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block title %}{{ plan.name }} · Beneficios{% endblock %}
+{% block topbar %}Aseguradoras · Beneficios{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1 class="page-title">{{ plan.name }}</h1>
+  <p class="page-sub">{{ carrier.name }} · {{ plan.metric_type }} · base {{ plan.calculation_base }} · <b>{{ org_name }}</b></p>
+</section>
+
+{% if flash %}<p class="flash-ok">OK ({{ flash }}).</p>{% endif %}
+{% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+
+<section class="poliza-panel" style="margin-bottom:1rem">
+  <h2 class="poliza-panel-title">Progreso (solo cobranza/producción CONFIRMADA)</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(10rem,1fr));gap:0.75rem">
+    <div>
+      <div class="meta">Confirmado</div>
+      <div class="money-amt">${{ '%.2f'|format(progress.confirmed_amount) }}</div>
+    </div>
+    <div>
+      <div class="meta">Pendiente conf.</div>
+      <div class="money-amt">${{ '%.2f'|format(progress.pending_amount) }}</div>
+    </div>
+    <div>
+      <div class="meta">Meta</div>
+      <div class="money-amt">{% if progress.target_amount is not none %}${{ '%.2f'|format(progress.target_amount) }}{% else %}—{% endif %}</div>
+    </div>
+    <div>
+      <div class="meta">Cumplimiento</div>
+      <div class="money-amt">{% if progress.progress_pct is not none %}{{ progress.progress_pct }}%{% else %}—{% endif %}</div>
+    </div>
+    <div>
+      <div class="meta">Faltan</div>
+      <div class="money-amt">{% if progress.remaining is not none %}${{ '%.2f'|format(progress.remaining) }}{% else %}—{% endif %}</div>
+    </div>
+    <div>
+      <div class="meta">Beneficio {{ progress.benefit_stage }}</div>
+      <div class="money-amt">
+        {% if progress.benefit_stage == 'EARNED' %}${{ '%.2f'|format(progress.earned_benefit) }}
+        {% else %}${{ '%.2f'|format(progress.estimated_benefit) }}{% endif %}
+      </div>
+    </div>
+  </div>
+  <p class="hint" style="margin-top:0.75rem">ESTIMATED/EARNED no se convierten solos en RECOGNIZED/PAID.</p>
+</section>
+
+<section class="poliza-panel" style="margin-bottom:1rem">
+  <h2 class="poliza-panel-title">Tramos</h2>
+  <table class="data-table">
+    <thead><tr><th>#</th><th>Umbral</th><th>Tipo</th><th>Valor</th></tr></thead>
+    <tbody>
+    {% for t in tiers %}
+      <tr>
+        <td>{{ t.sequence }}</td>
+        <td class="mono">${{ '%.2f'|format(t.threshold_amount) }}</td>
+        <td>{{ t.benefit_type }}</td>
+        <td class="mono">{{ t.benefit_value }}{% if t.benefit_type == 'PERCENTAGE' %}%{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="poliza-panel" style="margin-bottom:1rem">
+  <h2 class="poliza-panel-title">Registrar movimiento elegible</h2>
+  <form method="post" action="/aseguradoras/{{ carrier.id }}/beneficios/{{ plan.id }}/txn" class="catalog-form">
+    <div class="catalog-row" style="flex-wrap:wrap;gap:0.75rem">
+      <label class="catalog-field code">Monto
+        <input name="amount" class="mono" required />
+      </label>
+      <label class="catalog-field code">Fecha
+        <input type="date" name="txn_date" required />
+      </label>
+      <label class="catalog-field code">ID fuente
+        <input name="source_id" class="mono" required placeholder="único por plan" />
+      </label>
+      <label class="catalog-field code">Estado
+        <select name="confirmation_status">
+          <option value="PENDING">PENDING (no suma oficial)</option>
+          <option value="CONFIRMED">CONFIRMED</option>
+        </select>
+      </label>
+      <label class="catalog-field code">Nº recibo cia
+        <input name="carrier_receipt_number" />
+      </label>
+      <div class="wizard-actions"><button class="btn-primary" type="submit">Agregar</button></div>
+    </div>
+  </form>
+</section>
+
+<section class="poliza-panel" style="margin-bottom:1rem">
+  <h2 class="poliza-panel-title">Transacciones</h2>
+  <table class="data-table">
+    <thead><tr><th>Fecha</th><th>Monto</th><th>Estado</th><th>Recibo</th><th>Fuente</th><th></th></tr></thead>
+    <tbody>
+    {% for t in txns %}
+      <tr>
+        <td class="mono">{{ t.txn_date }}</td>
+        <td class="mono">${{ '%.2f'|format(t.amount) }}</td>
+        <td>{{ t.confirmation_status }}</td>
+        <td class="mono">{{ t.carrier_receipt_number or '—' }}</td>
+        <td class="mono">{{ t.source_type }}:{{ t.source_id[:12] }}</td>
+        <td class="cli-action">
+          {% if t.confirmation_status == 'PENDING' %}
+          <form style="display:inline" method="post" action="/aseguradoras/{{ carrier.id }}/beneficios/{{ plan.id }}/txn/{{ t.id }}/confirmar">
+            <button class="open-link" type="submit">Confirmar</button>
+          </form>
+          {% endif %}
+          {% if t.confirmation_status != 'REVERSED' %}
+          <form style="display:inline" method="post" action="/aseguradoras/{{ carrier.id }}/beneficios/{{ plan.id }}/txn/{{ t.id }}/reversar" onsubmit="return confirm('¿Reversar?');">
+            <input type="hidden" name="reason" value="reverso manual" />
+            <button class="open-link" type="submit">Reversar</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6" class="empty-row">Sin movimientos.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="poliza-panel" style="margin-bottom:1rem">
+  <h2 class="poliza-panel-title">Liquidación</h2>
+  <form method="post" action="/aseguradoras/{{ carrier.id }}/beneficios/{{ plan.id }}/reclamar" style="margin-bottom:0.75rem">
+    <button class="btn-primary" type="submit">Calcular y marcar CLAIMED</button>
+  </form>
+  <table class="data-table">
+    <thead>
+      <tr><th>Período</th><th>Elegible</th><th>Calc.</th><th>Stage</th><th>Status</th><th>Reconocido</th><th>Pagado</th><th></th></tr>
+    </thead>
+    <tbody>
+    {% for s in settlements %}
+      <tr>
+        <td>{{ s.period_label }}</td>
+        <td class="mono">${{ '%.2f'|format(s.eligible_amount) }}</td>
+        <td class="mono">${{ '%.2f'|format(s.calculated_benefit) }}</td>
+        <td>{{ s.benefit_stage }}</td>
+        <td>{{ s.status }}</td>
+        <td class="mono">{% if s.recognized_amount is not none %}${{ '%.2f'|format(s.recognized_amount) }}{% else %}—{% endif %}</td>
+        <td class="mono">{% if s.paid_amount is not none %}${{ '%.2f'|format(s.paid_amount) }}{% else %}—{% endif %}</td>
+        <td>
+          {% if s.status == 'CLAIMED' %}
+          <form method="post" action="/aseguradoras/{{ carrier.id }}/beneficios/{{ plan.id }}/reconocer" class="catalog-form">
+            <input type="hidden" name="settlement_id" value="{{ s.id }}" />
+            <input name="recognized_amount" class="mono" placeholder="Monto cia" required style="max-width:7rem" />
+            <input name="carrier_reference" placeholder="Ref cia" style="max-width:7rem" />
+            <button type="submit" class="btn-secondary">Reconocer</button>
+          </form>
+          {% endif %}
+          {% if s.status in ['RECOGNIZED', 'PARTIALLY_PAID'] %}
+          <form method="post" action="/aseguradoras/{{ carrier.id }}/beneficios/{{ plan.id }}/pagado" class="catalog-form">
+            <input type="hidden" name="settlement_id" value="{{ s.id }}" />
+            <input name="paid_amount" class="mono" placeholder="Pagado" required style="max-width:7rem" />
+            <button type="submit" class="btn-secondary">Marcar pagado</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="8" class="empty-row">Sin liquidaciones aún.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="poliza-panel">
+  <h2 class="poliza-panel-title">Evidencia (metadato)</h2>
+  <form method="post" action="/aseguradoras/{{ carrier.id }}/beneficios/{{ plan.id }}/evidencia" class="catalog-form">
+    <div class="catalog-row">
+      <label class="catalog-field name">Título
+        <input name="title" required placeholder="Carta de incentivo 2026" />
+      </label>
+      <label class="catalog-field code">Tipo
+        <select name="evidence_kind">
+          <option>CONTRATO</option><option>CARTA</option><option>CORREO</option>
+          <option>TABLA</option><option>LIQUIDACION</option><option>COMPROBANTE</option>
+          <option>PAGO</option><option>OTRO</option>
+        </select>
+      </label>
+      <label class="catalog-field name">Notas
+        <input name="notes" />
+      </label>
+      <div class="wizard-actions"><button class="btn-secondary" type="submit">Registrar evidencia</button></div>
+    </div>
+  </form>
+</section>
+
+<p class="hint" style="margin-top:1rem">
+  <a href="/aseguradoras/{{ carrier.id }}/beneficios">← Beneficios</a>
+</p>
+{% endblock %}

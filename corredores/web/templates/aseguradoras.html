@@ -84,7 +84,11 @@
         <td class="cli-id">{{ c.code }}</td>
         <td class="cli-name">{{ c.name }}</td>
         <td>{{ 'Sí' if c.active else 'No' }}</td>
-        <td class="cli-action"><a class="open-link" href="/aseguradoras?edit={{ c.id }}#row-{{ c.id }}">Editar</a></td>
+        <td class="cli-action">
+          <a class="open-link" href="/aseguradoras/{{ c.id }}/beneficios">Beneficios</a>
+          ·
+          <a class="open-link" href="/aseguradoras?edit={{ c.id }}#row-{{ c.id }}">Editar</a>
+        </td>
       </tr>
       {% endif %}
     {% else %}
