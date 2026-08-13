@@ -53,4 +53,13 @@ Tests: `tests/test_crm_adr011_f1.py`
 4. Prefijo `crm_*` deliberado para no chocar con `/oportunidades` de renovación.
 5. No aplicar migración en PROD.
 
-**STOP** — no iniciar F2 sin GO.
+## F2 — AccessContext / RBAC (DONE 2026-08-13)
+
+- `corredores/services/crm_access.py` — scope filters + `require_*_in_scope` (404 anti-IDOR)
+- Permisos `crm:read` / `crm:manage` en matriz de roles
+- PRODUCER (`ASSIGNED_PORTFOLIO`): prospectos/oportunidades asignadas; oportunidades sobre `customer_id` en cartera; executive subject match
+- OWNER/ADMIN/BROKER/PLATFORM: org-wide CRM
+- `office_id`: aún sin filtro (sin entidad Office)
+- Tests: `tests/test_crm_adr011_f2.py`
+
+**STOP** — no iniciar F3 (CRM API) sin GO.

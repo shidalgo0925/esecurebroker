@@ -56,6 +56,8 @@ PERMISSION_CATALOG: tuple[str, ...] = (
     "roles:manage",
     "incentives:read",
     "incentives:manage",
+    "crm:read",
+    "crm:manage",
     "settings:read",
     "settings:manage",
     "platform:admin",
@@ -71,6 +73,7 @@ PERMISSION_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("Gestiones", ("activities:read", "activities:create", "activities:update")),
     ("Productores", ("producers:read", "producers:manage")),
     ("Reportes", ("reports:read",)),
+    ("CRM", ("crm:read", "crm:manage")),
     (
         "Administración",
         (
@@ -137,6 +140,8 @@ SYSTEM_ROLE_PERMISSIONS: dict[str, tuple[str, ...]] = {
         "roles:manage",
         "incentives:read",
         "incentives:manage",
+        "crm:read",
+        "crm:manage",
         "settings:read",
         "settings:manage",
     ),
@@ -169,6 +174,8 @@ SYSTEM_ROLE_PERMISSIONS: dict[str, tuple[str, ...]] = {
         "roles:manage",  # custom roles only — enforced in service
         "incentives:read",
         "incentives:manage",
+        "crm:read",
+        "crm:manage",
         "settings:read",
         "settings:manage",
     ),
@@ -187,6 +194,8 @@ SYSTEM_ROLE_PERMISSIONS: dict[str, tuple[str, ...]] = {
         "activities:update",
         "reports:read",
         "incentives:read",
+        "crm:read",
+        "crm:manage",
         "settings:read",
     ),
     COLLECTIONS: _READ_CORE
@@ -202,6 +211,7 @@ SYSTEM_ROLE_PERMISSIONS: dict[str, tuple[str, ...]] = {
         "activities:create",
         "reports:read",
         "incentives:read",
+        "crm:read",
     ),
     PRODUCER: _READ_CORE
     + _WRITE_CORE
@@ -218,6 +228,8 @@ SYSTEM_ROLE_PERMISSIONS: dict[str, tuple[str, ...]] = {
         "activities:update",
         "reports:read",
         "incentives:read",
+        "crm:read",
+        "crm:manage",
     ),
     PLATFORM: _READ_CORE
     + (
@@ -231,6 +243,8 @@ SYSTEM_ROLE_PERMISSIONS: dict[str, tuple[str, ...]] = {
         "roles:manage",
         "incentives:read",
         "incentives:manage",
+        "crm:read",
+        "crm:manage",
         "settings:read",
         "settings:manage",
     ),

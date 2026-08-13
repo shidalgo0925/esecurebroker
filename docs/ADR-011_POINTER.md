@@ -7,6 +7,6 @@ Canónico (este repo):
 
 `docs/ADR-011_CRM_DOMAIN.md`
 
-F1 (domain) entregado: tablas `crm_*`, models, catalog seed, tests.
+F1 (domain) + F2 (AccessContext/RBAC) entregados en DEV.
 
-Siguiente: F2 AccessContext/RBAC — requiere GO explícito.
+Siguiente: F3 CRM API — requiere GO explícito.
