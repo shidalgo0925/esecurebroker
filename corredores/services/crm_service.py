@@ -424,6 +424,64 @@ def create_opportunity(
     return row
 
 
+def update_opportunity(
+    session: Session,
+    ctx: AccessContext | None,
+    *,
+    organization_id: str,
+    opportunity_id: str,
+    title: str | None = None,
+    estimated_premium: Decimal | str | None = None,
+    clear_premium: bool = False,
+    probability: int | None = None,
+    expected_close_date: date | None = None,
+    clear_close_date: bool = False,
+    product_interest: str | None = None,
+    notes: str | None = None,
+    actor_id: str | None = None,
+) -> CrmOpportunity:
+    """Edit opportunity fields (not stage — use set_opportunity_stage)."""
+    _require_manage(ctx)
+    row = get_opportunity(session, ctx, organization_id, opportunity_id)
+    before = {
+        "title": row.title,
+        "estimated_premium": str(row.estimated_premium) if row.estimated_premium is not None else None,
+        "probability": row.probability,
+    }
+    if title is not None:
+        t = _norm(title)
+        if not t:
+            raise CrmError("title requerido")
+        row.title = t
+    if clear_premium:
+        row.estimated_premium = None
+    elif estimated_premium is not None and str(estimated_premium) != "":
+        row.estimated_premium = Decimal(str(estimated_premium)).quantize(Decimal("0.01"))
+    if probability is not None:
+        if probability < 0 or probability > 100:
+            raise CrmError("probability debe estar entre 0 y 100")
+        row.probability = probability
+    if clear_close_date:
+        row.expected_close_date = None
+    elif expected_close_date is not None:
+        row.expected_close_date = expected_close_date
+    if product_interest is not None:
+        row.product_interest = _norm(product_interest)
+    if notes is not None:
+        row.notes = _norm(notes)
+    _audit(
+        session,
+        organization_id=organization_id,
+        actor_id=actor_id,
+        entity_type="CrmOpportunity",
+        entity_id=row.id,
+        action="CRM_OPPORTUNITY_UPDATED",
+        detail={"before": before, "title": row.title},
+    )
+    session.flush()
+    return row
+
+
 def set_opportunity_stage(
     session: Session,
     ctx: AccessContext | None,

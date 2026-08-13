@@ -113,7 +113,7 @@ def test_crm_html_routes(session, world, monkeypatch):
     client = TestClient(create_app())
     r = client.get("/crm")
     assert r.status_code == 200
-    assert b"Pipeline CRM" in r.content
+    assert b"Pipeline" in r.content
     r2 = client.get("/crm/prospectos")
     assert r2.status_code == 200
     assert b"Nuevo prospecto" in r2.content
@@ -131,3 +131,29 @@ def test_crm_html_routes(session, world, monkeypatch):
     )
     assert r3.status_code == 303
     assert "/crm/prospectos/" in r3.headers.get("location", "")
+
+
+def test_crm_quick_create_and_list(session, world, monkeypatch):
+    monkeypatch.setattr(settings, "auth_enabled", False)
+    client = TestClient(create_app())
+    r = client.post(
+        "/crm/rapido",
+        data={
+            "stage_code": "NEW",
+            "contact_name": "Maria Quick",
+            "title": "Fianza colegio",
+            "email": "maria.quick@example.invalid",
+            "phone": "",
+            "estimated_premium": "1500.00",
+        },
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+    loc = r.headers.get("location", "")
+    assert "/crm/oportunidades/" in loc
+    r2 = client.get("/crm?vista=lista")
+    assert r2.status_code == 200
+    assert b"Fianza colegio" in r2.content
+    r3 = client.get("/crm?q=maria")
+    assert r3.status_code == 200
+    assert b"Fianza colegio" in r3.content

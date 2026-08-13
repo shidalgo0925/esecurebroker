@@ -4,25 +4,54 @@
 {% block content %}
 <section class="odoo-crm-toolbar">
   <div class="odoo-crm-toolbar-left">
+    <a class="btn-primary" href="/crm?quick=NEW{% if show_lost %}&include_lost=1{% endif %}">Nuevo</a>
     <h1 class="odoo-crm-title">Pipeline</h1>
     <nav class="odoo-crm-tabs">
-      <a class="on" href="/crm">Kanban</a>
+      <a class="{% if view_mode == 'kanban' %}on{% endif %}" href="/crm{% if show_lost %}?include_lost=1{% endif %}">Kanban</a>
+      <a class="{% if view_mode == 'lista' %}on{% endif %}" href="/crm?vista=lista{% if show_lost %}&include_lost=1{% endif %}{% if q %}&q={{ q|urlencode }}{% endif %}">Lista</a>
       <a href="/crm/prospectos">Prospectos</a>
       {% if show_lost %}
-      <a class="on" href="/crm">Ocultar perdidos</a>
+      <a href="/crm?vista={{ view_mode }}">Ocultar perdidos</a>
       {% else %}
-      <a href="/crm?include_lost=1">Perdidos</a>
+      <a href="/crm?include_lost=1&vista={{ view_mode }}">Perdidos</a>
       {% endif %}
     </nav>
   </div>
   <div class="odoo-crm-toolbar-right">
+    <form class="odoo-crm-search" method="get" action="/crm">
+      {% if show_lost %}<input type="hidden" name="include_lost" value="1" />{% endif %}
+      <input type="hidden" name="vista" value="{{ view_mode }}" />
+      <input type="search" name="q" value="{{ q }}" placeholder="Buscar…" />
+    </form>
     <span class="odoo-crm-org">{{ org_name }}</span>
-    <a class="btn-primary" href="/crm/prospectos#nuevo">Nuevo</a>
   </div>
 </section>
 
 {% if error %}<p class="form-error">{{ error }}</p>{% endif %}
 {% if ok %}<p class="flash-ok">{{ ok }}</p>{% endif %}
+
+{% if view_mode == 'lista' %}
+<div class="table-card">
+  <table class="data-table">
+    <thead>
+      <tr><th>Oportunidad</th><th>Contacto</th><th>Etapa</th><th>Prima</th><th></th></tr>
+    </thead>
+    <tbody>
+    {% for card in list_rows %}
+      <tr>
+        <td class="cli-name">{{ card.title }}</td>
+        <td>{{ card.subtitle or '—' }}</td>
+        <td><span class="kind-pill">{{ stage_labels.get(card.stage_code, card.stage_code) }}</span></td>
+        <td class="mono">{% if card.premium is not none %}${{ card.premium|money }}{% else %}—{% endif %}</td>
+        <td class="cli-action"><a class="open-link" href="/crm/oportunidades/{{ card.id }}">Abrir</a></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5" class="empty-row">Sin oportunidades{% if q %} para “{{ q }}”{% endif %}.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
 
 <div class="odoo-kanban-board" role="list">
   {% for col in columns %}
@@ -32,8 +61,38 @@
         <span class="odoo-stage-dot stage-{{ col.code|lower }}"></span>
         <h2>{{ col.name }}</h2>
       </div>
-      <span class="odoo-kanban-count">{{ col.cards|length }}</span>
+      <div class="odoo-kanban-col-tools">
+        <a class="odoo-col-plus" href="/crm?quick={{ col.code }}{% if show_lost %}&include_lost=1{% endif %}#quick-{{ col.code }}" title="Agregar">+</a>
+        <span class="odoo-kanban-count">{{ col.cards|length }}</span>
+      </div>
     </header>
+
+    {% if col.open_quick %}
+    <form id="quick-{{ col.code }}" class="odoo-quick-create" method="post" action="/crm/rapido">
+      <input type="hidden" name="stage_code" value="{{ col.code }}" />
+      <label>Contacto
+        <input name="contact_name" required placeholder="Nombre del contacto" autofocus />
+      </label>
+      <label>Oportunidad
+        <input name="title" required placeholder="Ej. Auto familiar / Fianza…" />
+      </label>
+      <label>Correo electrónico
+        <input name="email" type="email" placeholder="correo@ejemplo.com" />
+      </label>
+      <label>Teléfono
+        <input name="phone" placeholder="6000-0000" />
+      </label>
+      <label>Ingreso esperado
+        <input name="estimated_premium" class="mono" inputmode="decimal" placeholder="0.00" />
+      </label>
+      <div class="odoo-quick-actions">
+        <button class="btn-primary" type="submit">Agregar</button>
+        <a class="btn-secondary" href="/crm{% if show_lost %}?include_lost=1{% endif %}">Cancelar</a>
+      </div>
+      <p class="hint">Correo o teléfono obligatorio.</p>
+    </form>
+    {% endif %}
+
     <div class="odoo-kanban-col-body">
       {% for card in col.cards %}
       <article class="odoo-kanban-card">
@@ -76,15 +135,18 @@
         </div>
       </article>
       {% else %}
-      <div class="odoo-kanban-empty">Arrastrá oportunidades aquí<br><span class="meta">o creá un prospecto</span></div>
+      {% if not col.open_quick %}
+      <div class="odoo-kanban-empty">Sin oportunidades</div>
+      {% endif %}
       {% endfor %}
     </div>
     <footer class="odoo-kanban-col-foot">
-      <a href="/crm/prospectos#nuevo">+ Agregar</a>
+      <a href="/crm?quick={{ col.code }}{% if show_lost %}&include_lost=1{% endif %}#quick-{{ col.code }}">+ Agregar</a>
     </footer>
   </section>
   {% endfor %}
 </div>
+{% endif %}
 
 {% if show_lost and lost_rows %}
 <section class="poliza-panel" style="margin-top:1rem">

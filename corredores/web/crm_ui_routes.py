@@ -42,6 +42,7 @@ from corredores.services.crm_service import (
     mark_won,
     reopen_opportunity,
     set_opportunity_stage,
+    update_opportunity,
 )
 from corredores.web.auth_session import read_session
 from corredores.web.deps import current_access_context, get_session, resolve_org
@@ -110,6 +111,9 @@ def crm_pipeline(
     request: Request,
     session: Session = Depends(get_session),
     include_lost: str = Query(default=""),
+    vista: str = Query(default="kanban"),
+    q: str = Query(default=""),
+    quick: str = Query(default=""),
     error: str = Query(default=""),
     ok: str = Query(default=""),
 ):
@@ -117,36 +121,48 @@ def crm_pipeline(
     _require_crm(session, request, manage=False)
     access = _ctx_access(session, request)
     show_lost = include_lost in {"1", "true", "yes", "on"}
+    view_mode = "lista" if (vista or "").lower() in {"lista", "list"} else "kanban"
+    query = (q or "").strip().lower()
     stages = list_stages(session, access, org.id)
     kanban_codes = [s.code for s in stages if s.is_kanban] or list(PIPELINE_KANBAN_CODES)
-    opps = list_opportunities(
-        session, access, org.id, include_lost=show_lost
-    )
+    lost_reasons = list_lost_reasons(session, access, org.id)
+    opps = list_opportunities(session, access, org.id, include_lost=show_lost)
     by_stage: dict[str, list] = {c: [] for c in kanban_codes}
     lost_rows: list = []
+    list_rows: list = []
     prospect_cache: dict[str, str] = {}
+    prospect_contact: dict[str, dict] = {}
     for o in opps:
-        label = o.title
+        subtitle = ""
         if o.prospect_id:
             if o.prospect_id not in prospect_cache:
                 try:
                     p = get_prospect(session, access, org.id, o.prospect_id)
                     prospect_cache[o.prospect_id] = _prospect_label(p)
+                    prospect_contact[o.prospect_id] = {
+                        "email": p.email,
+                        "phone": p.phone or p.mobile,
+                    }
                 except AccessDenied:
                     prospect_cache[o.prospect_id] = "—"
-            label = f"{o.title} · {prospect_cache[o.prospect_id]}"
+                    prospect_contact[o.prospect_id] = {}
+            subtitle = prospect_cache[o.prospect_id]
+        hay = f"{o.title} {subtitle}".lower()
+        if query and query not in hay:
+            continue
         card = {
             "id": o.id,
             "title": o.title,
-            "subtitle": prospect_cache.get(o.prospect_id or "", ""),
+            "subtitle": subtitle,
             "stage_code": o.stage_code,
             "premium": o.estimated_premium,
-            "label": label,
-            "initial": (
-                (prospect_cache.get(o.prospect_id or "") or o.title or "?")[:1].upper()
-            ),
+            "probability": o.probability,
+            "label": f"{o.title} · {subtitle}" if subtitle else o.title,
+            "initial": (subtitle or o.title or "?")[:1].upper(),
             "prev_code": None,
             "next_code": None,
+            "email": prospect_contact.get(o.prospect_id or "", {}).get("email"),
+            "phone": prospect_contact.get(o.prospect_id or "", {}).get("phone"),
         }
         if o.stage_code in kanban_codes:
             idx = kanban_codes.index(o.stage_code)
@@ -154,6 +170,7 @@ def crm_pipeline(
                 card["prev_code"] = kanban_codes[idx - 1]
             if idx < len(kanban_codes) - 1:
                 card["next_code"] = kanban_codes[idx + 1]
+        list_rows.append(card)
         if o.stage_code == STAGE_LOST:
             lost_rows.append(card)
         elif o.stage_code in by_stage:
@@ -166,6 +183,7 @@ def crm_pipeline(
             "code": code,
             "name": PIPELINE_STAGE_LABELS_ES.get(code, code),
             "cards": by_stage.get(code, []),
+            "open_quick": quick.upper() == code,
         }
         for code in kanban_codes
     ]
@@ -177,13 +195,72 @@ def crm_pipeline(
             "crm",
             org_name=org.name,
             columns=columns,
+            list_rows=list_rows,
             lost_rows=lost_rows if show_lost else [],
             show_lost=show_lost,
+            view_mode=view_mode,
+            q=q or "",
             stage_labels=PIPELINE_STAGE_LABELS_ES,
             kanban_codes=kanban_codes,
+            lost_reasons=lost_reasons,
             error=error or None,
             ok=ok or None,
         ),
+    )
+
+
+@router.post("/crm/rapido")
+def crm_quick_create(
+    request: Request,
+    stage_code: str = Form("NEW"),
+    contact_name: str = Form(...),
+    title: str = Form(...),
+    email: str = Form(""),
+    phone: str = Form(""),
+    estimated_premium: str = Form(""),
+    session: Session = Depends(get_session),
+):
+    """Odoo-style quick create: prospect + opportunity in one step."""
+    org = resolve_org(session, request)
+    _require_crm(session, request, manage=True)
+    access = _ctx_access(session, request)
+    try:
+        name = (contact_name or "").strip()
+        if not name:
+            raise CrmError("contacto requerido")
+        parts = name.split(None, 1)
+        first = parts[0]
+        last = parts[1] if len(parts) > 1 else None
+        em = (email or "").strip() or None
+        ph = (phone or "").strip() or None
+        if not em and not ph:
+            raise CrmError("indicá correo o teléfono")
+        prosp = create_prospect(
+            session,
+            access,
+            organization_id=org.id,
+            prospect_type="PERSON",
+            first_name=first,
+            last_name=last,
+            email=em,
+            phone=ph,
+            actor_id=_actor(request),
+        )
+        opp = create_opportunity(
+            session,
+            access,
+            organization_id=org.id,
+            title=title,
+            prospect_id=prosp.id,
+            estimated_premium=_money(estimated_premium),
+            stage_code=(stage_code or "NEW").upper(),
+            actor_id=_actor(request),
+        )
+    except (CrmError, AccessDenied, ValueError) as exc:
+        return _err_redirect("/crm", exc)
+    return RedirectResponse(
+        f"/crm/oportunidades/{opp.id}?ok={quote('Oportunidad creada')}",
+        status_code=303,
     )
 
 
@@ -464,12 +541,65 @@ def crm_oportunidad_detalle(
             stages=stages,
             lost_reasons=lost_reasons,
             activities=activities,
+            activity_count=len(activities),
+            pending_activities=sum(1 for a in activities if a.status in {"PENDING", "OVERDUE"}),
             stage_labels=PIPELINE_STAGE_LABELS_ES,
             activity_types=sorted(ACTIVITY_TYPES),
-            kanban_codes=list(PIPELINE_KANBAN_CODES),
+            kanban_codes=[s.code for s in stages if s.is_kanban] or list(PIPELINE_KANBAN_CODES),
             error=error or None,
             ok=ok or None,
         ),
+    )
+
+
+@router.post("/crm/oportunidades/{opp_id}/editar")
+def crm_opp_editar(
+    opp_id: str,
+    request: Request,
+    title: str = Form(...),
+    estimated_premium: str = Form(""),
+    probability: str = Form(""),
+    expected_close_date: str = Form(""),
+    product_interest: str = Form(""),
+    notes: str = Form(""),
+    session: Session = Depends(get_session),
+):
+    from datetime import date as date_cls
+
+    org = resolve_org(session, request)
+    _require_crm(session, request, manage=True)
+    access = _ctx_access(session, request)
+    try:
+        prob = None
+        if (probability or "").strip() != "":
+            prob = int(float(probability))
+        close = None
+        clear_close = False
+        if (expected_close_date or "").strip() == "":
+            clear_close = True
+        else:
+            close = date_cls.fromisoformat(expected_close_date)
+        prem_raw = (estimated_premium or "").strip()
+        update_opportunity(
+            session,
+            access,
+            organization_id=org.id,
+            opportunity_id=opp_id,
+            title=title,
+            estimated_premium=_money(prem_raw) if prem_raw else None,
+            clear_premium=not prem_raw,
+            probability=prob,
+            expected_close_date=close,
+            clear_close_date=clear_close,
+            product_interest=product_interest,
+            notes=notes,
+            actor_id=_actor(request),
+        )
+    except (CrmError, AccessDenied, ValueError) as exc:
+        return _err_redirect(f"/crm/oportunidades/{opp_id}", exc)
+    return RedirectResponse(
+        f"/crm/oportunidades/{opp_id}?ok={quote('Guardado')}",
+        status_code=303,
     )
 
 

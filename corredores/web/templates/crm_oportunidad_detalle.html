@@ -2,79 +2,132 @@
 {% block title %}{{ opp.title }} · Oportunidad · ESecureBroker{% endblock %}
 {% block topbar %}Ventas · Oportunidad CRM{% endblock %}
 {% block content %}
-<section class="page-head row-between">
-  <div>
-    <h1 class="page-title">{{ opp.title }}</h1>
-    <p class="page-sub">
-      <span class="kind-pill">{{ stage_labels.get(opp.stage_code, opp.stage_code) }}</span>
-      {% if prospect_label %} · <a href="/crm/prospectos/{{ opp.prospect_id }}">{{ prospect_label }}</a>{% endif %}
-      · <b>{{ org_name }}</b>
-    </p>
-  </div>
-  <div class="stack-actions">
-    <a class="btn-secondary" href="/crm">Pipeline</a>
-    {% if opp.prospect_id %}
-    <a class="btn-secondary" href="/crm/prospectos/{{ opp.prospect_id }}">Prospecto</a>
+<section class="odoo-opp-top">
+  <div class="odoo-opp-actions">
+    {% if opp.stage_code != 'WON' %}
+    <form method="post" action="/crm/oportunidades/{{ opp.id }}/etapa-detalle">
+      <input type="hidden" name="stage_code" value="WON" />
+      <button class="btn-primary" type="submit">Ganado</button>
+    </form>
     {% endif %}
+    {% if opp.stage_code != 'LOST' %}
+    <details class="odoo-lost-menu">
+      <summary class="btn-secondary">Perdido</summary>
+      <form method="post" action="/crm/oportunidades/{{ opp.id }}/etapa-detalle" class="odoo-lost-form">
+        <input type="hidden" name="stage_code" value="LOST" />
+        <label>Motivo
+          <select name="lost_reason_id" required>
+            <option value="">Elegí…</option>
+            {% for r in lost_reasons %}
+            <option value="{{ r.id }}">{{ r.name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <button class="btn-primary" type="submit">Marcar perdido</button>
+      </form>
+    </details>
+    {% endif %}
+    {% if opp.stage_code == 'WON' and not opp.customer_id %}
+    <form method="post" action="/crm/oportunidades/{{ opp.id }}/convertir">
+      <button class="btn-primary" type="submit">Convertir a cliente</button>
+    </form>
+    {% endif %}
+    {% if opp.stage_code == 'LOST' or opp.stage_code == 'WON' %}
+    <form method="post" action="/crm/oportunidades/{{ opp.id }}/reabrir">
+      <button class="btn-secondary" type="submit">Reabrir</button>
+    </form>
+    {% endif %}
+    <a class="btn-secondary" href="/crm">Pipeline</a>
+  </div>
+
+  <div class="odoo-opp-right">
+    <div class="odoo-smart-btns">
+      <a class="odoo-smart" href="#actividades">
+        <span class="odoo-smart-n">{{ pending_activities }}</span>
+        <span>Actividades</span>
+      </a>
+      {% if opp.prospect_id %}
+      <a class="odoo-smart" href="/crm/prospectos/{{ opp.prospect_id }}">
+        <span class="odoo-smart-n">1</span>
+        <span>Prospecto</span>
+      </a>
+      {% endif %}
+      {% if opp.customer_id %}
+      <a class="odoo-smart" href="/clientes/{{ opp.customer_id }}">
+        <span class="odoo-smart-n">360°</span>
+        <span>Cliente</span>
+      </a>
+      {% endif %}
+    </div>
+    <nav class="odoo-statusbar" aria-label="Etapas">
+      {% for code in kanban_codes %}
+      <form method="post" action="/crm/oportunidades/{{ opp.id }}/etapa-detalle" class="odoo-statusbar-item {% if code == opp.stage_code %}on{% endif %}">
+        <input type="hidden" name="stage_code" value="{{ code }}" />
+        <button type="submit">{{ stage_labels.get(code, code) }}</button>
+      </form>
+      {% endfor %}
+    </nav>
   </div>
 </section>
 
 {% if error %}<p class="form-error">{{ error }}</p>{% endif %}
 {% if ok %}<p class="flash-ok">{{ ok }}</p>{% endif %}
 
-<div class="poliza-split">
-  <section class="poliza-panel">
-    <h2 class="poliza-panel-title">Registro</h2>
-    <table class="poliza-facts">
-      <tr><th>Título</th><td>{{ opp.title }}</td></tr>
-      <tr><th>Etapa</th><td>{{ stage_labels.get(opp.stage_code, opp.stage_code) }}</td></tr>
-      <tr><th>Prima est.</th><td class="mono">{% if opp.estimated_premium %}${{ opp.estimated_premium|money }}{% else %}—{% endif %}</td></tr>
-      <tr><th>Interés</th><td>{{ opp.product_interest or '—' }}</td></tr>
-      <tr><th>Notas</th><td>{{ opp.notes or '—' }}</td></tr>
-      {% if opp.customer_id %}
-      <tr><th>Cliente</th><td><a href="/clientes/{{ opp.customer_id }}">Ver 360°</a></td></tr>
-      {% endif %}
-    </table>
-  </section>
+<header class="odoo-opp-titleblock">
+  <h1 class="page-title">{{ opp.title }}</h1>
+  <p class="page-sub">
+    {% if prospect_label %}<a href="/crm/prospectos/{{ opp.prospect_id }}">{{ prospect_label }}</a> · {% endif %}
+    <b>{{ org_name }}</b>
+  </p>
+</header>
 
-  <aside class="poliza-side">
-    <section class="poliza-panel catalog-editor">
-      <h2 class="poliza-panel-title">Cambiar etapa</h2>
-      <form class="catalog-form catalog-stack" method="post" action="/crm/oportunidades/{{ opp.id }}/etapa-detalle">
-        <label class="catalog-field name">Etapa
-          <select name="stage_code" required>
-            {% for s in stages %}
-            <option value="{{ s.code }}" {% if s.code == opp.stage_code %}selected{% endif %}>{{ s.name }}</option>
-            {% endfor %}
-          </select>
-        </label>
-        <label class="catalog-field name">Motivo (si Perdido)
-          <select name="lost_reason_id">
-            <option value="">—</option>
-            {% for r in lost_reasons %}
-            <option value="{{ r.id }}" {% if opp.lost_reason_id == r.id %}selected{% endif %}>{{ r.name }}</option>
-            {% endfor %}
-          </select>
-        </label>
-        <div class="wizard-actions">
-          <button class="btn-primary" type="submit">Guardar etapa</button>
-        </div>
-      </form>
-      {% if opp.stage_code == 'LOST' or opp.stage_code == 'WON' %}
-      <form method="post" action="/crm/oportunidades/{{ opp.id }}/reabrir" style="margin-top:0.75rem">
-        <button class="btn-secondary" type="submit">Reabrir → Negociación</button>
-      </form>
-      {% endif %}
-      {% if opp.stage_code == 'WON' and not opp.customer_id %}
-      <form method="post" action="/crm/oportunidades/{{ opp.id }}/convertir" style="margin-top:0.75rem">
-        <button class="btn-primary" type="submit">Convertir a cliente</button>
-      </form>
-      {% endif %}
-    </section>
-  </aside>
-</div>
+<form class="odoo-opp-sheet" method="post" action="/crm/oportunidades/{{ opp.id }}/editar">
+  <div class="odoo-metrics">
+    <label>Ingreso esperado
+      <input name="estimated_premium" class="mono" inputmode="decimal"
+             value="{{ '%.2f'|format(opp.estimated_premium) if opp.estimated_premium is not none else '' }}"
+             placeholder="0.00" />
+    </label>
+    <label>Probabilidad %
+      <input name="probability" class="mono" type="number" min="0" max="100"
+             value="{{ opp.probability if opp.probability is not none else '' }}" placeholder="0" />
+    </label>
+    <label>Cierre esperado
+      <input name="expected_close_date" type="date"
+             value="{{ opp.expected_close_date.isoformat() if opp.expected_close_date else '' }}" />
+    </label>
+  </div>
 
-<section class="poliza-panel catalog-editor" style="margin-top:1.25rem">
+  <div class="odoo-opp-grid">
+    <div>
+      <label>Oportunidad
+        <input name="title" required value="{{ opp.title }}" />
+      </label>
+      <label>Contacto
+        <input value="{{ prospect_label or '—' }}" disabled />
+      </label>
+      <label>Correo
+        <input value="{{ prospect.email if prospect else '—' }}" disabled />
+      </label>
+      <label>Teléfono
+        <input value="{{ (prospect.phone or prospect.mobile) if prospect else '—' }}" disabled />
+      </label>
+    </div>
+    <div>
+      <label>Interés / producto
+        <input name="product_interest" value="{{ opp.product_interest or '' }}" />
+      </label>
+      <label>Notas internas
+        <textarea name="notes" rows="5">{{ opp.notes or '' }}</textarea>
+      </label>
+      <div class="wizard-actions">
+        <button class="btn-primary" type="submit">Guardar</button>
+      </div>
+    </div>
+  </div>
+</form>
+
+<section class="poliza-panel catalog-editor" id="actividades" style="margin-top:1.25rem">
   <h2 class="poliza-panel-title">Actividades</h2>
   <form class="catalog-form" method="post" action="/crm/oportunidades/{{ opp.id }}/actividades">
     <div class="catalog-row">
