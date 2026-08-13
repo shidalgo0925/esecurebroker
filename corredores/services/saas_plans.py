@@ -21,6 +21,7 @@ class SaasPlan:
 
 # Códigos: individual | oficina | broker_red | enterprise
 PLANS: dict[str, SaasPlan] = {
+    # Precios: Easy-Wiki PLANES_COMERCIALES_V1 §6 (USD/mes provisionales).
     "individual": SaasPlan(
         code="individual",
         name="Individual",
@@ -40,7 +41,7 @@ PLANS: dict[str, SaasPlan] = {
     "oficina": SaasPlan(
         code="oficina",
         name="Oficina",
-        price_monthly_usd=129,
+        price_monthly_usd=99,
         audience="Con mi equipo",
         seats_included=15,
         tagline="Correduría pequeña/mediana: el equipo interno sobre la misma cartera.",
@@ -57,7 +58,7 @@ PLANS: dict[str, SaasPlan] = {
     "broker_red": SaasPlan(
         code="broker_red",
         name="Broker / Red",
-        price_monthly_usd=229,
+        price_monthly_usd=159,
         audience="Administro agentes",
         seats_included=15,
         tagline="Broker que administra agentes: consolidación y cartera por productor.",
