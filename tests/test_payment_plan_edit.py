@@ -20,6 +20,7 @@ from corredores.services.payment_plan_edit import (
     build_plan_edit_view,
     regenerate_payment_plan,
     update_open_installments,
+    update_policy_premium,
 )
 
 
@@ -115,4 +116,52 @@ def test_update_open_installment_amount():
         view2 = build_plan_edit_view(session, result.organization_id, result.policy_id)
         assert view2.installments[0]["due_date"] == "2026-02-15"
         assert view2.installments[0]["amount"] == new_a
+        session.commit()
+
+
+def test_update_policy_premium_without_payments():
+    with db.SessionLocal() as session:
+        result = run_auto_e2e_demo(session, org_name="Premium Edit Org", today=date(2026, 1, 15))
+        _clear_payments(session, result.policy_id)
+        regenerate_payment_plan(
+            session,
+            organization_id=result.organization_id,
+            policy_id=result.policy_id,
+            count=2,
+            first_due=date(2026, 2, 1),
+            actor_id="test",
+        )
+        view = build_plan_edit_view(session, result.organization_id, result.policy_id)
+        assert view.can_edit_premium
+        update_policy_premium(
+            session,
+            organization_id=result.organization_id,
+            policy_id=result.policy_id,
+            annual_premium="1500.00",
+            actor_id="test",
+        )
+        view2 = build_plan_edit_view(session, result.organization_id, result.policy_id)
+        assert view2.premium == Decimal("1500.00")
+        total = sum((i["amount"] for i in view2.installments), Decimal("0"))
+        assert abs(total - Decimal("1500.00")) <= Decimal("0.02")
+        assert view2.installments[0]["due_date"] == "2026-02-01"
+        session.commit()
+
+
+def test_cannot_update_premium_after_payment():
+    with db.SessionLocal() as session:
+        result = run_auto_e2e_demo(session, org_name="Premium Locked Org", today=date(2026, 1, 15))
+        view = build_plan_edit_view(session, result.organization_id, result.policy_id)
+        assert not view.can_edit_premium
+        raised = False
+        try:
+            update_policy_premium(
+                session,
+                organization_id=result.organization_id,
+                policy_id=result.policy_id,
+                annual_premium="999.00",
+            )
+        except ValueError:
+            raised = True
+        assert raised
         session.commit()

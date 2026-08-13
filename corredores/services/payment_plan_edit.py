@@ -4,10 +4,12 @@ Rules:
 - Installments with allocations (pagos aplicados) are locked.
 - Regenerating replaces only unlocked installments; if any paid, refuse full regen.
 - Amounts must sum to the policy premium when regenerating the whole plan.
+- Policy premium may be corrected only when the policy has no payment transactions.
 """
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal, InvalidOperation
@@ -18,6 +20,7 @@ from corredores.domain.enums import DueDateSource
 from corredores.domain.models import (
     AuditEvent,
     Installment,
+    Payment,
     PaymentAllocation,
     PaymentPlan,
     PaymentPromise,
@@ -35,13 +38,17 @@ class PlanEditView:
     policy_id: str
     policy_number: str
     premium: Decimal
+    net_premium: Decimal | None
+    gross_premium: Decimal | None
     effective_date: date | None
     plan_id: str | None
     confirmed: bool
     notes: str
     installments: list[dict]
     locked_count: int
+    payment_count: int
     can_regenerate: bool
+    can_edit_premium: bool
 
 
 def _premium(policy: Policy) -> Decimal:
@@ -51,11 +58,27 @@ def _premium(policy: Policy) -> Decimal:
     return Decimal("0")
 
 
+def _parse_money(value: str | Decimal | None, *, field: str) -> Decimal:
+    if value is None or str(value).strip() == "":
+        raise ValueError(f"{field} requerida")
+    try:
+        amt = Decimal(str(value).replace(",", "").strip()).quantize(Decimal("0.01"))
+    except (InvalidOperation, ValueError) as exc:
+        raise ValueError(f"{field} inválida") from exc
+    if amt <= 0:
+        raise ValueError(f"{field} debe ser > 0")
+    return amt
+
+
 def _is_locked(session: Session, installment: Installment) -> bool:
     if allocated_total(installment) > 0:
         return True
     n = session.query(PaymentAllocation).filter_by(installment_id=installment.id).count()
     return n > 0
+
+
+def _payment_count(session: Session, policy_id: str) -> int:
+    return session.query(Payment).filter_by(policy_id=policy_id).count()
 
 
 def build_plan_edit_view(session: Session, organization_id: str, policy_id: str) -> PlanEditView:
@@ -90,18 +113,119 @@ def build_plan_edit_view(session: Session, organization_id: str, policy_id: str)
                 }
             )
     premium = _premium(policy)
+    payments = _payment_count(session, policy.id)
+    can_edit_premium = locked == 0 and payments == 0
     return PlanEditView(
         policy_id=policy.id,
         policy_number=policy.policy_number or policy.id[:8],
         premium=premium,
+        net_premium=policy.net_premium,
+        gross_premium=policy.gross_premium,
         effective_date=term.effective_date if term else None,
         plan_id=plan.id if plan else None,
         confirmed=bool(plan and plan.confirmed),
         notes=(plan.notes or "") if plan else "",
         installments=rows,
         locked_count=locked,
+        payment_count=payments,
         can_regenerate=(locked == 0 and premium > 0),
+        can_edit_premium=can_edit_premium,
     )
+
+
+def _rescale_installments_to_premium(
+    session: Session, *, plan: PaymentPlan, premium: Decimal
+) -> None:
+    insts = (
+        session.query(Installment)
+        .filter_by(payment_plan_id=plan.id)
+        .order_by(Installment.installment_number)
+        .all()
+    )
+    if not insts:
+        return
+    for i in insts:
+        if _is_locked(session, i):
+            raise ValueError("no se puede repartir: hay cuotas con pagos aplicados")
+    n = len(insts)
+    base = (premium / n).quantize(Decimal("0.01"))
+    amounts = [base] * n
+    diff = premium - sum(amounts)
+    amounts[-1] = (amounts[-1] + diff).quantize(Decimal("0.01"))
+    for i, amt in zip(insts, amounts):
+        if amt <= 0:
+            raise ValueError("prima demasiado baja para el número de cuotas")
+        i.amount = amt
+
+
+def update_policy_premium(
+    session: Session,
+    *,
+    organization_id: str,
+    policy_id: str,
+    annual_premium: str | Decimal,
+    net_premium: str | Decimal | None = None,
+    gross_premium: str | Decimal | None = None,
+    actor_id: str | None = None,
+    rescale_installments: bool = True,
+) -> Policy:
+    """Correct policy premium when there are no payment transactions."""
+    view = build_plan_edit_view(session, organization_id, policy_id)
+    if not view.can_edit_premium:
+        raise ValueError(
+            "no se puede editar la prima: la póliza tiene transacciones (pagos aplicados)"
+        )
+    policy = session.get(Policy, policy_id)
+    assert policy is not None
+
+    annual = _parse_money(annual_premium, field="prima anual")
+    net = (
+        _parse_money(net_premium, field="prima neta")
+        if net_premium is not None and str(net_premium).strip() != ""
+        else annual
+    )
+    gross: Decimal | None = None
+    if gross_premium is not None and str(gross_premium).strip() != "":
+        gross = _parse_money(gross_premium, field="prima bruta")
+
+    old = {
+        "annual": str(policy.annual_premium) if policy.annual_premium is not None else None,
+        "net": str(policy.net_premium) if policy.net_premium is not None else None,
+        "gross": str(policy.gross_premium) if policy.gross_premium is not None else None,
+    }
+    policy.annual_premium = annual
+    policy.net_premium = net
+    if gross is not None:
+        policy.gross_premium = gross
+
+    plan = session.query(PaymentPlan).filter_by(policy_id=policy.id).first()
+    rescaled = bool(rescale_installments and plan is not None and view.installments)
+    if rescaled:
+        _rescale_installments_to_premium(session, plan=plan, premium=annual)
+
+    session.add(
+        AuditEvent(
+            organization_id=organization_id,
+            actor_id=actor_id,
+            entity_type="Policy",
+            entity_id=policy.id,
+            action="PREMIUM_CORRECTED",
+            detail_json=json.dumps(
+                {
+                    "old": old,
+                    "new": {
+                        "annual": str(annual),
+                        "net": str(net),
+                        "gross": str(gross) if gross is not None else None,
+                    },
+                    "rescaled_installments": rescaled,
+                }
+            ),
+        )
+    )
+    session.flush()
+    materialize_portfolio(session, organization_id=organization_id, actor_id=actor_id or "premium-edit")
+    return policy
 
 
 def regenerate_payment_plan(

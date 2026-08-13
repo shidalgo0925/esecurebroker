@@ -2427,6 +2427,42 @@ def poliza_plan_pagos_get(
     )
 
 
+@router.post("/polizas/{policy_id}/plan-pagos/prima")
+def poliza_plan_pagos_prima(
+    request: Request,
+    policy_id: str,
+    annual_premium: str = Form(...),
+    net_premium: str = Form(""),
+    gross_premium: str = Form(""),
+    session: Session = Depends(get_session),
+):
+    from urllib.parse import quote
+
+    from corredores.services.payment_plan_edit import update_policy_premium
+
+    org = resolve_org(session)
+    actor = current_actor(request)
+    try:
+        update_policy_premium(
+            session,
+            organization_id=org.id,
+            policy_id=policy_id,
+            annual_premium=annual_premium,
+            net_premium=net_premium or None,
+            gross_premium=gross_premium or None,
+            actor_id=actor.actor_id,
+        )
+    except (ValueError, TypeError) as exc:
+        return RedirectResponse(
+            f"/polizas/{policy_id}/plan-pagos?error={quote(str(exc))}",
+            status_code=303,
+        )
+    return RedirectResponse(
+        f"/polizas/{policy_id}/plan-pagos?ok={quote('Prima corregida')}",
+        status_code=303,
+    )
+
+
 @router.post("/polizas/{policy_id}/plan-pagos/regenerar")
 def poliza_plan_pagos_regenerar(
     request: Request,

@@ -18,6 +18,41 @@
 {% if ok %}<p class="form-ok">{{ ok }}</p>{% endif %}
 
 <section class="poliza-panel" style="margin-bottom:1.25rem">
+  <h2 class="poliza-panel-title">Corregir prima</h2>
+  {% if view.can_edit_premium %}
+  <p class="meta" style="margin-top:0">
+    Solo si no hay pagos. Al guardar se reparte la nueva prima en las cuotas existentes (mismas fechas).
+  </p>
+  <form class="capture-form" method="post" action="/polizas/{{ view.policy_id }}/plan-pagos/prima">
+    <div class="capture-grid">
+      <label>Prima anual
+        <input name="annual_premium" class="mono" inputmode="decimal"
+               value="{{ '%.2f'|format(view.premium) if view.premium else '' }}" required />
+      </label>
+      <label>Prima neta
+        <input name="net_premium" class="mono" inputmode="decimal"
+               value="{{ '%.2f'|format(view.net_premium) if view.net_premium else ('%.2f'|format(view.premium) if view.premium else '') }}" />
+      </label>
+      <label>Prima bruta <span class="meta">(opcional)</span>
+        <input name="gross_premium" class="mono" inputmode="decimal"
+               value="{{ '%.2f'|format(view.gross_premium) if view.gross_premium else '' }}" />
+      </label>
+    </div>
+    <div class="wizard-actions">
+      <button class="btn-primary" type="submit">Guardar prima →</button>
+    </div>
+  </form>
+  {% else %}
+  <p class="meta" style="margin:0">
+    No se puede editar la prima: hay
+    {% if view.payment_count %}{{ view.payment_count }} pago(s){% endif %}
+    {% if view.payment_count and view.locked_count %} / {% endif %}
+    {% if view.locked_count %}{{ view.locked_count }} cuota(s) con aplicación{% endif %}.
+  </p>
+  {% endif %}
+</section>
+
+<section class="poliza-panel" style="margin-bottom:1.25rem">
   <h2 class="poliza-panel-title">Regenerar calendario</h2>
   {% if view.can_regenerate %}
   <p class="meta" style="margin-top:0">Reemplaza todas las cuotas abiertas. Reparto igualitario sobre la prima.</p>
