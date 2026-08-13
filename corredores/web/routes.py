@@ -104,6 +104,7 @@ NAV_GROUPS = [
         "title": "Ventas",
         "links": [
             ("crm", "CRM / Pipeline", "/crm", "target"),
+            ("crm_actividades", "Agenda CRM", "/crm/actividades", "spark"),
             ("oportunidades", "Cola renovaciones", "/oportunidades", "refresh"),
             ("cotizador", "Cotizador", "/cotizador", "scale"),
             ("referidos", "Referidos", "/referidos", "share"),
@@ -231,6 +232,7 @@ def _resolve_back(request: Request, active: str, extra: dict) -> tuple[str | Non
         "reclamos": ("/hoy", "← Hoy"),
         "oportunidades": ("/hoy", "← Hoy"),
         "crm": ("/hoy", "← Hoy"),
+        "crm_actividades": ("/crm", "← Pipeline CRM"),
         "cotizador": ("/hoy", "← Hoy"),
         "referidos": ("/hoy", "← Hoy"),
         "aseguradoras": ("/hoy", "← Hoy"),
@@ -2937,6 +2939,10 @@ def cotizador(
     request: Request,
     quote_request_id: str | None = Query(default=None),
     q: str = Query(default=""),
+    party_id: str | None = Query(default=None),
+    crm_opportunity_id: str | None = Query(default=None),
+    line_id: str | None = Query(default=None),
+    note: str | None = Query(default=None),
     session: Session = Depends(get_session),
 ):
     org = resolve_org(session)
@@ -2979,7 +2985,10 @@ def cotizador(
             }
         )
     comparator = None
-    preselect_party_id = None
+    preselect_party_id = party_id or None
+    preselect_line_id = line_id or None
+    prefill_note = note or ""
+    prefill_crm_opportunity_id = crm_opportunity_id or ""
     if quote_request_id:
         qr = session.get(QuoteRequest, quote_request_id)
         if qr and qr.organization_id == org.id:
@@ -2989,9 +2998,12 @@ def cotizador(
                 comparator = []
             try:
                 payload = json.loads(qr.payload_json or "{}")
-                preselect_party_id = payload.get("party_id")
+                preselect_party_id = payload.get("party_id") or preselect_party_id
+                prefill_crm_opportunity_id = (
+                    payload.get("crm_opportunity_id") or prefill_crm_opportunity_id
+                )
             except Exception:
-                preselect_party_id = None
+                pass
         else:
             quote_request_id = None
     parties_raw = (
@@ -3024,6 +3036,9 @@ def cotizador(
             carriers=carriers,
             lines=lines,
             preselect_party_id=preselect_party_id,
+            preselect_line_id=preselect_line_id,
+            prefill_note=prefill_note,
+            prefill_crm_opportunity_id=prefill_crm_opportunity_id,
             form_error=request.query_params.get("error"),
         ),
     )
@@ -3035,6 +3050,7 @@ def cotizador_nuevo_post(
     party_id: str = Form(""),
     line_id: str = Form(""),
     note: str = Form(""),
+    crm_opportunity_id: str = Form(""),
     carrier_ids: list[str] = Form(default=[]),
     session: Session = Depends(get_session),
 ):
@@ -3057,15 +3073,18 @@ def cotizador_nuevo_post(
         client_name = " ".join(x for x in [party.first_name or "", party.last_name or ""] if x) or (
             party.legal_name or ""
         )
+    payload = {
+        "party_id": party_id,
+        "client_name": client_name,
+        "note": note.strip(),
+    }
+    if crm_opportunity_id.strip():
+        payload["crm_opportunity_id"] = crm_opportunity_id.strip()
     qr = create_quote_request(
         session,
         organization_id=org.id,
         insurance_line_id=line_id,
-        payload={
-            "party_id": party_id,
-            "client_name": client_name,
-            "note": note.strip(),
-        },
+        payload=payload,
         actor_id=actor.actor_id,
     )
     dispatch_carriers(session, qr, carrier_ids, actor_id=actor.actor_id)

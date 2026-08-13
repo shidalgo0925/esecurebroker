@@ -9,8 +9,8 @@ Canónico (este repo):
 
 F1–F3 entregados en DEV (`/api/crm/v1`).
 
-**F4 DONE (2026-08-13):** Pipeline Web / Kanban en `/crm` (+ prospectos / oportunidades HTML).  
-Funciones Odoo-like: quick-create (+), Kanban/Lista/búsqueda, statusbar, Ganado/Perdido, editar prima/probabilidad.  
+**F4+ GO (2026-08-13):** drag-drop Kanban, Agenda `/crm/actividades`, Nueva cotización → cotizador (soft `crm_opportunity_id`).  
+“Generar leads” no aplica (alta manual / quick-create).  
 Solo DEV — no push / no PROD sin GO.
 
 Siguiente: F5+ según ADR (requiere GO).

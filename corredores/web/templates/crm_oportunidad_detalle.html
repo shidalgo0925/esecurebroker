@@ -4,10 +4,13 @@
 {% block content %}
 <section class="odoo-opp-top">
   <div class="odoo-opp-actions">
+    <form method="post" action="/crm/oportunidades/{{ opp.id }}/cotizar">
+      <button class="btn-primary" type="submit">Nueva cotización</button>
+    </form>
     {% if opp.stage_code != 'WON' %}
     <form method="post" action="/crm/oportunidades/{{ opp.id }}/etapa-detalle">
       <input type="hidden" name="stage_code" value="WON" />
-      <button class="btn-primary" type="submit">Ganado</button>
+      <button class="btn-secondary" type="submit">Ganado</button>
     </form>
     {% endif %}
     {% if opp.stage_code != 'LOST' %}
@@ -38,6 +41,7 @@
     </form>
     {% endif %}
     <a class="btn-secondary" href="/crm">Pipeline</a>
+    <a class="btn-secondary" href="/crm/actividades">Agenda</a>
   </div>
 
   <div class="odoo-opp-right">
@@ -139,6 +143,9 @@
       <label class="catalog-field name">Título
         <input name="title" maxlength="200" />
       </label>
+      <label class="catalog-field name">Vence
+        <input name="due_at" type="datetime-local" />
+      </label>
       <label class="catalog-field name">Notas
         <input name="notes" maxlength="500" />
       </label>
@@ -149,12 +156,13 @@
   </form>
   <div class="table-card" style="margin-top:0.75rem">
     <table class="data-table">
-      <thead><tr><th>Tipo</th><th>Título</th><th>Estado</th><th></th></tr></thead>
+      <thead><tr><th>Tipo</th><th>Título</th><th>Vence</th><th>Estado</th><th></th></tr></thead>
       <tbody>
       {% for a in activities %}
         <tr>
           <td>{{ a.activity_type }}</td>
           <td>{{ a.title or '—' }}</td>
+          <td class="mono">{% if a.due_at %}{{ a.due_at.strftime('%Y-%m-%d %H:%M') }}{% else %}—{% endif %}</td>
           <td>{{ a.status }}</td>
           <td class="cli-action">
             {% if a.status == 'PENDING' or a.status == 'OVERDUE' %}
@@ -166,7 +174,7 @@
           </td>
         </tr>
       {% else %}
-        <tr><td colspan="4" class="empty-row">Sin actividades</td></tr>
+        <tr><td colspan="5" class="empty-row">Sin actividades</td></tr>
       {% endfor %}
       </tbody>
     </table>

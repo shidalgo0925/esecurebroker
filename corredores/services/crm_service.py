@@ -796,6 +796,86 @@ def find_customer_matches(
     return out or rows
 
 
+def ensure_party_for_opportunity(
+    session: Session,
+    ctx: AccessContext | None,
+    *,
+    organization_id: str,
+    opportunity_id: str,
+    actor_id: str | None = None,
+) -> Party:
+    """Return linked Customer Party, creating one from prospect if needed (quote flow)."""
+    _require_manage(ctx)
+    opp = get_opportunity(session, ctx, organization_id, opportunity_id)
+    if opp.customer_id:
+        party = session.get(Party, opp.customer_id)
+        if party is None or party.organization_id != organization_id:
+            raise CrmError("customer_id inválido")
+        return party
+    if not opp.prospect_id:
+        raise CrmError("la oportunidad no tiene prospecto ni cliente")
+    prosp = get_prospect(session, ctx, organization_id, opp.prospect_id)
+    if prosp.converted_customer_id:
+        party = session.get(Party, prosp.converted_customer_id)
+        if party and party.organization_id == organization_id:
+            opp.customer_id = party.id
+            session.flush()
+            return party
+    if prosp.prospect_type == PROSPECT_COMPANY:
+        party = Party(
+            organization_id=organization_id,
+            party_type=PartyType.ORGANIZATION,
+            legal_name=prosp.company_name,
+            national_id=prosp.identification_number,
+            phone=prosp.phone or prosp.mobile,
+            email=prosp.email,
+            data_source=DataSource.MANUAL,
+        )
+    else:
+        party = Party(
+            organization_id=organization_id,
+            party_type=PartyType.PERSON,
+            first_name=prosp.first_name,
+            last_name=prosp.last_name,
+            national_id=prosp.identification_number,
+            phone=prosp.phone or prosp.mobile,
+            email=prosp.email,
+            data_source=DataSource.MANUAL,
+        )
+    session.add(party)
+    session.flush()
+    role = (
+        session.query(PartyRole)
+        .filter_by(
+            organization_id=organization_id,
+            party_id=party.id,
+            role_type=PartyRoleType.CLIENT,
+        )
+        .one_or_none()
+    )
+    if role is None:
+        session.add(
+            PartyRole(
+                organization_id=organization_id,
+                party_id=party.id,
+                role_type=PartyRoleType.CLIENT,
+            )
+        )
+    prosp.converted_customer_id = party.id
+    opp.customer_id = party.id
+    _audit(
+        session,
+        organization_id=organization_id,
+        actor_id=actor_id,
+        entity_type="CrmOpportunity",
+        entity_id=opp.id,
+        action="CRM_PARTY_ENSURED_FOR_QUOTE",
+        detail={"party_id": party.id, "prospect_id": prosp.id},
+    )
+    session.flush()
+    return party
+
+
 def convert_opportunity_to_customer(
     session: Session,
     ctx: AccessContext | None,

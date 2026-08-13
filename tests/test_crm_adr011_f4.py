@@ -151,9 +151,20 @@ def test_crm_quick_create_and_list(session, world, monkeypatch):
     assert r.status_code == 303
     loc = r.headers.get("location", "")
     assert "/crm/oportunidades/" in loc
+    opp_id = loc.split("/crm/oportunidades/")[1].split("?")[0]
     r2 = client.get("/crm?vista=lista")
     assert r2.status_code == 200
     assert b"Fianza colegio" in r2.content
     r3 = client.get("/crm?q=maria")
     assert r3.status_code == 200
     assert b"Fianza colegio" in r3.content
+    r4 = client.get("/crm/actividades")
+    assert r4.status_code == 200
+    assert b"Agenda" in r4.content
+    r5 = client.post(
+        f"/crm/oportunidades/{opp_id}/cotizar",
+        follow_redirects=False,
+    )
+    assert r5.status_code == 303
+    assert "/cotizador?" in r5.headers.get("location", "")
+    assert "crm_opportunity_id=" in r5.headers.get("location", "")

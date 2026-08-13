@@ -6,7 +6,7 @@ Distinct from renewal queue at `/oportunidades` (RenewalOpportunity).
 from __future__ import annotations
 
 from decimal import Decimal, InvalidOperation
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -18,6 +18,7 @@ from corredores.domain.crm_constants import (
     PIPELINE_STAGE_LABELS_ES,
     PROSPECT_COMPANY,
     STAGE_LOST,
+    STAGE_QUOTING,
     STAGE_WON,
 )
 from corredores.services.access_control import AccessDenied, require_permission
@@ -30,6 +31,7 @@ from corredores.services.crm_service import (
     create_activity,
     create_opportunity,
     create_prospect,
+    ensure_party_for_opportunity,
     get_opportunity,
     get_prospect,
     list_activities,
@@ -261,6 +263,104 @@ def crm_quick_create(
     return RedirectResponse(
         f"/crm/oportunidades/{opp.id}?ok={quote('Oportunidad creada')}",
         status_code=303,
+    )
+
+
+@router.post("/crm/oportunidades/{opp_id}/cotizar")
+def crm_opp_cotizar(
+    opp_id: str,
+    request: Request,
+    session: Session = Depends(get_session),
+):
+    """Ensure Party from prospect if needed, move to QUOTING, open cotizador prefilled."""
+    org = resolve_org(session, request)
+    _require_crm(session, request, manage=True)
+    access = _ctx_access(session, request)
+    try:
+        opp = get_opportunity(session, access, org.id, opp_id)
+        party = ensure_party_for_opportunity(
+            session,
+            access,
+            organization_id=org.id,
+            opportunity_id=opp_id,
+            actor_id=_actor(request),
+        )
+        if opp.stage_code not in {STAGE_WON, STAGE_LOST, STAGE_QUOTING}:
+            set_opportunity_stage(
+                session,
+                access,
+                organization_id=org.id,
+                opportunity_id=opp_id,
+                stage_code=STAGE_QUOTING,
+                actor_id=_actor(request),
+            )
+        note = opp.title
+        if opp.product_interest:
+            note = f"{opp.title} · {opp.product_interest}"
+        params = {
+            "party_id": party.id,
+            "crm_opportunity_id": opp.id,
+            "note": note,
+        }
+        if opp.line_of_business_id:
+            params["line_id"] = opp.line_of_business_id
+    except (CrmError, AccessDenied, ValueError) as exc:
+        return _err_redirect(f"/crm/oportunidades/{opp_id}", exc)
+    return RedirectResponse(f"/cotizador?{urlencode(params)}#nueva", status_code=303)
+
+
+@router.get("/crm/actividades", response_class=HTMLResponse)
+def crm_actividades(
+    request: Request,
+    session: Session = Depends(get_session),
+    error: str = Query(default=""),
+    ok: str = Query(default=""),
+):
+    from collections import defaultdict
+    from datetime import date as date_cls
+    from datetime import timezone
+
+    org = resolve_org(session, request)
+    _require_crm(session, request, manage=False)
+    access = _ctx_access(session, request)
+    rows = list_activities(session, access, org.id)
+    today = date_cls.today()
+    groups: dict[str, list] = defaultdict(list)
+    for a in rows:
+        if a.due_at is None:
+            key = "Sin fecha"
+        else:
+            d = a.due_at.astimezone(timezone.utc).date() if a.due_at.tzinfo else a.due_at.date()
+            if d < today and a.status in {"PENDING", "OVERDUE"}:
+                key = f"Vencidas · {d.isoformat()}"
+            elif d == today:
+                key = f"Hoy · {d.isoformat()}"
+            else:
+                key = d.isoformat()
+        groups[key].append(a)
+
+    def _sort_key(k: str):
+        if k.startswith("Vencidas"):
+            return (0, k)
+        if k.startswith("Hoy"):
+            return (1, k)
+        if k == "Sin fecha":
+            return (3, k)
+        return (2, k)
+
+    grouped = [(k, groups[k]) for k in sorted(groups.keys(), key=_sort_key)]
+    return templates.TemplateResponse(
+        request,
+        "crm_actividades.html",
+        _ctx(
+            request,
+            "crm_actividades",
+            org_name=org.name,
+            grouped=grouped,
+            activity_types=sorted(ACTIVITY_TYPES),
+            error=error or None,
+            ok=ok or None,
+        ),
     )
 
 
@@ -707,12 +807,19 @@ def crm_opp_actividad(
     activity_type: str = Form("FOLLOW_UP"),
     title: str = Form(""),
     notes: str = Form(""),
+    due_at: str = Form(""),
     session: Session = Depends(get_session),
 ):
+    from datetime import datetime
+
     org = resolve_org(session, request)
     _require_crm(session, request, manage=True)
     access = _ctx_access(session, request)
     try:
+        due = None
+        if (due_at or "").strip():
+            raw = due_at.strip()
+            due = datetime.fromisoformat(raw if "T" in raw else f"{raw}T09:00:00")
         create_activity(
             session,
             access,
@@ -721,6 +828,7 @@ def crm_opp_actividad(
             activity_type=activity_type,
             title=title or None,
             notes=notes or None,
+            due_at=due,
             actor_id=_actor(request),
         )
     except (CrmError, AccessDenied, ValueError) as exc:

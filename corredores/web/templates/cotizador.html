@@ -16,6 +16,9 @@
 <section id="nueva" class="poliza-panel" style="margin-bottom:1rem">
   <h2 class="poliza-panel-title">Nueva cotización</h2>
   <form method="post" action="/cotizador/nuevo" class="capture-grid" style="max-width:none">
+    {% if prefill_crm_opportunity_id %}
+    <input type="hidden" name="crm_opportunity_id" value="{{ prefill_crm_opportunity_id }}" />
+    {% endif %}
     <label>Cliente
       <select name="party_id" required>
         <option value="">Seleccionar…</option>
@@ -27,12 +30,12 @@
     <label>Ramo
       <select name="line_id" required>
         {% for l in lines %}
-        <option value="{{ l.id }}" {% if l.code == 'AUTO' %}selected{% endif %}>{{ l.code }} — {{ l.name }}</option>
+        <option value="{{ l.id }}" {% if preselect_line_id == l.id or (not preselect_line_id and l.code == 'AUTO') %}selected{% endif %}>{{ l.code }} — {{ l.name }}</option>
         {% endfor %}
       </select>
     </label>
     <label class="span-2">Nota / riesgo
-      <input type="text" name="note" placeholder="Ej. Toyota 2020, uso particular, renovación…" />
+      <input type="text" name="note" value="{{ prefill_note or '' }}" placeholder="Ej. Toyota 2020, uso particular, renovación…" />
     </label>
     <div class="span-2">
       <p class="meta" style="margin:0 0 0.35rem">Aseguradoras a pedir</p>

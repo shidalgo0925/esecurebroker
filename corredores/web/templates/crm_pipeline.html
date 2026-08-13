@@ -9,6 +9,7 @@
     <nav class="odoo-crm-tabs">
       <a class="{% if view_mode == 'kanban' %}on{% endif %}" href="/crm{% if show_lost %}?include_lost=1{% endif %}">Kanban</a>
       <a class="{% if view_mode == 'lista' %}on{% endif %}" href="/crm?vista=lista{% if show_lost %}&include_lost=1{% endif %}{% if q %}&q={{ q|urlencode }}{% endif %}">Lista</a>
+      <a href="/crm/actividades">Agenda</a>
       <a href="/crm/prospectos">Prospectos</a>
       {% if show_lost %}
       <a href="/crm?vista={{ view_mode }}">Ocultar perdidos</a>
@@ -53,7 +54,7 @@
 </div>
 {% else %}
 
-<div class="odoo-kanban-board" role="list">
+<div class="odoo-kanban-board" role="list" id="crmKanban">
   {% for col in columns %}
   <section class="odoo-kanban-col" role="listitem" data-stage="{{ col.code }}">
     <header class="odoo-kanban-col-head">
@@ -93,9 +94,9 @@
     </form>
     {% endif %}
 
-    <div class="odoo-kanban-col-body">
+    <div class="odoo-kanban-col-body" data-drop-stage="{{ col.code }}">
       {% for card in col.cards %}
-      <article class="odoo-kanban-card">
+      <article class="odoo-kanban-card" draggable="true" data-opp-id="{{ card.id }}" data-stage="{{ card.stage_code }}">
         <a class="odoo-kanban-card-link" href="/crm/oportunidades/{{ card.id }}">
           <div class="odoo-kanban-card-top">
             <span class="odoo-avatar" aria-hidden="true">{{ card.initial }}</span>
@@ -136,7 +137,7 @@
       </article>
       {% else %}
       {% if not col.open_quick %}
-      <div class="odoo-kanban-empty">Sin oportunidades</div>
+      <div class="odoo-kanban-empty">Soltá aquí o usá +</div>
       {% endif %}
       {% endfor %}
     </div>
@@ -146,6 +147,51 @@
   </section>
   {% endfor %}
 </div>
+<script>
+(function () {
+  var board = document.getElementById('crmKanban');
+  if (!board) return;
+  var dragged = null;
+  board.querySelectorAll('.odoo-kanban-card[draggable]').forEach(function (card) {
+    card.addEventListener('dragstart', function (e) {
+      dragged = card;
+      card.classList.add('is-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', card.getAttribute('data-opp-id'));
+    });
+    card.addEventListener('dragend', function () {
+      card.classList.remove('is-dragging');
+      board.querySelectorAll('.odoo-kanban-col-body').forEach(function (b) { b.classList.remove('drop-ready'); });
+      dragged = null;
+    });
+  });
+  board.querySelectorAll('.odoo-kanban-col-body').forEach(function (body) {
+    body.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      body.classList.add('drop-ready');
+    });
+    body.addEventListener('dragleave', function () { body.classList.remove('drop-ready'); });
+    body.addEventListener('drop', function (e) {
+      e.preventDefault();
+      body.classList.remove('drop-ready');
+      var stage = body.getAttribute('data-drop-stage');
+      var oppId = e.dataTransfer.getData('text/plain') || (dragged && dragged.getAttribute('data-opp-id'));
+      if (!oppId || !stage) return;
+      if (dragged && dragged.getAttribute('data-stage') === stage) return;
+      var form = document.createElement('form');
+      form.method = 'post';
+      form.action = '/crm/oportunidades/' + encodeURIComponent(oppId) + '/etapa';
+      var input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'stage_code';
+      input.value = stage;
+      form.appendChild(input);
+      document.body.appendChild(form);
+      form.submit();
+    });
+  });
+})();
+</script>
 {% endif %}
 
 {% if show_lost and lost_rows %}

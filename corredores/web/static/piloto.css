@@ -2008,10 +2008,21 @@ a.radar-card:hover { border-color: rgba(205,154,52,.45); }
   flex-direction: column;
   gap: 0.2rem;
 }
-@media (max-width: 800px) {
-  .odoo-metrics,
-  .odoo-opp-grid { grid-template-columns: 1fr; }
-  .odoo-opp-right { align-items: stretch; width: 100%; }
-  .odoo-statusbar { justify-content: flex-start; }
+.odoo-kanban-card.is-dragging {
+  opacity: 0.45;
 }
+.odoo-kanban-col-body.drop-ready {
+  outline: 2px dashed #714b67;
+  outline-offset: -4px;
+  background: rgba(113, 75, 103, 0.06);
+}
+.odoo-kanban-card[draggable="true"] {
+  cursor: grab;
+}
+.odoo-kanban-card[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+/* legacy class kept so old markup never breaks layout */
+.crm-kanban { display: none; }
 

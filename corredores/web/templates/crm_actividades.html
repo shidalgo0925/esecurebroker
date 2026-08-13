@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Agenda CRM · ESecureBroker{% endblock %}
+{% block topbar %}Ventas · Agenda CRM{% endblock %}
+{% block content %}
+<section class="odoo-crm-toolbar">
+  <div class="odoo-crm-toolbar-left">
+    <h1 class="odoo-crm-title">Agenda</h1>
+    <nav class="odoo-crm-tabs">
+      <a href="/crm">Pipeline</a>
+      <a class="on" href="/crm/actividades">Actividades</a>
+      <a href="/crm/prospectos">Prospectos</a>
+    </nav>
+  </div>
+  <span class="odoo-crm-org">{{ org_name }}</span>
+</section>
+
+{% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+{% if ok %}<p class="flash-ok">{{ ok }}</p>{% endif %}
+
+<p class="meta">Creá actividades con fecha desde el detalle de cada oportunidad (campo Vence).</p>
+
+{% for label, rows in grouped %}
+<section class="poliza-panel" style="margin-bottom:1rem">
+  <h2 class="poliza-panel-title">{{ label }} · {{ rows|length }}</h2>
+  <div class="table-card">
+    <table class="data-table">
+      <thead><tr><th>Tipo</th><th>Título</th><th>Vence</th><th>Estado</th><th></th></tr></thead>
+      <tbody>
+      {% for a in rows %}
+        <tr>
+          <td>{{ a.activity_type }}</td>
+          <td>
+            {{ a.title or '—' }}
+            {% if a.opportunity_id %}
+            · <a class="open-link" href="/crm/oportunidades/{{ a.opportunity_id }}">opp</a>
+            {% endif %}
+          </td>
+          <td class="mono">{% if a.due_at %}{{ a.due_at.strftime('%Y-%m-%d %H:%M') }}{% else %}—{% endif %}</td>
+          <td>{{ a.status }}</td>
+          <td class="cli-action">
+            {% if a.status == 'PENDING' or a.status == 'OVERDUE' %}
+            <form method="post" action="/crm/actividades/{{ a.id }}/completar" style="display:inline">
+              <input type="hidden" name="return_to" value="/crm/actividades" />
+              <button class="open-link" type="submit" style="background:none;border:0;padding:0;cursor:pointer">Completar</button>
+            </form>
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% else %}
+<p class="empty-row">Sin actividades. Abrí una oportunidad y registrá un seguimiento con fecha.</p>
+{% endfor %}
+{% endblock %}
