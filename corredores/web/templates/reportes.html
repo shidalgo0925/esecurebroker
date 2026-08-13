@@ -201,13 +201,13 @@
         <tr>
           <td class="cli-name">{{ row.carrier_name }}</td>
           <td>{{ p.name }}</td>
-          <td class="mono">{% if g %}${{ '%.2f'|format(g.confirmed_amount) }}{% else %}—{% endif %}</td>
-          <td class="mono">{% if g and g.target_amount is not none %}${{ '%.2f'|format(g.target_amount) }}{% else %}—{% endif %}</td>
+          <td class="mono">{% if g %}${{ g.confirmed_amount|money }}{% else %}—{% endif %}</td>
+          <td class="mono">{% if g and g.target_amount is not none %}${{ g.target_amount|money }}{% else %}—{% endif %}</td>
           <td class="mono">{% if g and g.progress_pct is not none %}{{ g.progress_pct }}%{% else %}—{% endif %}</td>
           <td class="mono">
             {% if g %}
-              {% if g.benefit_stage == 'EARNED' %}${{ '%.2f'|format(g.earned_benefit) }}
-              {% else %}${{ '%.2f'|format(g.estimated_benefit) }}{% endif %}
+              {% if g.benefit_stage == 'EARNED' %}${{ g.earned_benefit|money }}
+              {% else %}${{ g.estimated_benefit|money }}{% endif %}
             {% else %}—{% endif %}
           </td>
           <td class="cli-action"><a class="open-link" href="{{ row.href }}">Abrir</a></td>

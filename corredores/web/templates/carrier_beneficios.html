@@ -82,14 +82,14 @@
       <tr>
         <td class="cli-name">{{ p.name }}</td>
         <td class="mono">{{ p.period_start }} → {{ p.period_end }}</td>
-        <td class="mono">{% if g and g.target_amount is not none %}${{ '%.2f'|format(g.target_amount) }}{% else %}—{% endif %}</td>
-        <td class="mono">{% if g %}${{ '%.2f'|format(g.confirmed_amount) }}{% else %}—{% endif %}</td>
+        <td class="mono">{% if g and g.target_amount is not none %}${{ g.target_amount|money }}{% else %}—{% endif %}</td>
+        <td class="mono">{% if g %}${{ g.confirmed_amount|money }}{% else %}—{% endif %}</td>
         <td>{% if g and g.progress_pct is not none %}{{ g.progress_pct }}%{% else %}—{% endif %}</td>
-        <td class="mono">{% if g and g.remaining is not none %}${{ '%.2f'|format(g.remaining) }}{% else %}—{% endif %}</td>
+        <td class="mono">{% if g and g.remaining is not none %}${{ g.remaining|money }}{% else %}—{% endif %}</td>
         <td class="mono">
           {% if g %}
-            {% if g.benefit_stage == 'EARNED' %}${{ '%.2f'|format(g.earned_benefit) }} (devengado)
-            {% else %}${{ '%.2f'|format(g.estimated_benefit) }} (est.){% endif %}
+            {% if g.benefit_stage == 'EARNED' %}${{ g.earned_benefit|money }} (devengado)
+            {% else %}${{ g.estimated_benefit|money }} (est.){% endif %}
           {% else %}—{% endif %}
         </td>
         <td>{{ p.status }}</td>

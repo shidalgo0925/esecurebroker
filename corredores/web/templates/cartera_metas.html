@@ -74,17 +74,17 @@
           <div class="meta-card-nums">
             <div>
               <div class="meta">Confirmado</div>
-              <div class="money-amt">${{ '%.2f'|format(g.confirmed_amount) }}</div>
+              <div class="money-amt">${{ g.confirmed_amount|money }}</div>
             </div>
             <div>
               <div class="meta">Meta</div>
-              <div class="money-amt">{% if g.target_amount is not none %}${{ '%.2f'|format(g.target_amount) }}{% else %}—{% endif %}</div>
+              <div class="money-amt">{% if g.target_amount is not none %}${{ g.target_amount|money }}{% else %}—{% endif %}</div>
             </div>
             <div>
               <div class="meta">Beneficio</div>
               <div class="money-amt">
-                {% if g.benefit_stage == 'EARNED' %}${{ '%.2f'|format(g.earned_benefit) }}
-                {% else %}${{ '%.2f'|format(g.estimated_benefit) }} <span class="meta">est.</span>{% endif %}
+                {% if g.benefit_stage == 'EARNED' %}${{ g.earned_benefit|money }}
+                {% else %}${{ g.estimated_benefit|money }} <span class="meta">est.</span>{% endif %}
               </div>
             </div>
           </div>
@@ -95,7 +95,7 @@
           </div>
           <div class="meta-card-foot">
             <span>{% if g.progress_pct is not none %}{{ g.progress_pct }}%{% else %}—{% endif %}</span>
-            <span>{% if g.remaining is not none %}Faltan ${{ '%.2f'|format(g.remaining) }}{% else %}Meta alcanzada o sin tramo{% endif %}</span>
+            <span>{% if g.remaining is not none %}Faltan ${{ g.remaining|money }}{% else %}Meta alcanzada o sin tramo{% endif %}</span>
           </div>
         </div>
         {% else %}

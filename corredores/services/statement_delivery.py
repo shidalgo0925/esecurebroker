@@ -22,6 +22,7 @@ from corredores.services.account_cxc import (
 )
 from corredores.services.interactions import log_interaction
 from corredores.services.mail import mail_configured, send_email
+from corredores.services.money_format import format_money
 from corredores.services.runtime_settings import runtime
 
 _TEMPLATES = Path(__file__).resolve().parent.parent / "web" / "templates"
@@ -29,7 +30,7 @@ _env = Environment(
     loader=FileSystemLoader(str(_TEMPLATES)),
     autoescape=select_autoescape(["html", "xml"]),
 )
-_env.filters["money"] = lambda v: f"{Decimal(str(v)):.2f}"
+_env.filters["money"] = format_money
 
 
 @dataclass

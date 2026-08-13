@@ -72,8 +72,10 @@ from corredores.web.deps import (
 )
 
 router = APIRouter()
+from corredores.services.money_format import format_money
+
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
-templates.env.filters["money"] = lambda v: f"{Decimal(str(v)):.2f}"
+templates.env.filters["money"] = format_money
 
 # Sidebar groups — (key, label, href, icon)
 NAV_GROUPS = [

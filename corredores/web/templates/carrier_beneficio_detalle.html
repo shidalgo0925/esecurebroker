@@ -15,15 +15,15 @@
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(10rem,1fr));gap:0.75rem">
     <div>
       <div class="meta">Confirmado</div>
-      <div class="money-amt">${{ '%.2f'|format(progress.confirmed_amount) }}</div>
+      <div class="money-amt">${{ progress.confirmed_amount|money }}</div>
     </div>
     <div>
       <div class="meta">Pendiente conf.</div>
-      <div class="money-amt">${{ '%.2f'|format(progress.pending_amount) }}</div>
+      <div class="money-amt">${{ progress.pending_amount|money }}</div>
     </div>
     <div>
       <div class="meta">Meta</div>
-      <div class="money-amt">{% if progress.target_amount is not none %}${{ '%.2f'|format(progress.target_amount) }}{% else %}—{% endif %}</div>
+      <div class="money-amt">{% if progress.target_amount is not none %}${{ progress.target_amount|money }}{% else %}—{% endif %}</div>
     </div>
     <div>
       <div class="meta">Cumplimiento</div>
@@ -31,13 +31,13 @@
     </div>
     <div>
       <div class="meta">Faltan</div>
-      <div class="money-amt">{% if progress.remaining is not none %}${{ '%.2f'|format(progress.remaining) }}{% else %}—{% endif %}</div>
+      <div class="money-amt">{% if progress.remaining is not none %}${{ progress.remaining|money }}{% else %}—{% endif %}</div>
     </div>
     <div>
       <div class="meta">Beneficio {{ progress.benefit_stage }}</div>
       <div class="money-amt">
-        {% if progress.benefit_stage == 'EARNED' %}${{ '%.2f'|format(progress.earned_benefit) }}
-        {% else %}${{ '%.2f'|format(progress.estimated_benefit) }}{% endif %}
+        {% if progress.benefit_stage == 'EARNED' %}${{ progress.earned_benefit|money }}
+        {% else %}${{ progress.estimated_benefit|money }}{% endif %}
       </div>
     </div>
   </div>
@@ -52,7 +52,7 @@
     {% for t in tiers %}
       <tr>
         <td>{{ t.sequence }}</td>
-        <td class="mono">${{ '%.2f'|format(t.threshold_amount) }}</td>
+        <td class="mono">${{ t.threshold_amount|money }}</td>
         <td>{{ t.benefit_type }}</td>
         <td class="mono">{{ t.benefit_value }}{% if t.benefit_type == 'PERCENTAGE' %}%{% endif %}</td>
       </tr>
@@ -96,7 +96,7 @@
     {% for t in txns %}
       <tr>
         <td class="mono">{{ t.txn_date }}</td>
-        <td class="mono">${{ '%.2f'|format(t.amount) }}</td>
+        <td class="mono">${{ t.amount|money }}</td>
         <td>{{ t.confirmation_status }}</td>
         <td class="mono">{{ t.carrier_receipt_number or '—' }}</td>
         <td class="mono">{{ t.source_type }}:{{ t.source_id[:12] }}</td>
@@ -134,12 +134,12 @@
     {% for s in settlements %}
       <tr>
         <td>{{ s.period_label }}</td>
-        <td class="mono">${{ '%.2f'|format(s.eligible_amount) }}</td>
-        <td class="mono">${{ '%.2f'|format(s.calculated_benefit) }}</td>
+        <td class="mono">${{ s.eligible_amount|money }}</td>
+        <td class="mono">${{ s.calculated_benefit|money }}</td>
         <td>{{ s.benefit_stage }}</td>
         <td>{{ s.status }}</td>
-        <td class="mono">{% if s.recognized_amount is not none %}${{ '%.2f'|format(s.recognized_amount) }}{% else %}—{% endif %}</td>
-        <td class="mono">{% if s.paid_amount is not none %}${{ '%.2f'|format(s.paid_amount) }}{% else %}—{% endif %}</td>
+        <td class="mono">{% if s.recognized_amount is not none %}${{ s.recognized_amount|money }}{% else %}—{% endif %}</td>
+        <td class="mono">{% if s.paid_amount is not none %}${{ s.paid_amount|money }}{% else %}—{% endif %}</td>
         <td>
           {% if s.status == 'CLAIMED' %}
           <form method="post" action="/aseguradoras/{{ carrier.id }}/beneficios/{{ plan.id }}/reconocer" class="catalog-form">
