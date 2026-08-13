@@ -62,4 +62,15 @@ Tests: `tests/test_crm_adr011_f1.py`
 - `office_id`: aún sin filtro (sin entidad Office)
 - Tests: `tests/test_crm_adr011_f2.py`
 
-**STOP** — no iniciar F3 (CRM API) sin GO.
+## F3 — CRM API (DONE 2026-08-13)
+
+- `corredores/services/crm_service.py` — create/list/assign, stages, WON/LOST/REOPEN, activities, convert
+- `corredores/web/crm_routes.py` — REST `/api/crm/v1` (tag OpenAPI `crm-v1`)
+- Deduplicación Customer (LINK / CREATE / 409 ambiguous)
+- Auditoría `CRM_*` vía `AuditEvent`
+- Tests: `tests/test_crm_adr011_f3.py`
+
+Endpoints clave:
+`GET/POST /prospects` · `GET/POST /opportunities` · `POST .../won|lost|reopen|convert|stage|assign` · `GET/POST /activities` · catalogs `/stages|/lead-sources|/lost-reasons`
+
+**STOP** — no iniciar F4 (Pipeline Web / Kanban) sin GO.

@@ -7,6 +7,6 @@ Canónico (este repo):
 
 `docs/ADR-011_CRM_DOMAIN.md`
 
-F1 (domain) + F2 (AccessContext/RBAC) entregados en DEV.
+F1–F3 entregados en DEV (`/api/crm/v1`).
 
-Siguiente: F3 CRM API — requiere GO explícito.
+Siguiente: F4 Pipeline Web / Kanban — requiere GO explícito.

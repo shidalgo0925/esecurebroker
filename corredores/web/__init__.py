@@ -6,7 +6,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from fastapi import FastAPI, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -36,6 +36,16 @@ class PilotoAuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
         if not settings.auth_enabled or is_public_path(path):
+            return await call_next(request)
+        # CRM JSON API — never HTML-redirect (ADR-011 F3)
+        if path.startswith("/api/crm/"):
+            principal = read_session(request)
+            if principal is None:
+                return JSONResponse({"detail": "sesión requerida"}, status_code=401)
+            if not principal.organization_id:
+                return JSONResponse(
+                    {"detail": "organización activa no definida"}, status_code=403
+                )
             return await call_next(request)
         principal = read_session(request)
         if principal is None:
@@ -134,7 +144,8 @@ def create_app() -> FastAPI:
         version="0.1.0",
         description=(
             "ESecureBroker Web + Mobile API. "
-            "ESB GO Mobile contract: `/api/mobile/v1` (OpenAPI tag `mobile-v1`)."
+            "ESB GO Mobile contract: `/api/mobile/v1` (OpenAPI tag `mobile-v1`). "
+            "CRM API: `/api/crm/v1` (OpenAPI tag `crm-v1`, ADR-011)."
         ),
     )
     try:
@@ -145,6 +156,7 @@ def create_app() -> FastAPI:
         ensure_runtime_settings()
     except Exception as e:
         print(f"Warning: ensure_runtime_settings: {e}")
+    from corredores.web.crm_routes import router as crm_router
     from corredores.web.mobile.errors import MobileAPIError, mobile_api_error_handler
     from corredores.web.mobile.router import router as mobile_router
 
@@ -156,6 +168,7 @@ def create_app() -> FastAPI:
     app.include_router(router)
     app.include_router(org_admin_router)
     app.include_router(carrier_incentive_router)
+    app.include_router(crm_router)
     app.include_router(mobile_router)
     return app
 
