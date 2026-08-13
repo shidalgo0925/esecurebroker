@@ -160,14 +160,14 @@
       <div class="stack-actions" style="margin-top:0.85rem">
         <form method="post" action="/configuracion/estados-auto" style="display:inline">
           <input type="hidden" name="dry_run" value="1" />
-          <button type="submit" class="btn-secondary">Simular (simulación)</button>
+          <button type="submit" class="btn-secondary">Simular (sin enviar)</button>
         </form>
         <form method="post" action="/configuracion/estados-auto" style="display:inline" onsubmit="return confirm('¿Enviar estados de cuenta reales ahora?');">
           <input type="hidden" name="dry_run" value="0" />
           <button type="submit" class="btn-primary" {% if not mail.configured or not mail.auto_enabled %}disabled title="Activa MAIL_ENABLED, SMTP y STATEMENT_AUTO_ENABLED"{% endif %}>Ejecutar ahora</button>
         </form>
       </div>
-      <p class="meta" style="margin-top:0.6rem">Timer systemd: <span class="mono">esecurebroker-statements.timer</span> (07:30) · CLI: <span class="mono">python -m corredores.cli send-statements [--simulación]</span></p>
+      <p class="meta" style="margin-top:0.6rem">Timer systemd: <span class="mono">esecurebroker-statements.timer</span> (07:30) · CLI: <span class="mono">python -m corredores.cli send-statements [--dry-run]</span></p>
     </div>
   </section>
 </div>
