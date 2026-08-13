@@ -2,71 +2,100 @@
 {% block title %}Pipeline CRM · ESecureBroker{% endblock %}
 {% block topbar %}Ventas · Pipeline CRM{% endblock %}
 {% block content %}
-<section class="page-head row-between">
-  <div>
-    <h1 class="page-title">Pipeline CRM</h1>
-    <p class="page-sub">Nuevos negocios (prospectos → oportunidades) · <b>{{ org_name }}</b></p>
+<section class="odoo-crm-toolbar">
+  <div class="odoo-crm-toolbar-left">
+    <h1 class="odoo-crm-title">Pipeline</h1>
+    <nav class="odoo-crm-tabs">
+      <a class="on" href="/crm">Kanban</a>
+      <a href="/crm/prospectos">Prospectos</a>
+      {% if show_lost %}
+      <a class="on" href="/crm">Ocultar perdidos</a>
+      {% else %}
+      <a href="/crm?include_lost=1">Perdidos</a>
+      {% endif %}
+    </nav>
   </div>
-  <div class="stack-actions">
-    <a class="btn-secondary" href="/crm/prospectos">Prospectos</a>
-    <a class="btn-primary" href="/crm/prospectos">+ Nuevo prospecto</a>
-    {% if show_lost %}
-    <a class="btn-secondary" href="/crm">Ocultar perdidos</a>
-    {% else %}
-    <a class="btn-secondary" href="/crm?include_lost=1">Ver perdidos</a>
-    {% endif %}
+  <div class="odoo-crm-toolbar-right">
+    <span class="odoo-crm-org">{{ org_name }}</span>
+    <a class="btn-primary" href="/crm/prospectos#nuevo">Nuevo</a>
   </div>
 </section>
 
 {% if error %}<p class="form-error">{{ error }}</p>{% endif %}
 {% if ok %}<p class="flash-ok">{{ ok }}</p>{% endif %}
 
-<p class="meta" style="margin-top:0">
-  La cola de <a href="/oportunidades">renovaciones</a> es otro flujo (pólizas por vencer).
-</p>
-
-<div class="crm-kanban">
+<div class="odoo-kanban-board" role="list">
   {% for col in columns %}
-  <section class="crm-kanban-col">
-    <header class="crm-kanban-head">
-      <h2>{{ col.name }}</h2>
-      <span class="mono">{{ col.cards|length }}</span>
+  <section class="odoo-kanban-col" role="listitem" data-stage="{{ col.code }}">
+    <header class="odoo-kanban-col-head">
+      <div class="odoo-kanban-col-title">
+        <span class="odoo-stage-dot stage-{{ col.code|lower }}"></span>
+        <h2>{{ col.name }}</h2>
+      </div>
+      <span class="odoo-kanban-count">{{ col.cards|length }}</span>
     </header>
-    <div class="crm-kanban-cards">
+    <div class="odoo-kanban-col-body">
       {% for card in col.cards %}
-      <article class="crm-card">
-        <a class="crm-card-title" href="/crm/oportunidades/{{ card.id }}">{{ card.title }}</a>
-        {% if card.subtitle %}<p class="meta">{{ card.subtitle }}</p>{% endif %}
-        {% if card.premium %}<p class="mono">${{ card.premium|money }}</p>{% endif %}
-        <form method="post" action="/crm/oportunidades/{{ card.id }}/etapa" class="crm-card-move">
-          <label class="meta">Mover
-            <select name="stage_code" onchange="this.form.submit()">
+      <article class="odoo-kanban-card">
+        <a class="odoo-kanban-card-link" href="/crm/oportunidades/{{ card.id }}">
+          <div class="odoo-kanban-card-top">
+            <span class="odoo-avatar" aria-hidden="true">{{ card.initial }}</span>
+            <div class="odoo-kanban-card-main">
+              <strong class="odoo-kanban-card-title">{{ card.title }}</strong>
+              {% if card.subtitle %}<span class="odoo-kanban-card-partner">{{ card.subtitle }}</span>{% endif %}
+            </div>
+          </div>
+          {% if card.premium is not none %}
+          <div class="odoo-kanban-card-money mono">${{ card.premium|money }}</div>
+          {% endif %}
+        </a>
+        <div class="odoo-kanban-card-actions">
+          {% if card.prev_code %}
+          <form method="post" action="/crm/oportunidades/{{ card.id }}/etapa">
+            <input type="hidden" name="stage_code" value="{{ card.prev_code }}" />
+            <button type="submit" class="odoo-stage-btn" title="{{ stage_labels.get(card.prev_code, card.prev_code) }}">‹</button>
+          </form>
+          {% else %}
+          <span class="odoo-stage-btn disabled">‹</span>
+          {% endif %}
+          <form method="post" action="/crm/oportunidades/{{ card.id }}/etapa" class="odoo-stage-jump">
+            <select name="stage_code" onchange="this.form.submit()" title="Mover a etapa">
               {% for code in kanban_codes %}
               <option value="{{ code }}" {% if code == card.stage_code %}selected{% endif %}>{{ stage_labels.get(code, code) }}</option>
               {% endfor %}
             </select>
-          </label>
-        </form>
+          </form>
+          {% if card.next_code %}
+          <form method="post" action="/crm/oportunidades/{{ card.id }}/etapa">
+            <input type="hidden" name="stage_code" value="{{ card.next_code }}" />
+            <button type="submit" class="odoo-stage-btn" title="{{ stage_labels.get(card.next_code, card.next_code) }}">›</button>
+          </form>
+          {% else %}
+          <span class="odoo-stage-btn disabled">›</span>
+          {% endif %}
+        </div>
       </article>
       {% else %}
-      <p class="empty-row">Sin tarjetas</p>
+      <div class="odoo-kanban-empty">Arrastrá oportunidades aquí<br><span class="meta">o creá un prospecto</span></div>
       {% endfor %}
     </div>
+    <footer class="odoo-kanban-col-foot">
+      <a href="/crm/prospectos#nuevo">+ Agregar</a>
+    </footer>
   </section>
   {% endfor %}
 </div>
 
 {% if show_lost and lost_rows %}
-<section class="poliza-panel" style="margin-top:1.25rem">
+<section class="poliza-panel" style="margin-top:1rem">
   <h2 class="poliza-panel-title">Perdidos</h2>
   <div class="table-card">
     <table class="data-table">
-      <thead><tr><th>Oportunidad</th><th>Etapa</th><th></th></tr></thead>
+      <thead><tr><th>Oportunidad</th><th></th></tr></thead>
       <tbody>
       {% for card in lost_rows %}
         <tr>
           <td>{{ card.label }}</td>
-          <td><span class="kind-pill">Perdido</span></td>
           <td class="cli-action"><a class="open-link" href="/crm/oportunidades/{{ card.id }}">Abrir</a></td>
         </tr>
       {% endfor %}

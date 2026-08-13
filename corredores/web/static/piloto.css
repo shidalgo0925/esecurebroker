@@ -1521,66 +1521,275 @@ a.radar-card:hover { border-color: rgba(205,154,52,.45); }
 }
 .catalog-edit-row .catalog-form { max-width: none; }
 
-/* ADR-011 F4 — Pipeline Kanban */
-.crm-kanban {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 0.75rem;
-  align-items: start;
-  overflow-x: auto;
-  padding-bottom: 0.5rem;
-}
-.crm-kanban-col {
-  background: rgba(26, 20, 8, 0.03);
-  border: 1px solid rgba(26, 20, 8, 0.08);
-  border-radius: 10px;
-  min-height: 12rem;
+/* ADR-011 F4 — Odoo-style Kanban board */
+.odoo-crm-toolbar {
   display: flex;
-  flex-direction: column;
-}
-.crm-kanban-head {
-  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: space-between;
-  align-items: baseline;
-  gap: 0.5rem;
-  padding: 0.65rem 0.75rem 0.35rem;
-  border-bottom: 1px solid rgba(26, 20, 8, 0.08);
+  gap: 0.75rem 1rem;
+  margin: 0 0 0.85rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid rgba(26, 20, 8, 0.1);
 }
-.crm-kanban-head h2 {
+.odoo-crm-toolbar-left {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.85rem 1.25rem;
+}
+.odoo-crm-title {
   margin: 0;
-  font-size: 0.92rem;
+  font-size: 1.35rem;
   font-weight: 700;
+  letter-spacing: -0.02em;
 }
-.crm-kanban-cards {
-  padding: 0.55rem;
+.odoo-crm-tabs {
+  display: flex;
+  gap: 0.15rem;
+  background: rgba(26, 20, 8, 0.05);
+  border-radius: 8px;
+  padding: 0.2rem;
+}
+.odoo-crm-tabs a {
+  text-decoration: none;
+  color: rgba(26, 20, 8, 0.65);
+  font-size: 0.84rem;
+  font-weight: 600;
+  padding: 0.35rem 0.7rem;
+  border-radius: 6px;
+}
+.odoo-crm-tabs a.on,
+.odoo-crm-tabs a:hover {
+  background: #fff;
+  color: #1a1408;
+  box-shadow: 0 1px 2px rgba(26, 20, 8, 0.08);
+}
+.odoo-crm-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+.odoo-crm-org {
+  font-size: 0.82rem;
+  color: rgba(26, 20, 8, 0.55);
+}
+
+.odoo-kanban-board {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0.75rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.15rem 0.15rem 1rem;
+  min-height: calc(100vh - 220px);
+  -webkit-overflow-scrolling: touch;
+}
+.odoo-kanban-col {
+  flex: 0 0 260px;
+  width: 260px;
+  max-width: 260px;
   display: flex;
   flex-direction: column;
+  background: #f0eeea;
+  border-radius: 10px;
+  min-height: 28rem;
+  border: 1px solid rgba(26, 20, 8, 0.06);
+}
+.odoo-kanban-col-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.7rem 0.75rem 0.55rem;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.odoo-kanban-col-title {
+  display: flex;
+  align-items: center;
   gap: 0.45rem;
+  min-width: 0;
 }
-.crm-card {
-  background: #fff;
-  border: 1px solid rgba(26, 20, 8, 0.1);
+.odoo-kanban-col-title h2 {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.odoo-stage-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: #714b67;
+}
+.odoo-stage-dot.stage-new { background: #017e84; }
+.odoo-stage-dot.stage-contacted { background: #5b6abf; }
+.odoo-stage-dot.stage-qualified { background: #c07a1a; }
+.odoo-stage-dot.stage-quoting { background: #d9376e; }
+.odoo-stage-dot.stage-negotiation { background: #875a7b; }
+.odoo-stage-dot.stage-won { background: #2e7d32; }
+.odoo-kanban-count {
+  min-width: 1.4rem;
+  height: 1.4rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: rgba(26, 20, 8, 0.1);
+  color: rgba(26, 20, 8, 0.75);
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
+}
+.odoo-kanban-col-body {
+  flex: 1 1 auto;
+  padding: 0 0.5rem 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow-y: auto;
+  max-height: calc(100vh - 280px);
+}
+.odoo-kanban-empty {
+  margin: 0.35rem 0.15rem;
+  padding: 1.1rem 0.75rem;
+  text-align: center;
+  font-size: 0.78rem;
+  color: rgba(26, 20, 8, 0.4);
+  border: 1px dashed rgba(26, 20, 8, 0.15);
   border-radius: 8px;
-  padding: 0.55rem 0.65rem;
+  line-height: 1.35;
 }
-.crm-card-title {
+.odoo-kanban-card {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(26, 20, 8, 0.08), 0 0 0 1px rgba(26, 20, 8, 0.04);
+  overflow: hidden;
+}
+.odoo-kanban-card:hover {
+  box-shadow: 0 4px 12px rgba(26, 20, 8, 0.12), 0 0 0 1px rgba(113, 75, 103, 0.2);
+}
+.odoo-kanban-card-link {
   display: block;
-  font-weight: 650;
+  padding: 0.65rem 0.7rem 0.35rem;
   color: inherit;
   text-decoration: none;
-  margin-bottom: 0.2rem;
 }
-.crm-card-title:hover { color: var(--brass, #8c651e); }
-.crm-card .meta { margin: 0.15rem 0; }
-.crm-card-move { margin-top: 0.35rem; }
-.crm-card-move select {
+.odoo-kanban-card-top {
+  display: flex;
+  gap: 0.55rem;
+  align-items: flex-start;
+}
+.odoo-avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: #714b67;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.odoo-kanban-card-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+.odoo-kanban-card-title {
+  font-size: 0.9rem;
+  font-weight: 650;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.odoo-kanban-card-partner {
+  font-size: 0.78rem;
+  color: rgba(26, 20, 8, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.odoo-kanban-card-money {
+  margin-top: 0.45rem;
+  font-size: 0.92rem;
+  font-weight: 650;
+  color: #1a1408;
+}
+.odoo-kanban-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.45rem 0.45rem;
+  border-top: 1px solid rgba(26, 20, 8, 0.05);
+  background: rgba(26, 20, 8, 0.015);
+}
+.odoo-stage-btn {
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 6px;
+  border: 1px solid rgba(26, 20, 8, 0.12);
+  background: #fff;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  color: #1a1408;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.odoo-stage-btn:hover:not(.disabled) {
+  border-color: #714b67;
+  color: #714b67;
+}
+.odoo-stage-btn.disabled {
+  opacity: 0.28;
+  cursor: default;
+}
+.odoo-stage-jump {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.odoo-stage-jump select {
   width: 100%;
+  font-size: 0.72rem;
+  padding: 0.2rem 0.3rem;
+  border-radius: 5px;
+  border: 1px solid rgba(26, 20, 8, 0.12);
+  background: #fff;
+}
+.odoo-kanban-col-foot {
+  padding: 0.35rem 0.65rem 0.55rem;
+  margin-top: auto;
+}
+.odoo-kanban-col-foot a {
+  display: block;
+  text-align: left;
+  text-decoration: none;
   font-size: 0.8rem;
-  padding: 0.25rem 0.35rem;
+  font-weight: 600;
+  color: rgba(26, 20, 8, 0.45);
+  padding: 0.3rem 0.25rem;
+  border-radius: 6px;
 }
-@media (max-width: 900px) {
-  .crm-kanban {
-    grid-template-columns: repeat(6, minmax(200px, 1fr));
-  }
+.odoo-kanban-col-foot a:hover {
+  color: #714b67;
+  background: rgba(113, 75, 103, 0.08);
 }
+
+/* legacy class kept so old markup never breaks layout */
+.crm-kanban { display: none; }
 

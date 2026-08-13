@@ -142,7 +142,18 @@ def crm_pipeline(
             "stage_code": o.stage_code,
             "premium": o.estimated_premium,
             "label": label,
+            "initial": (
+                (prospect_cache.get(o.prospect_id or "") or o.title or "?")[:1].upper()
+            ),
+            "prev_code": None,
+            "next_code": None,
         }
+        if o.stage_code in kanban_codes:
+            idx = kanban_codes.index(o.stage_code)
+            if idx > 0:
+                card["prev_code"] = kanban_codes[idx - 1]
+            if idx < len(kanban_codes) - 1:
+                card["next_code"] = kanban_codes[idx + 1]
         if o.stage_code == STAGE_LOST:
             lost_rows.append(card)
         elif o.stage_code in by_stage:
