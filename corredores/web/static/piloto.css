@@ -1029,15 +1029,34 @@ a.report-tile:hover { border-color:rgba(205,154,52,.45); box-shadow:0 2px 8px rg
 .aging-grid {
   display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:0.75rem;
 }
+/* Dentro del panel de cartera (3 columnas) 4 celdas quedan demasiado angostas
+   y los montos con miles ($317,086.xx) se recortan. Usar 2×2. */
+.chart-card .aging-grid,
+.dash-pane-card .aging-grid {
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:0.55rem;
+}
 @media (max-width:900px) { .aging-grid { grid-template-columns:1fr 1fr; } }
 .aging-card {
   display:block; text-decoration:none; color:inherit;
   background:var(--card); border:1px solid var(--rule); border-radius:12px;
-  padding:0.95rem 1rem;
+  padding:0.75rem 0.8rem;
+  min-width:0;
+  overflow:visible;
 }
 .aging-card.has-debt { border-color:rgba(155,44,44,.28); background:#fff8f7; }
-.aging-card .aging-label { font-size:0.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--text-dim); font-weight:700; }
-.aging-card .money-amt { font-family:var(--font-mono); font-size:1.35rem; font-weight:600; margin-top:0.35rem; }
+.aging-card .aging-label { font-size:0.68rem; letter-spacing:.06em; text-transform:uppercase; color:var(--text-dim); font-weight:700; }
+.aging-card .money-amt {
+  font-family:var(--font-mono);
+  font-size:clamp(0.92rem, 1.6vw, 1.15rem);
+  font-weight:600;
+  margin-top:0.35rem;
+  line-height:1.2;
+  letter-spacing:-0.02em;
+  overflow:visible;
+  white-space:nowrap;
+  max-width:100%;
+}
 td.warn { color:#9b2c2c; font-weight:600; }
 .cobranza-kpis { margin: 0.45rem 0 0.75rem; }
 .cobranza-kpis .report-tile { padding: 0.7rem 0.85rem; }
