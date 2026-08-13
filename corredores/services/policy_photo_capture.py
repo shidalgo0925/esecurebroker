@@ -84,13 +84,84 @@ payment_form, annual_premium, num_payments,
 make, model, year, plate, usage, vehicle_type, color, motor, chassis,
 broker_name, confidence (0-1).
 Reglas:
-- Póliza Panamá AUTO típica (FEDPA, SURA, ANCÓN, ASSA…).
-- Cedula formato N-NNN-NNNN.
-- Prima total a pagar → annual_premium (si es contado/1 cuota).
+- Póliza Panamá (AUTO, FIANZA, CAR, etc.): FEDPA, SURA, ANCÓN, ASSA, ALIADO….
+- Cedula/RUC formato N-NNN-NNNN o RUC sociedad.
+- annual_premium = SOLO el TOTAL A PAGAR (prima + impuestos). Nunca uses
+  SUMA ASEGURADA, LÍMITE AFIANZADO, LÍMITES de coberturas ni deducibles.
+- En PDFs Aliado el monto a menudo aparece ANTES del rótulo (ej. "4,720.43TOTAL A PAGAR").
 - CONTADO → num_payments=1; MENSUAL → inferir cuotas si hay calendario.
+- Fianza / Cumplimiento de contrato → line_code=FIANZA.
+- Todo Riesgo Contratista → line_code=CAR.
 - No inventes montos ni fechas; si no se lee, deja "".
-- line_code suele ser AUTO para Automóvil.
 """
+
+
+_MONEY_RE = r"([0-9]{1,3}(?:,[0-9]{3})*\.[0-9]{2}|[0-9]+\.[0-9]{2})"
+
+
+def _normalize_money_str(raw: str) -> str:
+    return (raw or "").replace(",", "").replace(" ", "").strip()
+
+
+def _extract_labeled_money(text: str, label_re: str) -> str | None:
+    """Aliado layout: amount may sit before or after the label; ignore 0.00."""
+    t = text or ""
+    # amount immediately before label: "29,874.52TOTAL A PAGAR"
+    m = re.search(rf"{_MONEY_RE}\s*{label_re}", t, re.I)
+    if m:
+        amt = _normalize_money_str(m.group(1))
+        if premium_decimal(amt):
+            return amt
+    # amount after label on a short window (same block; avoid DOTALL over whole doc)
+    m = re.search(
+        rf"{label_re}\s*[:\s]*B?/?\.?\s*{_MONEY_RE}",
+        t,
+        re.I,
+    )
+    if m:
+        amt = _normalize_money_str(m.group(1))
+        if premium_decimal(amt):
+            return amt
+    return None
+
+
+def _extract_total_a_pagar(text: str) -> str | None:
+    return _extract_labeled_money(text, r"TOTAL\s+A\s+PAGAR")
+
+
+def _extract_sum_insured_or_limit(text: str) -> str | None:
+    for label in (
+        r"L[IÍ]MITE\s+AFIANZADO",
+        r"SUMA\s+ASEGURADA",
+        r"L[IÍ]MITE\s+ASEGURADO",
+    ):
+        amt = _extract_labeled_money(text, label)
+        if amt:
+            return amt
+    return None
+
+
+def refine_draft_money_from_text(draft: PolicyPhotoDraft, text: str) -> PolicyPhotoDraft:
+    """Prefer TOTAL A PAGAR; never keep límite/suma asegurada as premium."""
+    if not (text or "").strip():
+        return draft
+    total = _extract_total_a_pagar(text)
+    limite = _extract_sum_insured_or_limit(text)
+    lim = premium_decimal(limite) if limite else None
+    if total:
+        if lim and premium_decimal(draft.annual_premium) == lim:
+            draft.warnings.append(
+                "Se reemplazó SUMA/LÍMITE por TOTAL A PAGAR como prima."
+            )
+        draft.annual_premium = total
+        return draft
+    prem = premium_decimal(draft.annual_premium)
+    if prem and lim and prem == lim:
+        draft.annual_premium = ""
+        draft.warnings.append(
+            "Se descartó SUMA/LÍMITE como prima — completá TOTAL A PAGAR a mano."
+        )
+    return draft
 
 
 def _parse_es_date(text: str) -> str:
@@ -204,10 +275,11 @@ def extract_heuristic_from_text(text: str) -> PolicyPhotoDraft:
         d.carrier_name = m.group(1).upper().replace("Ó", "O")
         if d.carrier_name == "ANCON":
             d.carrier_name = "ANCÓN"
-    m = re.search(r"Total a Pagar\s*:?\s*B?/?\.?\s*([0-9]+[.,][0-9]{2})", t, re.I)
-    if m:
-        d.annual_premium = m.group(1).replace(",", ".")
-        d.num_payments = "1"
+    total = _extract_total_a_pagar(t)
+    if total:
+        d.annual_premium = total
+        d.num_payments = d.num_payments or "1"
+    refine_draft_money_from_text(d, t)
     m = re.search(r"Matr[ií]cula\s*:?\s*([A-Z0-9\-]+)", t, re.I)
     if m:
         d.plate = m.group(1).upper()
@@ -250,19 +322,19 @@ def extract_heuristic_from_pdf_bytes(pdf_bytes: bytes) -> PolicyPhotoDraft:
     if re.search(r"TODO\s+RIESGO\s+PARA\s+CONTRATISTA|RAMOS\s+TECNICOS", text, re.I):
         d.line_code = "CAR"
         d.warnings.append("Detectado Todo Riesgo Contratista (CAR).")
-    if re.search(r"ALIADO\s+SEGUROS", text, re.I):
+    if re.search(
+        r"FIANZA|CUMPLIMIENTO\s+DE\s+CONTRATO|L[IÍ]MITE\s+AFIANZADO",
+        text,
+        re.I,
+    ):
+        d.line_code = "FIANZA"
+        d.warnings.append("Detectada fianza / cumplimiento.")
+    if re.search(r"ALIADO\s+SEGUROS|aliadoseguros\.com", text, re.I):
         d.carrier_name = "ALIADO"
     m = re.search(r"P[ÓO]LIZA\s*:\s*([0-9]+(?:\s+[0-9]+)*)", text, re.I)
     if m and not d.policy_number:
         d.policy_number = "-".join(p for p in m.group(1).split() if p)
-    m = re.search(r"TOTAL\s+A\s+PAGAR\s*.*?([0-9]{1,3}(?:,[0-9]{3})*\.[0-9]{2}|[0-9]+\.[0-9]{2})", text, re.I | re.S)
-    if m:
-        d.annual_premium = m.group(1).replace(",", "")
-    m = re.search(
-        r"(\d{1,2}\s+de\s+[A-ZÁÉÍÓÚ]+(?:\s+de)?\s+\d{4})\s*DESDE:.*?(\d{1,2}\s+de\s+[A-ZÁÉÍÓÚ]+(?:\s+de)?\s+\d{4})\s*HASTA:",
-        text,
-        re.I | re.S,
-    )
+    refine_draft_money_from_text(d, text)
     # Dates often glued: "30 de JULIO de 2026DESDE:"
     m = re.search(r"(\d{1,2}\s+de\s+[A-ZÁÉÍÓÚ]+\s+de\s+\d{4})\s*DESDE:", text, re.I)
     if m:
@@ -340,20 +412,34 @@ def extract_policy_photo(
     )
     warnings: list[str] = []
 
+    is_pdf = mime == "application/pdf" or name.endswith(".pdf") or image_bytes[:4] == b"%PDF"
     has_openai = bool(runtime().get("capture.openai_api_key").strip())
-    if has_openai and not (mime == "application/pdf" or name.endswith(".pdf")):
+    if has_openai and not is_pdf:
         try:
             return extract_with_openai_vision(image_bytes, mime=mime)
         except Exception as exc:  # noqa: BLE001 — surface as warning, don't crash capture
             warnings.append(f"Visión IA no disponible ({exc}). Completá a mano.")
-    elif has_openai and (mime == "application/pdf" or name.endswith(".pdf")):
-        # Vision on PDF: try API; if fails, fall through to text layer
+    elif has_openai and is_pdf:
+        # Vision on PDF: try API; always refine money from text layer when present
         try:
-            return extract_with_openai_vision(image_bytes, mime="application/pdf")
+            draft = extract_with_openai_vision(image_bytes, mime="application/pdf")
+            text = extract_text_from_pdf(image_bytes)
+            if text:
+                refine_draft_money_from_text(draft, text)
+                if re.search(
+                    r"FIANZA|CUMPLIMIENTO\s+DE\s+CONTRATO|L[IÍ]MITE\s+AFIANZADO",
+                    text,
+                    re.I,
+                ):
+                    draft.line_code = "FIANZA"
+                elif re.search(r"TODO\s+RIESGO\s+PARA\s+CONTRATISTA|RAMOS\s+TECNICOS", text, re.I):
+                    draft.line_code = "CAR"
+            draft.warnings = warnings + list(draft.warnings)
+            return draft
         except Exception as exc:  # noqa: BLE001
             warnings.append(f"Visión IA PDF no disponible ({exc}). Probando texto del PDF.")
 
-    if mime == "application/pdf" or name.endswith(".pdf") or image_bytes[:4] == b"%PDF":
+    if is_pdf:
         draft = extract_heuristic_from_pdf_bytes(image_bytes)
         draft.warnings = warnings + list(draft.warnings)
         return draft
