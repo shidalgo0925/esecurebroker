@@ -1,0 +1,36 @@
+---
+description: Regla de oro — no mutar cobros/datos de cliente en PROD; pruebas solo en DEV
+alwaysApply: true
+---
+
+# Regla de oro: datos del cliente se respetan
+
+## Entornos
+
+| | PROD | DEV |
+|---|---|---|
+| Path | `/opt/corredores` | `/opt/corredores-dev` |
+| DB | `corredores` | `corredores_dev` |
+| Puerto | 8091 | 8092 |
+
+## Prohibido en PROD
+
+- Scripts ops que creen, confirmen o borren **pagos / cobros / allocations** “para probar” o “para el incentive”.
+- Actores tipo `ops:confirm-cobros-*` contra la DB de producción.
+- Asumir que un saldo abierto = cliente pagó. **Solo el operador (UI) o evidencia real de cobro.**
+
+Incidente: lote `ops:confirm-cobros-hoy` / `CONFIRMED-2026-08-13` marcó cobros falsos; hubo que revertir.
+
+## Obligatorio
+
+- **Pruebas y experimentos de cobranza / incentivos → solo DEV** (`/opt/corredores-dev`, DB `corredores_dev`).
+- Antes de cualquier write a PROD sobre pagos: verificar `DATABASE_URL` (no `corredores_dev`) **y** pedir **GO explícito** del usuario.
+- Cobros reales en PROD: vía UI de operadores, o corrección puntual con GO + auditoría (`REVERSED_DELETED`, etc.).
+
+## Checklist rápido
+
+```
+¿Es mutación de Payment / Installment / incentive eligible?
+  → ¿Estoy en DEV? Sí → ok con cuidado
+  → ¿Estoy en PROD? → STOP salvo GO explícito del dueño de datos
+```
