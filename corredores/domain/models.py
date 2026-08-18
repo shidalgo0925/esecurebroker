@@ -1103,3 +1103,194 @@ class SystemSetting(Base, TimestampMixin):
     value_type: Mapped[str] = mapped_column(String(20), nullable=False, default="string")  # string|bool|int|secret
     is_secret: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     updated_by: Mapped[Optional[str]] = mapped_column(String(128))
+
+
+# --- Public sales channel (anonymous quote/checkout → org) ---
+
+
+class PublicSalesChannel(Base, TimestampMixin):
+    """Public commercial channel bound to one Organization (multi-tenant)."""
+
+    __tablename__ = "public_sales_channels"
+    __table_args__ = (UniqueConstraint("slug", name="uq_public_sales_channel_slug"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    slug: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    product_code: Mapped[str] = mapped_column(String(40), nullable=False, default="VIAJE")
+    product_label: Mapped[str] = mapped_column(String(200), nullable=False, default="Seguro de viaje")
+    origin_default: Mapped[Optional[str]] = mapped_column(String(120))
+    origin_fixed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    default_producer_profile_id: Mapped[Optional[str]] = mapped_column(
+        String(36), nullable=True, index=True
+    )
+    lead_source_id: Mapped[Optional[str]] = mapped_column(
+        ForeignKey("crm_lead_sources.id"), nullable=True, index=True
+    )
+    currency: Mapped[str] = mapped_column(String(8), nullable=False, default="USD")
+    branding_json: Mapped[Optional[str]] = mapped_column(Text)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text)
+
+
+class PublicProductPlan(Base, TimestampMixin):
+    """Configurable plan offered on a public channel (not SaaS plan)."""
+
+    __tablename__ = "public_product_plans"
+    __table_args__ = (
+        UniqueConstraint("channel_id", "code", name="uq_public_product_plan_channel_code"),
+        Index("ix_public_product_plans_channel", "channel_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    channel_id: Mapped[str] = mapped_column(ForeignKey("public_sales_channels.id"), index=True)
+    code: Mapped[str] = mapped_column(String(40), nullable=False)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=100)
+    currency: Mapped[str] = mapped_column(String(8), nullable=False, default="USD")
+    coverages_json: Mapped[Optional[str]] = mapped_column(Text)
+    limits_json: Mapped[Optional[str]] = mapped_column(Text)
+    highlight: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+
+class PublicPlanRate(Base, TimestampMixin):
+    """DEV/catalog rate row — replace with real tariff source when approved."""
+
+    __tablename__ = "public_plan_rates"
+    __table_args__ = (Index("ix_public_plan_rates_plan_region", "plan_id", "destination_region"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    plan_id: Mapped[str] = mapped_column(ForeignKey("public_product_plans.id"), index=True)
+    destination_region: Mapped[str] = mapped_column(String(40), nullable=False)
+    age_min: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    age_max: Mapped[int] = mapped_column(Integer, nullable=False, default=120)
+    amount_per_passenger_per_day: Mapped[Decimal] = mapped_column(Numeric(14, 4), nullable=False)
+    currency: Mapped[str] = mapped_column(String(8), nullable=False, default="USD")
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    notes: Mapped[Optional[str]] = mapped_column(String(200))
+
+
+class PublicQuote(Base, TimestampMixin):
+    """Anonymous public quote session — system of record under channel.organization_id."""
+
+    __tablename__ = "public_quotes"
+    __table_args__ = (
+        UniqueConstraint("public_token", name="uq_public_quote_token"),
+        Index("ix_public_quotes_channel_status", "channel_id", "status"),
+        Index("ix_public_quotes_org_status", "organization_id", "status"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    public_token: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    channel_id: Mapped[str] = mapped_column(ForeignKey("public_sales_channels.id"), index=True)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="STARTED")
+    origin: Mapped[Optional[str]] = mapped_column(String(120))
+    destination: Mapped[Optional[str]] = mapped_column(String(200))
+    destination_region: Mapped[Optional[str]] = mapped_column(String(40))
+    start_date: Mapped[Optional[date]] = mapped_column(Date)
+    end_date: Mapped[Optional[date]] = mapped_column(Date)
+    days: Mapped[Optional[int]] = mapped_column(Integer)
+    passenger_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    ages_json: Mapped[Optional[str]] = mapped_column(Text)
+    quoted_plans_json: Mapped[Optional[str]] = mapped_column(Text)
+    selected_plan_code: Mapped[Optional[str]] = mapped_column(String(40))
+    selected_plan_snapshot_json: Mapped[Optional[str]] = mapped_column(Text)
+    currency: Mapped[str] = mapped_column(String(8), nullable=False, default="USD")
+    selected_premium: Mapped[Optional[Decimal]] = mapped_column(Numeric(14, 2))
+    crm_prospect_id: Mapped[Optional[str]] = mapped_column(
+        ForeignKey("crm_prospects.id"), nullable=True, index=True
+    )
+    crm_opportunity_id: Mapped[Optional[str]] = mapped_column(
+        ForeignKey("crm_opportunities.id"), nullable=True, index=True
+    )
+    # ESB cartera — filled after trusted PAID (landing is not ESB; ESB is SoR)
+    party_id: Mapped[Optional[str]] = mapped_column(
+        ForeignKey("parties.id"), nullable=True, index=True
+    )
+    policy_id: Mapped[Optional[str]] = mapped_column(
+        ForeignKey("policies.id"), nullable=True, index=True
+    )
+    checkout_ref: Mapped[Optional[str]] = mapped_column(String(120))
+    payment_status: Mapped[Optional[str]] = mapped_column(String(32))
+    expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    quoted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    selected_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    paid_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
+
+class PublicQuoteTraveler(Base, TimestampMixin):
+    __tablename__ = "public_quote_travelers"
+    __table_args__ = (
+        UniqueConstraint("quote_id", "seq", name="uq_public_quote_traveler_seq"),
+        Index("ix_public_quote_travelers_quote", "quote_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    quote_id: Mapped[str] = mapped_column(ForeignKey("public_quotes.id"), index=True)
+    seq: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    first_name: Mapped[Optional[str]] = mapped_column(String(120))
+    last_name: Mapped[Optional[str]] = mapped_column(String(120))
+    birth_date: Mapped[Optional[date]] = mapped_column(Date)
+    age: Mapped[Optional[int]] = mapped_column(Integer)
+    identification_number: Mapped[Optional[str]] = mapped_column(String(64))
+    email: Mapped[Optional[str]] = mapped_column(String(200))
+    phone: Mapped[Optional[str]] = mapped_column(String(40))
+    is_pep: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_primary: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+
+class PublicQuoteBeneficiary(Base, TimestampMixin):
+    __tablename__ = "public_quote_beneficiaries"
+    __table_args__ = (
+        UniqueConstraint("traveler_id", "seq", name="uq_public_quote_beneficiary_seq"),
+        Index("ix_public_quote_beneficiaries_traveler", "traveler_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    traveler_id: Mapped[str] = mapped_column(ForeignKey("public_quote_travelers.id"), index=True)
+    seq: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    full_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    relationship: Mapped[Optional[str]] = mapped_column(String(80))
+    identification_number: Mapped[Optional[str]] = mapped_column(String(64))
+    phone: Mapped[Optional[str]] = mapped_column(String(40))
+    share_pct: Mapped[Optional[Decimal]] = mapped_column(Numeric(5, 2))
+
+
+class PublicQuoteEmergencyContact(Base, TimestampMixin):
+    __tablename__ = "public_quote_emergency_contacts"
+    __table_args__ = (UniqueConstraint("quote_id", name="uq_public_quote_emergency"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    quote_id: Mapped[str] = mapped_column(ForeignKey("public_quotes.id"), index=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    phone: Mapped[str] = mapped_column(String(40), nullable=False)
+    email: Mapped[Optional[str]] = mapped_column(String(200))
+
+
+class PublicPaymentAttempt(Base, TimestampMixin):
+    """Pre-policy payment attempt for a public quote (provider-agnostic)."""
+
+    __tablename__ = "public_payment_attempts"
+    __table_args__ = (
+        Index("ix_public_payment_attempts_quote", "quote_id"),
+        Index("ix_public_payment_attempts_provider_ref", "provider_ref"),
+        UniqueConstraint("idempotency_key", name="uq_public_payment_attempt_idem"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    quote_id: Mapped[str] = mapped_column(ForeignKey("public_quotes.id"), index=True)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    channel_id: Mapped[str] = mapped_column(ForeignKey("public_sales_channels.id"), index=True)
+    amount: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
+    currency: Mapped[str] = mapped_column(String(8), nullable=False, default="USD")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="CREATED")
+    provider: Mapped[str] = mapped_column(String(32), nullable=False, default="SANDBOX")
+    provider_ref: Mapped[Optional[str]] = mapped_column(String(128))
+    idempotency_key: Mapped[str] = mapped_column(String(80), nullable=False)
+    redirect_url: Mapped[Optional[str]] = mapped_column(Text)
+    raw_event_json: Mapped[Optional[str]] = mapped_column(Text)
+    confirmed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    failure_reason: Mapped[Optional[str]] = mapped_column(String(240))

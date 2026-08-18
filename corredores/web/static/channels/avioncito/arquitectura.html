@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Avioncito × GRUPO ARSI × ESB</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy-950:#0A0F1E;
+    --navy-900:#0E1526;
+    --navy-800:#151F38;
+    --paper:#ECEEE6;
+    --paper-2:#E2E5DA;
+    --ink:#101826;
+    --ink-soft:#3C4657;
+    --gold:#D9A441;
+    --gold-soft:#F0CB84;
+    --sky:#5B8FA8;
+    --line:rgba(16,24,38,0.14);
+    --line-dark:rgba(236,238,230,0.16);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{ font-family:'Space Grotesk', sans-serif; letter-spacing:-0.01em; }
+  .mono{ font-family:'IBM Plex Mono', monospace; }
+  .wrap{ max-width:1080px; margin:0 auto; padding:0 32px; }
+  section{ padding:96px 0; }
+  a{ color:inherit; }
+
+  .reveal{ opacity:0; transform:translateY(18px); transition:opacity .7s ease, transform .7s ease; }
+  .reveal.in{ opacity:1; transform:translateY(0); }
+
+  header{
+    position:sticky; top:0; z-index:40;
+    background:rgba(236,238,230,0.85);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .navbar{
+    max-width:1080px; margin:0 auto; padding:18px 32px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .wordmark{ display:flex; align-items:center; gap:10px; font-weight:600; font-size:15px; }
+  .wordmark .dot{ width:8px; height:8px; border-radius:50%; background:var(--gold); }
+  .badge{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.06em;
+    text-transform:uppercase; padding:6px 12px; border:1px solid var(--line);
+    border-radius:100px; color:var(--ink-soft);
+  }
+
+  .hero{
+    background:radial-gradient(ellipse 120% 100% at 50% -10%, #182444 0%, var(--navy-950) 55%, var(--navy-950) 100%);
+    color:var(--paper);
+    padding:120px 0 80px;
+    position:relative;
+    overflow:hidden;
+  }
+  .hero::before{
+    content:"";
+    position:absolute; inset:0;
+    background-image: radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px);
+    background-size: 26px 26px;
+    opacity:.5;
+    pointer-events:none;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--gold-soft); margin-bottom:22px; position:relative; z-index:2;
+    display:flex; align-items:center; gap:10px;
+  }
+  .eyebrow::before{ content:""; width:22px; height:1px; background:var(--gold-soft); display:inline-block; }
+  .hero h1{
+    font-size:clamp(34px, 5.4vw, 60px);
+    font-weight:600; line-height:1.05; max-width:820px; position:relative; z-index:2;
+  }
+  .hero h1 em{ font-style:normal; color:var(--gold-soft); }
+  .hero p.lede{
+    margin-top:26px; max-width:600px; font-size:17px; color:#C6CBDA; position:relative; z-index:2;
+  }
+
+  .routeline{ margin-top:64px; position:relative; z-index:2; }
+  .route-svg{ width:100%; height:auto; display:block; }
+  .route-path{
+    fill:none; stroke:var(--gold-soft); stroke-width:1.6;
+    stroke-linecap:round;
+    stroke-dashoffset:1000; stroke-dasharray:1000;
+    animation:draw 2.6s ease forwards .3s;
+  }
+  @keyframes draw{ to{ stroke-dashoffset:0; } }
+  .route-label{
+    font-family:'IBM Plex Mono', monospace; font-size:11.5px; fill:#AEB6C8;
+    text-transform:uppercase; letter-spacing:.04em;
+  }
+  .route-label.strong{ fill:var(--gold-soft); font-weight:600; }
+  .route-dot{ fill:var(--navy-950); stroke:var(--gold-soft); stroke-width:1.6; }
+  .route-dot.filled{ fill:var(--gold-soft); }
+
+  .kicker{
+    font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:.12em;
+    text-transform:uppercase; color:var(--sky); margin-bottom:14px;
+  }
+  .section-head{ max-width:640px; margin-bottom:56px; }
+  .section-head h2{ font-size:clamp(26px,3.4vw,36px); font-weight:600; }
+  .section-head p{ margin-top:14px; color:var(--ink-soft); font-size:16px; }
+
+  .strip-scroll{
+    display:flex; gap:0; overflow-x:auto; padding-bottom:20px;
+    scrollbar-width:thin;
+  }
+  .stub{
+    position:relative;
+    flex:0 0 190px;
+    background:#fff;
+    border:1px solid var(--line);
+    padding:22px 18px 24px;
+    min-height:210px;
+    display:flex; flex-direction:column; justify-content:space-between;
+  }
+  .stub:not(:last-child){ border-right:none; }
+  .stub:first-child{ border-radius:10px 0 0 10px; }
+  .stub:last-child{ border-radius:0 10px 10px 0; background:var(--navy-950); color:var(--paper); border-color:var(--navy-950); }
+  .stub:not(:last-child)::after{
+    content:""; position:absolute; top:0; right:-1px; bottom:0; width:0;
+    border-right:1.5px dashed var(--line);
+  }
+  .stub .step-no{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--gold); letter-spacing:.06em;
+  }
+  .stub:last-child .step-no{ color:var(--gold-soft); }
+  .stub h3{ font-size:16px; font-weight:600; margin-top:10px; line-height:1.25; }
+  .stub p{ font-size:12.5px; color:var(--ink-soft); margin-top:8px; }
+  .stub:last-child p{ color:#AEB6C8; }
+  .stub .tag{
+    align-self:flex-start; margin-top:14px;
+    font-family:'IBM Plex Mono', monospace; font-size:10px; text-transform:uppercase;
+    letter-spacing:.05em; padding:4px 8px; border-radius:100px;
+    background:var(--paper-2); color:var(--ink-soft);
+  }
+  .stub:last-child .tag{ background:rgba(217,164,65,0.16); color:var(--gold-soft); }
+
+  .manifest{ border-top:1px solid var(--line); }
+  .manifest-row{
+    display:grid; grid-template-columns:1fr 40px 1fr;
+    align-items:center; padding:20px 0; border-bottom:1px solid var(--line);
+    gap:14px;
+  }
+  .manifest-row .from, .manifest-row .to{ font-size:16.5px; font-weight:500; }
+  .manifest-row .from{ color:var(--ink-soft); }
+  .manifest-row .to{ color:var(--ink); font-weight:600; }
+  .manifest-row .arrow{ text-align:center; color:var(--gold); font-family:'IBM Plex Mono', monospace; }
+  .manifest-row .idx{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; color:#9AA2B0; display:block; margin-bottom:4px;
+  }
+
+  .principle{
+    background:var(--navy-950); color:var(--paper);
+    border-radius:14px; padding:64px 48px; position:relative; overflow:hidden;
+  }
+  .principle::before{
+    content:""; position:absolute; inset:0;
+    background-image: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px);
+    background-size:22px 22px;
+  }
+  .principle-inner{ position:relative; z-index:2; display:flex; gap:48px; align-items:center; flex-wrap:wrap; }
+  .stamp{
+    flex:0 0 auto; width:148px; height:148px; border-radius:50%;
+    border:2px solid var(--gold-soft); display:flex; align-items:center; justify-content:center;
+    text-align:center; transform:rotate(-8deg);
+    font-family:'IBM Plex Mono', monospace; color:var(--gold-soft);
+    font-size:11px; letter-spacing:.06em; text-transform:uppercase; line-height:1.5;
+    padding:14px;
+  }
+  .principle-text{ flex:1 1 380px; }
+  .principle-text .kicker{ color:var(--gold-soft); }
+  .principle-text h2{ font-size:clamp(22px,3vw,30px); font-weight:600; color:#fff; margin-bottom:16px; }
+  .principle-text p{ color:#C6CBDA; font-size:15.5px; max-width:560px; }
+  .principle-text p + p{ margin-top:12px; }
+
+  .hubmap{ display:flex; gap:64px; align-items:center; flex-wrap:wrap; }
+  .hub-svg{ flex:1 1 380px; min-width:300px; }
+  .hub-list{ flex:1 1 260px; display:flex; flex-direction:column; gap:0; }
+  .hub-item{ display:flex; gap:14px; padding:18px 0; border-bottom:1px solid var(--line); align-items:flex-start; }
+  .hub-item:first-child{ padding-top:0; }
+  .hub-dot{ width:9px; height:9px; border-radius:50%; margin-top:6px; flex:0 0 auto; }
+  .hub-item h4{ font-size:15px; font-weight:600; }
+  .hub-item p{ font-size:13.5px; color:var(--ink-soft); margin-top:2px; }
+  .hub-item.live .hub-dot{ background:var(--gold); }
+  .hub-item.future .hub-dot{ background:var(--line); border:1px solid var(--ink-soft); }
+  .hub-item.future h4, .hub-item.future p{ color:#8B93A3; }
+
+  .next{
+    background:#fff; border:1px solid var(--line); border-radius:14px;
+    padding:44px; display:flex; gap:40px; flex-wrap:wrap; align-items:center;
+    justify-content:space-between;
+  }
+  .next-text{ flex:1 1 360px; }
+  .next-text .kicker{ color:var(--gold); }
+  .next-text h2{ font-size:24px; font-weight:600; margin-bottom:10px; }
+  .next-text p{ color:var(--ink-soft); font-size:15px; max-width:460px; }
+  .checklist{ flex:1 1 280px; display:flex; flex-direction:column; gap:12px; }
+  .check-item{
+    display:flex; align-items:flex-start; gap:12px; font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px; padding:12px 14px; background:var(--paper); border-radius:8px;
+    line-height:1.45;
+  }
+  .check-item .n{ color:var(--gold); font-weight:600; flex:0 0 auto; }
+  .check-item .ok{ color:#2F6B4F; }
+
+  .binding{
+    margin-top:28px; padding:20px 22px; border-radius:10px;
+    background:var(--navy-950); color:var(--paper);
+    font-family:'IBM Plex Mono', monospace; font-size:12px; line-height:1.7;
+  }
+  .binding .k{ color:var(--gold-soft); }
+  .binding a{ color:var(--gold-soft); text-decoration:underline; text-underline-offset:3px; }
+
+  footer{
+    padding:40px 0 60px; text-align:center; color:var(--ink-soft); font-size:13px;
+  }
+
+  @media (max-width:640px){
+    section{ padding:64px 0; }
+    .wrap{ padding:0 20px; }
+    .manifest-row{ grid-template-columns:1fr 24px 1fr; }
+    .manifest-row .from, .manifest-row .to{ font-size:14px; }
+    .principle{ padding:40px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="navbar">
+    <div class="wordmark"><span class="dot"></span>AVIONCITO <span style="color:var(--ink-soft); font-weight:400;">/ ESB</span></div>
+    <div class="badge">Nota de arquitectura — DEV</div>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Canal público de cotización</div>
+    <h1>Un enlace público.<br>Una cotización.<br>Un cliente de <em>GRUPO ARSI.</em></h1>
+    <p class="lede">El visitante nunca ve ESB. No crea usuario, no inicia sesión, no compra una suscripción. Entra, cotiza y, si decide comprar, todo lo que capturó ya vive dentro de la organización correcta — sin que nadie lo teclee dos veces.</p>
+
+    <div class="routeline">
+      <svg class="route-svg" viewBox="0 0 1000 120" preserveAspectRatio="xMidYMid meet">
+        <path class="route-path" d="M 40 60 C 250 10, 350 110, 500 60 S 750 10, 960 60" />
+        <circle class="route-dot filled" cx="40" cy="60" r="5"></circle>
+        <circle class="route-dot" cx="500" cy="60" r="5"></circle>
+        <circle class="route-dot filled" cx="960" cy="60" r="6"></circle>
+        <text class="route-label" x="10" y="92">Visitante anónimo</text>
+        <text class="route-label" x="440" y="30">Landing → cotización</text>
+        <text class="route-label strong" x="820" y="92">GRUPO ARSI / ESB</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section id="flujo">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="kicker">El viaje del pasajero</div>
+      <h2>Ocho paradas, un solo boleto</h2>
+      <p>La lógica funcional no cambia: datos del viaje, cálculo de días y pasajeros, tres alternativas de plan, y luego la información necesaria para emitir. Cada parada es un talón del mismo boleto.</p>
+    </div>
+
+    <div class="strip-scroll reveal">
+      <div class="stub">
+        <div><span class="step-no">01 / FRONT</span><h3>Landing pública</h3><p>Sin login. Enlace abierto, marca Avioncito.</p></div>
+        <span class="tag">Canal</span>
+      </div>
+      <div class="stub">
+        <div><span class="step-no">02</span><h3>Cotización</h3><p>Viaje, días, pasajeros → 3 alternativas.</p></div>
+        <span class="tag">Prospecto</span>
+      </div>
+      <div class="stub">
+        <div><span class="step-no">03</span><h3>Selección de plan</h3><p>El visitante elige una de las tres opciones.</p></div>
+        <span class="tag">Prospecto</span>
+      </div>
+      <div class="stub">
+        <div><span class="step-no">04</span><h3>Datos personales / pasajeros</h3><p>Identificación de cada persona a asegurar.</p></div>
+        <span class="tag">Riesgo</span>
+      </div>
+      <div class="stub">
+        <div><span class="step-no">05</span><h3>Beneficiarios</h3><p>Quiénes quedan relacionados a la póliza.</p></div>
+        <span class="tag">Relacionados</span>
+      </div>
+      <div class="stub">
+        <div><span class="step-no">06</span><h3>Contacto de emergencia</h3><p>Un dato operativo, no comercial.</p></div>
+        <span class="tag">Operación</span>
+      </div>
+      <div class="stub">
+        <div><span class="step-no">07</span><h3>Pago</h3><p>La transacción que convierte cotización en venta.</p></div>
+        <span class="tag">Transacción</span>
+      </div>
+      <div class="stub">
+        <div><span class="step-no">08 / BACK</span><h3>Resultado</h3><p>Póliza o certificado, ya dentro de la cartera.</p></div>
+        <span class="tag">Cliente</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="manifiesto" style="background:var(--paper-2);">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="kicker">Detrás de la landing</div>
+      <h2>Lo que entra como formulario, sale como cartera</h2>
+      <p>Nada de lo que el visitante llena es un dato suelto. Cada campo tiene un destino exacto dentro de ESB, con GRUPO ARSI como organización dueña del registro.</p>
+    </div>
+
+    <div class="manifest reveal">
+      <div class="manifest-row"><div class="from"><span class="idx">01</span>Prospecto</div><div class="arrow">→</div><div class="to">Cliente</div></div>
+      <div class="manifest-row"><div class="from"><span class="idx">02</span>Cotización</div><div class="arrow">→</div><div class="to">Venta / Emisión</div></div>
+      <div class="manifest-row"><div class="from"><span class="idx">03</span>Datos del viaje</div><div class="arrow">→</div><div class="to">Riesgo / producto</div></div>
+      <div class="manifest-row"><div class="from"><span class="idx">04</span>Beneficiarios</div><div class="arrow">→</div><div class="to">Relacionados</div></div>
+      <div class="manifest-row"><div class="from"><span class="idx">05</span>Pago</div><div class="arrow">→</div><div class="to">Transacción</div></div>
+      <div class="manifest-row"><div class="from"><span class="idx">06</span>Póliza / certificado</div><div class="arrow">→</div><div class="to">Cartera de GRUPO ARSI</div></div>
+    </div>
+  </div>
+</section>
+
+<section id="principio">
+  <div class="wrap">
+    <div class="principle reveal">
+      <div class="principle-inner">
+        <div class="stamp">Sistema<br>de registro<br>= ESB</div>
+        <div class="principle-text">
+          <div class="kicker">Regla arquitectónica</div>
+          <h2>La landing no tiene lógica propia de cartera.</h2>
+          <p>Cotiza, captura y vende — pero no decide, no almacena verdad de negocio y no duplica lo que ESB ya sabe hacer.</p>
+          <p>ESB es el único sistema de registro. La landing es un canal: público, desechable, reemplazable. Eso es lo que la hace barata de repetir.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="escala" style="background:var(--paper-2);">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="kicker">Por qué esto escala</div>
+      <h2>Un patrón, muchas corredurías</h2>
+      <p>Si la landing no carga lógica de negocio propia, mañana no construimos un sistema nuevo por cada canal — conectamos otro enlace al mismo hub.</p>
+    </div>
+
+    <div class="hubmap reveal">
+      <svg class="hub-svg" viewBox="0 0 420 300">
+        <circle cx="210" cy="150" r="46" fill="none" stroke="#101826" stroke-width="1.4"></circle>
+        <text x="210" y="146" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="#101826">ESB</text>
+        <text x="210" y="160" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="#3C4657">registro</text>
+
+        <line x1="176" y1="120" x2="70" y2="50" stroke="#D9A441" stroke-width="1.4" stroke-dasharray="4 5"></line>
+        <circle cx="70" cy="50" r="5" fill="#D9A441"></circle>
+        <text x="80" y="46" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#101826">Avioncito → GRUPO ARSI</text>
+
+        <line x1="244" y1="120" x2="350" y2="50" stroke="#9AA2B0" stroke-width="1.4" stroke-dasharray="4 5"></line>
+        <circle cx="350" cy="50" r="5" fill="none" stroke="#9AA2B0" stroke-width="1.4"></circle>
+        <text x="255" y="40" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#8B93A3">Seguro Auto → otra correduría</text>
+
+        <line x1="176" y1="185" x2="70" y2="250" stroke="#9AA2B0" stroke-width="1.4" stroke-dasharray="4 5"></line>
+        <circle cx="70" cy="250" r="5" fill="none" stroke="#9AA2B0" stroke-width="1.4"></circle>
+        <text x="80" y="255" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#8B93A3">Seguro Viaje → otra correduría</text>
+      </svg>
+
+      <div class="hub-list">
+        <div class="hub-item live">
+          <span class="hub-dot"></span>
+          <div><h4>Avioncito → GRUPO ARSI</h4><p>Activo en DEV. Landing pública de viaje, organización creada en ESB.</p></div>
+        </div>
+        <div class="hub-item future">
+          <span class="hub-dot"></span>
+          <div><h4>Seguro Auto → otra correduría</h4><p>Mismo patrón, distinta organización, sin sistema nuevo.</p></div>
+        </div>
+        <div class="hub-item future">
+          <span class="hub-dot"></span>
+          <div><h4>Seguro Viaje → otra correduría</h4><p>Mismo patrón, distinta organización, sin sistema nuevo.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="siguiente">
+  <div class="wrap">
+    <div class="next reveal">
+      <div class="next-text">
+        <div class="kicker">Amarre DEV</div>
+        <h2>SPAGHETTI reportó — listo para cablear</h2>
+        <p>Canal <span class="mono">avioncito</span> → organización Grupo Arsi en staging. PROD no se toca hasta GO explícito.</p>
+        <div class="binding">
+          <div><span class="k">channel_slug</span> &nbsp; avioncito</div>
+          <div><span class="k">organization_id</span> &nbsp; 31548d92-6c8a-4ed7-a7a7-94b7c9f1e8c9</div>
+          <div><span class="k">organization_name</span> &nbsp; Grupo Arsi</div>
+          <div><span class="k">lead_source</span> &nbsp; WEB · 70adacd2-50a8-4a3f-a98b-cbc90a5e98b8</div>
+          <div><span class="k">config</span> &nbsp; <a href="/canales/avioncito/config.json">/canales/avioncito/config.json</a></div>
+          <div><span class="k">prod_org_id</span> &nbsp; 86d41053-40ae-4cfd-8e0a-40a94c37cdd1 <em style="color:#AEB6C8;font-style:normal">(no cablear)</em></div>
+        </div>
+      </div>
+      <div class="checklist">
+        <div class="check-item"><span class="n ok">✓</span> <span>ID confirmado — sin slug de org; usamos <strong>channel_slug</strong></span></div>
+        <div class="check-item"><span class="n ok">✓</span> <span>Estructura mapeada — CRM + plan oficina en DEV</span></div>
+        <div class="check-item"><span class="n ok">✓</span> <span>Amarre staging definido — config JSON del canal</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  Avioncito es un canal de ESB — GRUPO ARSI es la organización dueña del registro. · Solo DEV
+</footer>
+
+<script>
+  const els = document.querySelectorAll('.reveal');
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, { threshold:0.12 });
+  els.forEach(el=>io.observe(el));
+</script>
+
+</body>
+</html>

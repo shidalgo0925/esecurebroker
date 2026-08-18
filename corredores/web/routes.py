@@ -407,6 +407,29 @@ def planes_page(request: Request):
     return RedirectResponse("/#planes", status_code=303)
 
 
+@router.get("/canales/{slug}")
+@router.get("/canales/{slug}/arquitectura")
+def canal_arquitectura(slug: str):
+    """Public architecture note for a quote channel (DEV). No auth."""
+    path = Path(__file__).parent / "static" / "channels" / slug / "arquitectura.html"
+    if not path.is_file():
+        raise HTTPException(404, "canal no encontrado")
+    return FileResponse(path, media_type="text/html; charset=utf-8")
+
+
+@router.get("/canales/{slug}/config.json")
+def canal_config(slug: str):
+    """Public channel → organization binding (staging). No portfolio logic."""
+    from fastapi.responses import JSONResponse
+
+    from corredores.channels import load_channel
+
+    try:
+        return JSONResponse(load_channel(slug))
+    except FileNotFoundError:
+        raise HTTPException(404, "canal no encontrado") from None
+
+
 @router.get("/registro", response_class=HTMLResponse)
 def registro_get(request: Request, plan: str = Query(default="oficina")):
     from corredores.config import settings
@@ -854,6 +877,10 @@ def checkout_success(
 async def stripe_webhook(request: Request, session: Session = Depends(get_session)):
     from corredores.services.runtime_settings import runtime
     from corredores.services.saas_billing import activate_from_stripe_session
+    from corredores.services.public_channel_payments import (
+        PRODUCT_META,
+        confirm_from_stripe_session,
+    )
 
     whsec = runtime().get("saas.stripe_webhook_secret").strip()
     if not whsec:
@@ -869,7 +896,10 @@ async def stripe_webhook(request: Request, session: Session = Depends(get_sessio
     if event["type"] == "checkout.session.completed":
         sess_obj = event["data"]["object"]
         sid = sess_obj.get("id")
-        if sid:
+        meta = sess_obj.get("metadata") or {}
+        if sid and meta.get("product") == PRODUCT_META:
+            confirm_from_stripe_session(session, sid)
+        elif sid:
             activate_from_stripe_session(session, sid)
     return {"ok": True}
 

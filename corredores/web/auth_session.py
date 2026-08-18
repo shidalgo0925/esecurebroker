@@ -227,6 +227,11 @@ def is_public_path(path: str) -> bool:
         return True
     if path.startswith("/webhooks/"):
         return True
+    # Public quote/sales channels (e.g. Avioncito → org binding); no session.
+    if path.startswith("/canales/"):
+        return True
+    if path.startswith("/public/"):
+        return True
     # Collaborator invite acceptance (ADR-008 F7)
     if path.startswith("/invitacion/"):
         return True

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pago seguro — Grupo Arsi</title>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,600;6..72,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#141b30;--paper:#fbfaf6;--line:#e8e6db;--brass:#cd9a34;--brass-deep:#8c651e;--muted:#6c7086}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,system-ui,sans-serif;background:var(--paper);color:var(--ink);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:32px;max-width:440px;width:100%}
+h1{font-family:Newsreader,Georgia,serif;font-size:26px;margin-bottom:8px}
+.lede{color:var(--muted);font-size:14px;margin-bottom:20px}
+.row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
+.row span{color:var(--muted)}
+.total{font-family:Newsreader,Georgia,serif;font-size:32px;color:var(--brass-deep);margin:18px 0}
+.btn{display:inline-flex;width:100%;justify-content:center;padding:14px;border:none;border-radius:8px;font:inherit;font-weight:600;cursor:pointer;background:var(--ink);color:#fff;margin-top:8px}
+.btn:disabled{opacity:.5}
+.btn-ghost{background:#fff;border:1px solid var(--line);color:var(--ink);text-decoration:none}
+.note{margin-top:14px;font-size:12px;color:var(--muted);line-height:1.4}
+.err{background:#f8e8e5;color:#a8402f;padding:10px;border-radius:8px;font-size:13px;margin-bottom:12px}
+.badge{display:inline-block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;background:#fbf1dc;color:var(--brass-deep);padding:4px 8px;border-radius:999px;font-weight:700;margin-bottom:12px}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="badge">{{ provider }}</div>
+  <h1>Pago seguro</h1>
+  <p class="lede">Confirma el cobro de tu seguro de viaje. El monto viene de la cotización congelada.</p>
+  <div id="err" class="err" style="display:none"></div>
+  <div class="row"><span>Plan</span><strong>{{ plan.name or '—' }}</strong></div>
+  <div class="row"><span>Estado</span><strong id="st">{{ status }}</strong></div>
+  <div class="total">{{ currency }} {{ amount }}</div>
+  {% if provider == 'SANDBOX' and status != 'SUCCEEDED' %}
+  <button class="btn" type="button" id="btnPay">Pagar ahora (sandbox DEV)</button>
+  <p class="note">Sandbox solo en DEV. En producción se usa Stripe Checkout. El pago no se marca solo por volver del navegador: requiere confirmación de servidor.</p>
+  {% elif status == 'SUCCEEDED' %}
+  <a class="btn btn-ghost" href="/public/{{ channel }}/quotes/{{ token }}/result?attempt_id={{ attempt_id }}">Ver resultado</a>
+  {% else %}
+  <p class="note">Proveedor {{ provider }}. Si fuiste enviado a Stripe, completa el pago allí.</p>
+  <a class="btn btn-ghost" href="/public/{{ channel }}/">Volver</a>
+  {% endif %}
+</div>
+<script>
+const CHANNEL={{ channel|tojson }}, TOKEN={{ token|tojson }}, ATTEMPT={{ attempt_id|tojson }};
+const btn=document.getElementById('btnPay');
+if(btn) btn.onclick=async()=>{
+  btn.disabled=true;
+  const err=document.getElementById('err');
+  err.style.display='none';
+  try{
+    const res=await fetch(`/public/${CHANNEL}/quotes/${TOKEN}/pay/confirm-sandbox?attempt_id=${encodeURIComponent(ATTEMPT)}`,{method:'POST'});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(data.detail||'No se pudo confirmar');
+    location.href=`/public/${CHANNEL}/quotes/${TOKEN}/result?attempt_id=${encodeURIComponent(ATTEMPT)}`;
+  }catch(e){
+    err.textContent=String(e.message||e);
+    err.style.display='block';
+    btn.disabled=false;
+  }
+};
+</script>
+</body>
+</html>

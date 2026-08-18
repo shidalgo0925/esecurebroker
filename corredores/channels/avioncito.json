@@ -1,0 +1,10 @@
+{
+  "channel_slug": "avioncito",
+  "channel_name": "Avioncito",
+  "env": "dev",
+  "resolution": "public_sales_channels.slug → organization_id (DB)",
+  "organization_name": "Grupo Arsi",
+  "esb_base_url": "https://esecurebroker-dev.etsrv.site",
+  "public_url": "/public/avioncito/",
+  "notes": "Legacy discovery stub. Runtime binding is PublicSalesChannel row seeded by org name lookup. Do not hardcode organization UUID in app code. Do not wire PROD."
+}

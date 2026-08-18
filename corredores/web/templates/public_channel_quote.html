@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ config.branding.display_name or config.name }} — Cotizar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600;6..72,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#141b30; --ink-2:#1c2544; --ink-soft:#3a4258; --muted:#6c7086;
+  --paper:#fbfaf6; --paper-deep:#f3f1e8; --panel:#fff;
+  --line:#e8e6db; --brass:#cd9a34; --brass-deep:#8c651e; --brass-soft:#e0ae54; --brass-tint:#fbf1dc;
+  --crit:#a8402f; --ok:#2f6e51; --white:#fff;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,system-ui,sans-serif;background:var(--paper);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased}
+h1,h2,h3,.display{font-family:Newsreader,Georgia,serif;font-optical-sizing:auto;letter-spacing:-.01em}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.app{max-width:1180px;margin:0 auto;padding:24px 20px 80px}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;padding-bottom:18px;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+.brand img{width:36px;height:36px;display:block}
+.brand-text{display:flex;flex-direction:column;gap:1px;line-height:1.15}
+.brand-text .word{font-family:Newsreader,Georgia,serif;font-weight:700;font-size:18px}
+.brand-text .word em{font-style:normal;color:var(--brass-deep)}
+.brand-text .tag{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:500}
+.top-meta{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.progress{display:flex;gap:6px;margin-bottom:28px}
+.progress span{flex:1;height:4px;border-radius:4px;background:var(--paper-deep)}
+.progress span.on{background:var(--brass)}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:20px;align-items:start}
+@media(max-width:960px){.grid{grid-template-columns:1fr}.summary{order:-1}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:28px}
+.card h2{font-size:26px;margin-bottom:6px;font-weight:600}
+.lede{color:var(--muted);font-size:14px;margin-bottom:22px}
+label{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em}
+input,select{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff;color:var(--ink)}
+input:focus,select:focus{outline:2px solid var(--brass-soft);outline-offset:1px;border-color:var(--brass)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+@media(max-width:560px){.row{grid-template-columns:1fr}}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.chip{padding:10px 14px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:13px;font-weight:500;color:var(--ink)}
+.chip.on{background:var(--ink);color:#dfe2ee;border-color:var(--ink)}
+.stepper{display:flex;align-items:center;gap:14px;margin:8px 0 18px}
+.stepper button{width:36px;height:36px;border-radius:8px;border:1px solid var(--line);background:#fff;font-size:18px;cursor:pointer;color:var(--ink)}
+.stepper .n{font-family:Newsreader,Georgia,serif;font-size:24px;min-width:28px;text-align:center}
+.ages{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px}
+.ages label{margin:0}
+.ages input{width:72px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 22px;border-radius:8px;border:none;font:inherit;font-weight:600;cursor:pointer}
+.btn-primary{background:var(--ink);color:#fff}
+.btn-primary:hover{background:var(--ink-2)}
+.btn-brass{background:var(--brass);color:var(--ink)}
+.btn-brass:hover{background:var(--brass-soft)}
+.btn-ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
+.actions{display:flex;gap:10px;justify-content:flex-end;margin-top:22px;flex-wrap:wrap}
+.summary{position:sticky;top:20px}
+.summary h3{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--brass-deep);margin-bottom:12px;font-weight:600}
+.summary .line{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:8px 0;border-bottom:1px solid var(--line)}
+.summary .line span{color:var(--muted)}
+.summary .total{font-family:Newsreader,Georgia,serif;font-size:28px;margin-top:14px;color:var(--brass-deep);font-weight:600}
+.plans{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:12px;
+  align-items:stretch;
+}
+@media(max-width:900px){
+  .plans{grid-template-columns:1fr}
+}
+.plan{
+  border:1.5px solid var(--line);border-radius:12px;padding:18px 16px 14px;
+  cursor:pointer;position:relative;background:#fff;
+  display:flex;flex-direction:column;min-height:100%;
+  transition:border-color .15s ease, box-shadow .15s ease;
+}
+.plan:hover{border-color:#d4c9a8}
+.plan.on{border-color:var(--brass);box-shadow:0 0 0 1px var(--brass)}
+.plan-name{font-family:Newsreader,Georgia,serif;font-size:20px;font-weight:600;color:var(--ink);padding-right:72px;min-height:1.25em}
+.plan-price{font-family:Newsreader,Georgia,serif;font-size:26px;line-height:1.1;margin:8px 0 12px;color:var(--brass-deep);font-weight:600}
+.plan-features{list-style:none;margin:0 0 14px;padding:0;display:grid;gap:7px;flex:1}
+.plan-features li{
+  position:relative;padding-left:16px;color:var(--ink-soft);font-size:13px;line-height:1.35;
+}
+.plan-features li::before{
+  content:"";position:absolute;left:0;top:.55em;width:6px;height:6px;border-radius:50%;background:var(--brass);
+}
+.plan-foot{display:flex;align-items:center;justify-content:flex-start;gap:12px;margin-top:auto}
+.plan .btn-more{
+  padding:8px 12px;font-size:12px;font-weight:600;border-radius:8px;
+  border:1px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer;
+}
+.plan .btn-more:hover{background:var(--paper-deep)}
+.badge{
+  position:absolute;top:12px;right:10px;font-size:9px;text-transform:uppercase;
+  letter-spacing:.06em;background:var(--brass);color:#fff;padding:4px 8px;
+  border-radius:999px;font-weight:700;border:none;
+}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.drawer-bg{position:fixed;inset:0;background:rgba(20,27,48,.45);z-index:50;display:flex;align-items:flex-end;justify-content:center;padding:16px}
+@media(min-width:720px){.drawer-bg{align-items:center}}
+.drawer{background:#fff;border-radius:14px;max-width:480px;width:100%;padding:24px;max-height:85vh;overflow:auto;border:1px solid var(--line)}
+.drawer h3{font-size:22px;margin-bottom:4px}
+.drawer .price{font-family:Newsreader,Georgia,serif;font-size:28px;color:var(--brass-deep);margin:8px 0 16px}
+.drawer h4{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:16px 0 8px}
+.drawer ul{margin:0 0 0 18px;color:var(--ink-soft);font-size:14px}
+.drawer .lim{display:grid;gap:6px}
+.drawer .lim div{display:flex;justify-content:space-between;gap:12px;font-size:13px;padding:6px 0;border-bottom:1px solid var(--line)}
+.drawer .lim span{color:var(--muted);text-transform:capitalize}
+.hero{background:var(--ink);color:#dfe2ee;border-radius:14px;padding:48px 36px;margin-bottom:24px;position:relative;overflow:hidden}
+.hero::before{content:"";position:absolute;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,.05) 1px,transparent 1px);background-size:22px 22px;opacity:.7;pointer-events:none}
+.hero > *{position:relative;z-index:1}
+.hero .eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--brass-soft);margin-bottom:16px;display:flex;align-items:center;gap:10px}
+.hero .eyebrow::before{content:"";width:22px;height:1px;background:var(--brass-soft)}
+.hero h1{font-size:clamp(30px,4.5vw,44px);max-width:14ch;line-height:1.08;color:#fff;font-weight:600}
+.hero h1 em{font-style:normal;color:var(--brass-soft)}
+.hero p{margin-top:14px;color:#aeb4c6;max-width:44ch;font-size:15px}
+.err{background:#f8e8e5;color:var(--crit);padding:10px 12px;border-radius:8px;font-size:13px;margin-bottom:12px;border:1px solid #e8c4bd}
+.ok{background:#e7f2eb;color:var(--ok);padding:10px 12px;border-radius:8px;font-size:13px;margin-bottom:12px;border:1px solid #c5ddd0}
+.hidden{display:none!important}
+.traveler-block{border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:12px;background:var(--paper)}
+.field{margin-bottom:12px}
+.check{display:flex;gap:8px;align-items:center;font-size:14px;margin-top:8px}
+.check input{width:auto}
+.foot{margin-top:40px;text-align:center;font-size:12px;color:var(--muted)}
+/* —— Checkout (Stripe / Google / Namecheap style) —— */
+.chk-wrap{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);gap:0;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#fff;min-height:420px}
+@media(max-width:860px){.chk-wrap{grid-template-columns:1fr}}
+.chk-form{padding:32px 28px 28px}
+.chk-aside{padding:32px 28px;background:var(--ink);color:#dfe2ee}
+@media(max-width:860px){.chk-aside{order:-1}}
+.chk-kicker{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;font-weight:600}
+.chk-aside .chk-kicker{color:#9aa3b5}
+.chk-title{font-family:Newsreader,Georgia,serif;font-size:26px;font-weight:600;margin-bottom:6px}
+.chk-sub{font-size:14px;color:var(--muted);margin-bottom:22px}
+.chk-field{margin-bottom:14px}
+.chk-field label{display:block;font-size:12px;font-weight:500;color:var(--ink-soft);margin-bottom:6px;text-transform:none;letter-spacing:0}
+.chk-field input{
+  width:100%;padding:14px 14px;border:1px solid #d0d5dd;border-radius:10px;
+  font:inherit;font-size:15px;background:#fff;color:var(--ink);transition:border-color .15s,box-shadow .15s;
+}
+.chk-field input:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 3px rgba(20,27,48,.12)}
+.chk-field input.is-bad{border-color:#e11d48;box-shadow:0 0 0 3px rgba(225,29,72,.12)}
+.chk-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.chk-brands{display:flex;gap:8px;align-items:center;margin:4px 0 18px;flex-wrap:wrap}
+.chk-brand{
+  font-size:10px;font-weight:700;letter-spacing:.04em;padding:4px 8px;border-radius:4px;
+  border:1px solid var(--line);color:var(--ink-soft);background:var(--paper);
+}
+.chk-pay{
+  width:100%;margin-top:8px;padding:16px 18px;border:none;border-radius:10px;
+  background:var(--ink);color:#fff;font:inherit;font-size:16px;font-weight:600;cursor:pointer;
+}
+.chk-pay:hover{background:#1c2744}
+.chk-pay:disabled{opacity:.55;cursor:not-allowed}
+.chk-secure{display:flex;gap:8px;align-items:center;justify-content:center;margin-top:14px;font-size:12px;color:var(--muted)}
+.chk-secure svg{flex:0 0 auto}
+.chk-back{margin-top:16px;background:none;border:none;color:var(--muted);font:inherit;font-size:13px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.chk-aside h3{font-family:Newsreader,Georgia,serif;font-size:20px;color:#fff;margin-bottom:18px;font-weight:600}
+.chk-line{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.1);font-size:13px}
+.chk-line span{color:#9aa3b5}
+.chk-line strong{color:#fff;font-weight:500;text-align:right}
+.chk-total{margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,.16)}
+.chk-total .lbl{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#9aa3b5}
+.chk-total .amt{font-family:Newsreader,Georgia,serif;font-size:34px;color:var(--brass-soft);margin-top:6px;font-weight:600}
+.chk-note{margin-top:18px;font-size:12px;color:#8b93a8;line-height:1.45}
+.pay-success{text-align:center;padding:40px 24px;border:1px solid var(--line);border-radius:16px;background:#fff}
+.pay-success .check-circle{
+  width:56px;height:56px;border-radius:50%;background:#ecfdf5;color:var(--ok);
+  display:inline-flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:16px;
+}
+.pay-success h2{font-size:28px;margin-bottom:8px}
+.pay-success .pay-amount{font-family:Newsreader,Georgia,serif;font-size:32px;color:var(--brass-deep);margin:16px 0}
+.grid.chk-mode{grid-template-columns:1fr}
+.grid.chk-mode .summary{display:none}
+.grid.chk-mode .card{padding:0;border:none;background:transparent;overflow:visible}
+.grid.chk-mode .card > .err,
+.grid.chk-mode .card > .ok{margin:0 0 12px;border-radius:12px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <a class="brand" href="/public/{{ channel }}/">
+      <img src="/static/brand/crest.svg" alt="">
+      <span class="brand-text">
+        <span class="word">Grupo <em>Arsi</em></span>
+        <span class="tag">Corredores de seguros</span>
+      </span>
+    </a>
+    <div class="top-meta">Seguro de viaje</div>
+  </div>
+
+  <div id="hero" class="hero">
+    <div class="eyebrow">Canal público de cotización</div>
+    <h1>{{ config.branding.product_tagline or 'Cotiza tu seguro de viaje' }}</h1>
+    <p>Sin registro. Compara planes, completa tus datos y continúa al pago de forma segura.</p>
+    <div style="margin-top:28px">
+      <button class="btn btn-brass" type="button" id="btnStart">Cotizar ahora</button>
+    </div>
+  </div>
+
+  <div id="wizard" class="hidden">
+    <div class="progress" id="progress"></div>
+    <div class="grid">
+      <div class="card" id="stepCard"></div>
+      <aside class="card summary" id="summary"></aside>
+    </div>
+  </div>
+
+  <p class="foot">Seguro de viaje · Grupo Arsi</p>
+</div>
+<script>
+const CHANNEL = {{ channel|tojson }};
+const CONFIG = {{ config|tojson }};
+const STEPS = ['viaje','planes','datos','pago'];
+const STEP_LABELS = {viaje:'Tu viaje',planes:'Elige tu plan',datos:'Tus datos',pago:'Revisa y paga'};
+let state = { step: 'viaje', token: null, quote: null, ages: [30], passengerCount: 1, region: null, selectedPlan: null, err: '', info: '', payPhase: 'review', payMethod: 'card', attemptId: null, checkout: null };
+
+async function api(path, opts={}){
+  const res = await fetch(`/public/${CHANNEL}${path}`, {
+    headers: {'Content-Type':'application/json', ...(opts.headers||{})},
+    ...opts,
+  });
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok){
+    const d = data.detail;
+    const msg = Array.isArray(d) ? d.map(x=>x.msg||JSON.stringify(x)).join('; ') : (d || data.message || 'Error');
+    throw new Error(typeof msg === 'string' ? msg : JSON.stringify(msg));
+  }
+  return data;
+}
+
+function money(v, cur){ return `${cur||'USD'} ${Number(v).toFixed(2)}`; }
+
+function renderProgress(){
+  const idx = STEPS.indexOf(state.step);
+  document.getElementById('progress').innerHTML = STEPS.map((_,i)=>`<span class="${i<=idx?'on':''}"></span>`).join('');
+}
+
+function renderSummary(){
+  const q = state.quote || {};
+  const plan = q.selected_plan || state.selectedPlan;
+  document.getElementById('summary').innerHTML = `
+    <h3>Tu viaje</h3>
+    <div class="line"><span>Origen</span><strong>${q.origin||'—'}</strong></div>
+    <div class="line"><span>Destino</span><strong>${q.destination||'—'}</strong></div>
+    <div class="line"><span>Fechas</span><strong>${q.start_date||'—'} → ${q.end_date||'—'}</strong></div>
+    <div class="line"><span>Días</span><strong>${q.days??'—'}</strong></div>
+    <div class="line"><span>Pasajeros</span><strong>${q.passenger_count||state.passengerCount}</strong></div>
+    <div class="line"><span>Plan</span><strong>${plan?.name||'—'}</strong></div>
+    <div class="total">${plan?.premium!=null?money(plan.premium, plan.currency||q.currency):'—'}</div>
+  `;
+}
+
+function openPlanDetail(code){
+  const p=(state.quote?.plans||[]).find(x=>x.code===code);
+  if(!p) return;
+  const lim=Object.entries(p.limits||{}).map(([k,v])=>`
+    <div><span>${k.replace(/_/g,' ')}</span><strong>${v}</strong></div>`).join('');
+  const el=document.createElement('div');
+  el.className='drawer-bg';
+  el.innerHTML=`<div class="drawer" role="dialog" aria-modal="true">
+    <h3>${p.name}</h3>
+    <div class="price">${money(p.premium,p.currency)}</div>
+    <h4>Coberturas</h4>
+    <ul>${(p.coverages||[]).map(c=>`<li>${c}</li>`).join('')}</ul>
+    ${lim?`<h4>Límites</h4><div class="lim">${lim}</div>`:''}
+    <div class="actions" style="margin-top:20px">
+      <button type="button" class="btn btn-ghost" data-close>Cerrar</button>
+      <button type="button" class="btn btn-primary" data-pick="${p.code}">Seleccionar</button>
+    </div>
+  </div>`;
+  el.addEventListener('click',(ev)=>{ if(ev.target===el || ev.target.dataset.close!==undefined) el.remove(); });
+  el.querySelector('[data-pick]')?.addEventListener('click',()=>{
+    state.selectedPlan=p; el.remove(); renderStep();
+  });
+  document.body.appendChild(el);
+}
+
+function ageInputs(){
+  let html='';
+  for(let i=0;i<state.passengerCount;i++){
+    const v = state.ages[i] ?? 30;
+    html += `<label>Pax ${i+1}<input type="number" min="0" max="120" data-age="${i}" value="${v}"></label>`;
+  }
+  return html;
+}
+
+function renderStep(){
+  renderProgress();
+  const card = document.getElementById('stepCard');
+  const grid = document.querySelector('.grid');
+  const chkMode = state.step==='pago' && (state.payPhase==='pay' || state.payPhase==='done');
+  if(grid) grid.classList.toggle('chk-mode', chkMode);
+  let body='';
+  if(state.err) body += `<div class="err">${state.err}</div>`;
+  if(state.info) body += `<div class="ok">${state.info}</div>`;
+
+  if(state.step==='viaje'){
+    const chips = (CONFIG.destinations||[]).map(d=>`
+      <button type="button" class="chip ${state.region===d.code?'on':''}" data-region="${d.code}">${d.label}</button>`).join('');
+    body += `
+      <h2>Tu viaje</h2>
+      <p class="lede">Indica destino, fechas reales y edades. Los días se calculan solos.</p>
+      <div class="field"><label>Origen</label>
+        <input id="origin" value="${CONFIG.origin_default||''}" ${CONFIG.origin_fixed?'readonly':''}>
+      </div>
+      <div class="field"><label>Destino</label><div class="chips">${chips}</div></div>
+      <div class="row">
+        <div class="field"><label>Fecha inicio</label><input type="date" id="start"></div>
+        <div class="field"><label>Fecha fin</label><input type="date" id="end"></div>
+      </div>
+      <div class="field"><label>Pasajeros</label>
+        <div class="stepper">
+          <button type="button" id="paxMinus">−</button>
+          <div class="n" id="paxN">${state.passengerCount}</div>
+          <button type="button" id="paxPlus">+</button>
+        </div>
+      </div>
+      <div class="field"><label>Edades</label><div class="ages" id="ages">${ageInputs()}</div></div>
+      <div class="actions"><button class="btn btn-primary" id="btnCalc">Cotizar</button></div>`;
+  }
+
+  if(state.step==='planes'){
+    const plans = state.quote?.plans || [];
+    body += `<h2>Elige tu plan</h2>
+      <p class="lede">Compara coberturas y límites. El precio queda fijado al seleccionar.</p>
+      <p class="mono" style="font-size:11px;color:var(--muted);margin-bottom:16px">${CONFIG.rates_note||''}</p>
+      <div class="plans" role="list">${plans.map(p=>{
+        const on = state.selectedPlan?.code===p.code;
+        const feats = (p.coverages||[]).slice(0,4).map(c=>`<li>${c}</li>`).join('');
+        return `<div class="plan ${on?'on':''}" data-plan="${p.code}" role="listitem" aria-pressed="${on}">
+          ${p.highlight?'<span class="badge">Destacado</span>':''}
+          <div class="plan-name">${p.name}</div>
+          <div class="plan-price">${money(p.premium,p.currency)}</div>
+          <ul class="plan-features">${feats}</ul>
+          <div class="plan-foot">
+            <button type="button" class="btn-more" data-more="${p.code}">Ver más</button>
+          </div>
+        </div>`;
+      }).join('')}</div>
+      <div class="actions">
+        <button class="btn btn-ghost" data-back>Atrás</button>
+        <button class="btn btn-primary" id="btnSelect" ${state.selectedPlan?'':'disabled'}>Continuar</button>
+      </div>`;
+  }
+
+  if(state.step==='datos'){
+    const n = state.quote?.passenger_count || state.passengerCount;
+    let blocks='';
+    for(let i=0;i<n;i++){
+      blocks += `<div class="traveler-block">
+        <strong>Pasajero ${i+1}${i===0?' (titular)':''}</strong>
+        <div class="row" style="margin-top:10px">
+          <div class="field"><label>Nombres</label><input data-t="${i}" data-f="first_name"></div>
+          <div class="field"><label>Apellidos</label><input data-t="${i}" data-f="last_name"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Fecha nacimiento</label><input type="date" data-t="${i}" data-f="birth_date"></div>
+          <div class="field"><label>Edad</label><input type="number" data-t="${i}" data-f="age" value="${(state.quote?.ages||[])[i]||''}"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Identificación</label><input data-t="${i}" data-f="identification_number"></div>
+          <div class="field"><label>Teléfono</label><input data-t="${i}" data-f="phone"></div>
+        </div>
+        ${i===0?`<div class="field"><label>Correo</label><input data-t="${i}" data-f="email" type="email"></div>`:''}
+        <label class="check"><input type="checkbox" data-t="${i}" data-f="is_pep"> ¿Persona políticamente expuesta (PEP)?</label>
+      </div>`;
+    }
+    body += `<h2>Tus datos</h2>
+      <p class="lede">Pasajeros, beneficiarios y contacto de emergencia.</p>
+      ${blocks}
+      <div class="traveler-block">
+        <strong>Beneficiario (titular)</strong>
+        <div class="field" style="margin-top:10px"><label>Nombre completo</label><input id="benName"></div>
+        <div class="row">
+          <div class="field"><label>Parentesco</label><input id="benRel"></div>
+          <div class="field"><label>Teléfono</label><input id="benPhone"></div>
+        </div>
+      </div>
+      <div class="traveler-block">
+        <strong>Contacto de emergencia</strong>
+        <div class="field" style="margin-top:10px"><label>Nombre</label><input id="emName"></div>
+        <div class="row">
+          <div class="field"><label>Teléfono</label><input id="emPhone"></div>
+          <div class="field"><label>Email</label><input id="emEmail" type="email"></div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-ghost" data-back>Atrás</button>
+        <button class="btn btn-primary" id="btnDatos">Continuar</button>
+      </div>`;
+  }
+
+  if(state.step==='pago'){
+    const q = state.quote||{};
+    const plan = q.selected_plan||{};
+    const primary = (q.travelers||[]).find(t=>t.is_primary) || (q.travelers||[])[0] || {};
+    if(q.payment_status==='SUCCEEDED' || q.status==='PAID' || q.status==='COMPLETED' || state.payPhase==='done'){
+      body += `<div class="pay-success">
+        <div class="check-circle" aria-hidden="true">✓</div>
+        <h2>Pago recibido</h2>
+        <p class="lede" style="max-width:36ch;margin:0 auto 8px">Gracias. Tu seguro de viaje quedó registrado en cartera.</p>
+        <div class="pay-amount">${money(q.selected_premium,q.currency)}</div>
+        ${q.policy_number?`<p class="mono" style="font-size:13px;color:var(--ink);margin-top:8px">Póliza <strong>${q.policy_number}</strong></p>`:''}
+        <p class="mono" style="font-size:12px;color:var(--muted)">Ref ${q.checkout_ref||'—'}</p>
+        <div class="actions" style="justify-content:center;margin-top:22px">
+          <a class="btn btn-primary" href="/public/${CHANNEL}/">Nueva cotización</a>
+        </div>
+      </div>`;
+    } else if(state.payPhase==='pay'){
+      const amount = state.checkout?.amount || q.selected_premium;
+      const cur = state.checkout?.currency || q.currency;
+      const email = primary.email || '';
+      const holder = [primary.first_name, primary.last_name].filter(Boolean).join(' ');
+      body += `<div class="chk-wrap">
+        <div class="chk-form">
+          <div class="chk-kicker">Checkout</div>
+          <div class="chk-title">Pagar con tarjeta</div>
+          <p class="chk-sub">Introduce los datos de tu tarjeta. El cobro es por ${money(amount,cur)}.</p>
+          <div id="payErr" class="err hidden"></div>
+          <div class="chk-brands">
+            <span class="chk-brand">VISA</span>
+            <span class="chk-brand">Mastercard</span>
+            <span class="chk-brand">Amex</span>
+          </div>
+          <div class="chk-field">
+            <label for="payEmail">Correo</label>
+            <input id="payEmail" type="email" autocomplete="email" value="${email.replace(/"/g,'&quot;')}" placeholder="nombre@correo.com">
+          </div>
+          <div class="chk-field">
+            <label for="payCard">Número de tarjeta</label>
+            <input id="payCard" inputmode="numeric" autocomplete="cc-number" placeholder="ACCT-000015" maxlength="19">
+          </div>
+          <div class="chk-row">
+            <div class="chk-field">
+              <label for="payExp">Vencimiento</label>
+              <input id="payExp" inputmode="numeric" autocomplete="cc-exp" placeholder="MM / AA" maxlength="7">
+            </div>
+            <div class="chk-field">
+              <label for="payCvc">CVC</label>
+              <input id="payCvc" inputmode="numeric" autocomplete="cc-csc" placeholder="123" maxlength="4">
+            </div>
+          </div>
+          <div class="chk-field">
+            <label for="payName">Nombre en la tarjeta</label>
+            <input id="payName" autocomplete="cc-name" value="${holder.replace(/"/g,'&quot;')}" placeholder="Como aparece en la tarjeta">
+          </div>
+          <button class="chk-pay" type="button" id="btnConfirmPay">Pagar ${money(amount,cur)}</button>
+          <div class="chk-secure">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6l7-3z" stroke="currentColor" stroke-width="1.6"/><path d="M9.5 12.2l1.8 1.8 3.4-3.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Pagos cifrados · no almacenamos el número de tarjeta
+          </div>
+          <button type="button" class="chk-back" id="btnPayBack">← Volver al resumen</button>
+        </div>
+        <aside class="chk-aside">
+          <div class="chk-kicker">Pedido</div>
+          <h3>${plan.name||q.selected_plan_code||'Plan'}</h3>
+          <div class="chk-line"><span>Origen</span><strong>${q.origin||'—'}</strong></div>
+          <div class="chk-line"><span>Destino</span><strong>${q.destination||'—'}</strong></div>
+          <div class="chk-line"><span>Fechas</span><strong>${q.start_date||'—'} → ${q.end_date||'—'}</strong></div>
+          <div class="chk-line"><span>Pasajeros</span><strong>${q.passenger_count||1}</strong></div>
+          <div class="chk-line"><span>Días</span><strong>${q.days??'—'}</strong></div>
+          <div class="chk-total">
+            <div class="lbl">Total</div>
+            <div class="amt">${money(amount,cur)}</div>
+          </div>
+          <p class="chk-note">El precio queda fijado al seleccionar el plan. La emisión de la póliza se gestiona después del pago.</p>
+        </aside>
+      </div>`;
+    } else {
+      body += `<h2>Revisa y paga</h2>
+        <p class="lede">Confirma tu viaje. En el siguiente paso pagarás con tarjeta de forma segura.</p>
+        <div class="traveler-block">
+          <div class="line"><span>Viaje</span><strong>${q.origin} → ${q.destination}</strong></div>
+          <div class="line"><span>Fechas</span><strong>${q.start_date} → ${q.end_date} (${q.days} días)</strong></div>
+          <div class="line"><span>Plan</span><strong>${plan.name||q.selected_plan_code}</strong></div>
+          <div class="line"><span>Total</span><strong>${money(q.selected_premium,q.currency)}</strong></div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-ghost" data-back type="button">Atrás</button>
+          <button class="btn btn-primary" id="btnPay" type="button">Pagar ${money(q.selected_premium,q.currency)}</button>
+        </div>`;
+    }
+  }
+
+  card.innerHTML = body;
+  renderSummary();
+  bindStep();
+}
+
+function collectAges(){
+  const ages=[];
+  document.querySelectorAll('[data-age]').forEach(el=>{ ages[Number(el.dataset.age)] = Number(el.value); });
+  state.ages = ages.filter(a=>a!==undefined);
+}
+
+function bindStep(){
+  document.querySelectorAll('[data-region]').forEach(b=>b.onclick=()=>{ state.region=b.dataset.region; state.err=''; renderStep(); });
+  const minus=document.getElementById('paxMinus');
+  const plus=document.getElementById('paxPlus');
+  if(minus) minus.onclick=()=>{ state.passengerCount=Math.max(1,state.passengerCount-1); state.ages=state.ages.slice(0,state.passengerCount); while(state.ages.length<state.passengerCount) state.ages.push(30); renderStep(); };
+  if(plus) plus.onclick=()=>{ state.passengerCount=Math.min(10,state.passengerCount+1); while(state.ages.length<state.passengerCount) state.ages.push(30); renderStep(); };
+  document.querySelectorAll('[data-age]').forEach(el=>el.onchange=collectAges);
+
+  const calc=document.getElementById('btnCalc');
+  if(calc) calc.onclick=async()=>{
+    try{
+      state.err=''; collectAges();
+      if(!state.region) throw new Error('Selecciona un destino');
+      const start=document.getElementById('start').value;
+      const end=document.getElementById('end').value;
+      if(!start||!end) throw new Error('Indica fechas de inicio y fin');
+      if(!state.token){
+        const q = await api('/quotes',{method:'POST',body:'{}'});
+        state.token=q.token; state.quote=q;
+      }
+      const origin=document.getElementById('origin').value;
+      const res = await api(`/quotes/${state.token}/calculate`,{method:'POST',body:JSON.stringify({
+        origin, destination_region: state.region, start_date:start, end_date:end, ages: state.ages
+      })});
+      state.quote=res.quote; state.step='planes'; state.selectedPlan=null; renderStep();
+    }catch(e){ state.err=String(e.message||e); renderStep(); }
+  };
+
+  document.querySelectorAll('[data-plan]').forEach(el=>{
+    el.onclick=(ev)=>{
+      if(ev.target.closest('[data-more]')) return;
+      const code=el.dataset.plan;
+      state.selectedPlan=(state.quote.plans||[]).find(p=>p.code===code);
+      renderStep();
+    };
+  });
+  document.querySelectorAll('[data-more]').forEach(btn=>{
+    btn.onclick=(ev)=>{
+      ev.stopPropagation();
+      openPlanDetail(btn.dataset.more);
+    };
+  });
+  const sel=document.getElementById('btnSelect');
+  if(sel) sel.onclick=async()=>{
+    try{
+      state.err='';
+      const q=await api(`/quotes/${state.token}/select-plan`,{method:'POST',body:JSON.stringify({plan_code:state.selectedPlan.code})});
+      state.quote=q; state.step='datos'; renderStep();
+    }catch(e){ state.err=String(e.message||e); renderStep(); }
+  };
+
+  const bd=document.getElementById('btnDatos');
+  if(bd) bd.onclick=async()=>{
+    try{
+      state.err='';
+      const n=state.quote.passenger_count;
+      const travelers=[];
+      for(let i=0;i<n;i++){
+        const get=(f)=>{ const el=document.querySelector(`[data-t="${i}"][data-f="${f}"]`); if(!el) return null; return el.type==='checkbox'?el.checked:el.value; };
+        travelers.push({
+          first_name:get('first_name'), last_name:get('last_name'), birth_date:get('birth_date')||null,
+          age:Number(get('age')), identification_number:get('identification_number')||null,
+          email:get('email')||null, phone:get('phone')||null, is_pep:!!get('is_pep'), is_primary:i===0
+        });
+      }
+      await api(`/quotes/${state.token}/travelers`,{method:'POST',body:JSON.stringify({travelers})});
+      const benName=(document.getElementById('benName')?.value||'').trim();
+      const items=[{traveler_seq:1,beneficiaries: benName?[{full_name:benName,relationship:document.getElementById('benRel').value,phone:document.getElementById('benPhone').value}]:[]}];
+      await api(`/quotes/${state.token}/beneficiaries`,{method:'POST',body:JSON.stringify({items})});
+      const q=await api(`/quotes/${state.token}/emergency-contact`,{method:'POST',body:JSON.stringify({
+        name:document.getElementById('emName').value, phone:document.getElementById('emPhone').value, email:document.getElementById('emEmail').value||null
+      })});
+      state.quote=q; state.step='pago'; state.payPhase='review'; renderStep();
+    }catch(e){ state.err=String(e.message||e); renderStep(); }
+  };
+
+  const pay=document.getElementById('btnPay');
+  if(pay) pay.onclick=async()=>{
+    try{
+      state.err=''; state.info='';
+      const res=await api(`/quotes/${state.token}/checkout`,{method:'POST',body:'{}'});
+      state.quote=res.quote;
+      state.checkout=res.checkout||{};
+      state.attemptId=state.checkout.attempt_id||null;
+      if(state.checkout.already_paid){ state.payPhase='done'; renderStep(); return; }
+      state.payPhase='pay';
+      renderStep();
+    }catch(e){ state.err=String(e.message||e); renderStep(); }
+  };
+
+  const payBack=document.getElementById('btnPayBack');
+  if(payBack) payBack.onclick=()=>{ state.payPhase='review'; state.err=''; renderStep(); };
+
+  const cardEl=document.getElementById('payCard');
+  if(cardEl){
+    cardEl.addEventListener('input',()=>{
+      let v=cardEl.value.replace(/\D/g,'').slice(0,16);
+      cardEl.value=v.replace(/(\d{4})(?=\d)/g,'$1 ').trim();
+    });
+  }
+  const expEl=document.getElementById('payExp');
+  if(expEl){
+    expEl.addEventListener('input',()=>{
+      const digits=expEl.value.replace(/\D/g,'').slice(0,4);
+      expEl.value=digits.length>2 ? digits.slice(0,2)+' / '+digits.slice(2) : digits;
+    });
+  }
+
+  const showPayErr=(msg)=>{
+    const el=document.getElementById('payErr');
+    if(!el){ state.err=msg; return; }
+    el.textContent=msg;
+    el.classList.remove('hidden');
+  };
+  const confPay=document.getElementById('btnConfirmPay');
+  if(confPay) confPay.onclick=async()=>{
+    try{
+      state.err='';
+      const payErr=document.getElementById('payErr');
+      if(payErr){ payErr.classList.add('hidden'); payErr.textContent=''; }
+      const email=(document.getElementById('payEmail')?.value||'').trim();
+      const num=(document.getElementById('payCard')?.value||'').replace(/\D/g,'');
+      const expDigits=(document.getElementById('payExp')?.value||'').replace(/\D/g,'');
+      const cvc=(document.getElementById('payCvc')?.value||'').replace(/\D/g,'');
+      const name=(document.getElementById('payName')?.value||'').trim();
+      ['payEmail','payCard','payExp','payCvc','payName'].forEach(id=>{
+        const el=document.getElementById(id); if(el) el.classList.remove('is-bad');
+      });
+      let bad=false;
+      const mark=(id)=>{ const el=document.getElementById(id); if(el) el.classList.add('is-bad'); bad=true; };
+      if(!email.includes('@')) mark('payEmail');
+      if(num.length<13 || num.length>19) mark('payCard');
+      if(expDigits.length!==4) mark('payExp');
+      if(cvc.length<3 || cvc.length>4) mark('payCvc');
+      if(name.length<3) mark('payName');
+      if(bad){ showPayErr('Revisa los datos de la tarjeta'); return; }
+
+      const co=state.checkout||{};
+      if(co.provider==='STRIPE' && co.redirect_url){
+        location.href=co.redirect_url;
+        return;
+      }
+      confPay.disabled=true;
+      confPay.textContent='Procesando…';
+      if(!state.attemptId){
+        const res=await api(`/quotes/${state.token}/checkout`,{method:'POST',body:'{}'});
+        state.quote=res.quote;
+        state.checkout=res.checkout||{};
+        state.attemptId=state.checkout.attempt_id;
+      }
+      // Never send raw PAN to our API — only confirm attempt server-side (sandbox / Stripe).
+      const conf=await api(`/quotes/${state.token}/pay/confirm-sandbox?attempt_id=${encodeURIComponent(state.attemptId)}`,{method:'POST'});
+      state.quote=conf.quote;
+      state.payPhase='done';
+      renderStep();
+    }catch(e){
+      const msg=String(e.message||e);
+      showPayErr(msg);
+      confPay.disabled=false;
+      const amt=state.checkout?.amount||state.quote?.selected_premium;
+      confPay.textContent=`Pagar ${money(amt,state.checkout?.currency||state.quote?.currency)}`;
+    }
+  };
+
+  document.querySelectorAll('[data-back]').forEach(b=>b.onclick=()=>{
+    const i=STEPS.indexOf(state.step); if(i>0){ state.step=STEPS[i-1]; state.err=''; renderStep(); }
+  });
+}
+
+document.getElementById('btnStart').onclick=()=>{
+  document.getElementById('hero').classList.add('hidden');
+  document.getElementById('wizard').classList.remove('hidden');
+  state.step='viaje'; renderStep();
+};
+</script>
+</body>
+</html>

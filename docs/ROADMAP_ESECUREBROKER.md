@@ -1,9 +1,9 @@
 # Roadmap ESecureBroker
 
 **Producto:** ESecureBroker (ESB) — expediente operativo de la correduría  
-**Actualizado:** 2026-08-13  
+**Actualizado:** 2026-08-18  
 **Ambiente activo:** DEV (`https://esecurebroker-dev.etsrv.site`)  
-**PROD:** cerrado hasta F1–F3 ADR-037 + E2E `credential_ref`  
+**PROD:** cerrado hasta F1–F3 ADR-037 + E2E `credential_ref` · **canal público no cableado a PROD**  
 **ADR-037:** SPAGHETTI ACCEPT 2026-08-13 · GO F1 → CODITO (EN1 DEV)  
 **Companion Ana/EN1:** `docs/briefs/ANA-roadmap-esb-en1-contexto.md`
 
@@ -18,8 +18,10 @@ Que una correduría pueda:
 3. **Armar su equipo** (colaboradores, roles, productores)  
 4. **Operar** cartera, cobranza, renovaciones, reclamos, documentos  
 5. **Trabajar en campo** con ESB GO bajo el mismo AccessContext  
+6. **Vender por canal público** (landing comercial → datos en ESB, sin login del comprador)
 
-Sin inventar límites comerciales en ESB y sin mezclar “cliente asegurado” con “colaborador”.
+Sin inventar límites comerciales en ESB y sin mezclar “cliente asegurado” con “colaborador”.  
+Landing ≠ UI ESB: el cotizador público es vitrina; **ESB es sistema de registro**.
 
 ---
 
@@ -27,10 +29,11 @@ Sin inventar límites comerciales en ESB y sin mezclar “cliente asegurado” c
 
 | Pilar | Qué es | SoR |
 |-------|--------|-----|
-| **Comercial** | Plan, seats, entitlement, pago | EN1 |
+| **Comercial SaaS** | Plan, seats, entitlement, pago | EN1 |
 | **Identidad / acceso** | Org, memberships, roles, invitaciones | ESB (ADR-008) |
 | **Cartera** | Clientes, pólizas, productores, asignaciones | ESB |
 | **Cobranza / CxC** | Cuotas, pagos, morosidad, estados de cuenta | ESB |
+| **Canal público** | Cotizar / pagar viaje → CRM + Party + Policy | ESB (org del canal) |
 | **Captura / import** | Foto póliza, Excel, documentos | ESB |
 | **Mobile GO** | `/api/mobile/v1` + AccessContext | ESB (+ LOCAL app) |
 | **Inteligencia** | Captura visión, oportunidades IA (acotado) | ESB |
@@ -57,6 +60,7 @@ Sin inventar límites comerciales en ESB y sin mezclar “cliente asegurado” c
 | Identidad org | Logo + datos en Configuración (cabecera PDF) |
 | Reportes PDF | Cartera, cobranza, morosidad, pagos, comisiones, cotizaciones, clientes, etc. |
 | Importaciones | Motor XLSX operativo (fix shadowing payments) |
+| **Canal público Avioncito** | Cotizador Grupo Arsi en DEV — ver FASE 3c |
 
 ### Huecos abiertos
 
@@ -65,22 +69,26 @@ Sin inventar límites comerciales en ESB y sin mezclar “cliente asegurado” c
 | Comprador ≠ Cliente canónico EN1 | CODITO | Narrativa comercial / re-test `/registro` |
 | SMTP invitaciones | ESB | Onboarding oficina “de verdad” |
 | Verificación comprobantes (bandeja) | ESB ops | Activación sin promo |
-| Tarjeta / Stripe ↔ EN1 | ESB+EN1 | Pago automático |
+| Tarjeta / Stripe ↔ EN1 | ESB+EN1 | Pago automático SaaS |
 | Revoke cookie web | ESB | Seguridad al desactivar colaborador |
 | GO F5A UI | LOCAL | Campo: gestiones/docs desde app |
-| PROD | Ana + ADR-037 | Go-live |
+| Tarifas oficiales viaje (canal) | ESB + negocio | Precios reales (hoy `DEV_PLACEHOLDER`) |
+| Stripe keys canal público | ESB ops | Checkout tarjeta real (hoy SANDBOX DEV) |
+| Transfer / Yappy en canal público | ESB | Alternativas de pago en landing |
+| Cablear canal → PROD | Ana + GO explícito | Go-live cotizador |
+| PROD plataforma | Ana + ADR-037 | Go-live ESB |
 
 ---
 
 ## Roadmap por fases
 
 ```
-NOW          NEXT                LATER              PROD
-─────        ─────               ─────              ────
-F7 pulido    Cliente EN1 (A)     Pagos reales       Gate 037
-Checkout     SMTP invites        GO F5A descongelar Certificación
-comprobante  Bandeja verify      API admin JSON     Cutover
-             Re-test /registro   Identidad ADR-006
+NOW                NEXT                     LATER                 PROD
+─────              ─────                    ─────                 ────
+Canal público DEV  Tarifas oficiales viaje  Stripe canal real     Gate 037
+(CRM+Party+Policy) Transfer/Yappy canal     PDF cotización        Canal→PROD (GO)
+F7 / checkout SaaS Cliente EN1 (A)          GO F5A descongelar    Cutover
+                   Re-test /registro        Identidad ADR-006
 ```
 
 ### FASE 0 — Base operativa (cerrada en DEV)
@@ -131,6 +139,28 @@ comprobante  Bandeja verify      API admin JSON     Cutover
 | Alertas en Hoy | DONE |
 | Feed automático Carrier API (F6) | LATER |
 
+### FASE 3c — Canal público de venta (Grupo Arsi / Avioncito) — DEV
+
+Landing comercial **fuera** del chrome ESB; datos bajo org del canal.  
+Regla: **pagado → cliente (`Party`) + póliza VIAJE** en cartera ESB. No crea `Payment`/`Allocation` de cobranza (operador/UI).  
+**PROD no cableado** hasta GO explícito.
+
+| Ítem | Estado |
+|------|--------|
+| Modelos canal / quote / travelers / payment attempts | DONE (DEV) |
+| Seed Grupo Arsi + planes GLOBAL / MAXIMUS / SUPREME | DONE (DEV; rates placeholder) |
+| Wizard público (viaje → planes → datos → pago) | DONE |
+| Checkout UX tipo Stripe/Namecheap (formulario + resumen) | DONE |
+| Stripe Checkout si keys; si no SANDBOX confirm in-app | DONE (DEV) |
+| CRM: prospect + oportunidad → WON al pagar | DONE |
+| Emisión: Party CLIENT + Policy ACTIVE + term + 1 cuota | DONE (idempotente) |
+| Subdominio `cotizadorgrupoarsi.etsrv.site` + nginx + SSL | DONE → DEV `:8092` |
+| `public_channel.base_url` | DONE |
+| Tarifas oficiales / carrier default por canal | NEXT |
+| PDF cotización / certificado al comprador | LATER |
+| Transfer / Yappy en landing | LATER |
+| Cablear canal + migración a PROD | LATER — requiere **GO** |
+
 ### FASE 4 — Profundidad producto (backlog priorizable)
 
 - Renovaciones / reclamos más ricos  
@@ -157,13 +187,15 @@ Checklist:
 
 | # | Trabajo | Owner |
 |---|---------|-------|
-| 1 | Inspección + fix Cliente canónico EN1 | CODITO |
-| 2 | Re-prueba E2E `/registro` | ESB + CODITO |
-| 3 | SMTP invitaciones colaboradores | ESB — DONE |
-| 4 | Bandeja verificar comprobantes Banistmo/Yappy | ESB — DONE |
-| 5 | Descongelar GO F5A (LOCAL) | LOCAL + ESB |
-| 6 | Tarjeta cuando EN1 liste | ESB + EN1 |
-| 7 | Gate PROD | Ana |
+| 1 | Tarifas oficiales + carrier default canal Avioncito | ESB + negocio |
+| 2 | Inspección + fix Cliente canónico EN1 | CODITO |
+| 3 | Re-prueba E2E `/registro` | ESB + CODITO |
+| 4 | SMTP invitaciones colaboradores | ESB — DONE |
+| 5 | Bandeja verificar comprobantes Banistmo/Yappy | ESB — DONE |
+| 6 | Stripe keys canal público (DEV→luego PROD) | ESB ops |
+| 7 | Descongelar GO F5A (LOCAL) | LOCAL + ESB |
+| 8 | Tarjeta SaaS cuando EN1 liste | ESB + EN1 |
+| 9 | Gate PROD + GO canal público | Ana |
 
 ---
 
@@ -171,10 +203,12 @@ Checklist:
 
 | Qué | Dónde |
 |-----|--------|
-| App DEV | https://esecurebroker-dev.etsrv.site |
+| App DEV (expediente) | https://esecurebroker-dev.etsrv.site |
+| Cotizador público Grupo Arsi | https://cotizadorgrupoarsi.etsrv.site → `/public/avioncito/` |
+| Clientes / pólizas canal | DEV `/clientes` · `/polizas` (org **Grupo Arsi**) |
 | Colaboradores | `/configuracion/colaboradores` |
 | Roles | `/configuracion/roles` |
-| Checkout | `/checkout` |
+| Checkout SaaS | `/checkout` |
 | Contrato F7 | `docs/ADR-008_F7_COLLABORATORS_RBAC_CONTRACT.md` |
 | Impl F7 | `docs/ADR-008_F7_IMPLEMENTATION.md` |
 | ADR-008 | `docs/ADR-008_POINTER.md` |
@@ -185,14 +219,16 @@ Checklist:
 
 ## Invariantes que el roadmap no rompe
 
-1. EN1 = SoR comercial (plan/seats/pago).  
-2. ESB = SoR operativo de la correduría.  
+1. EN1 = SoR comercial SaaS (plan/seats/pago).  
+2. ESB = SoR operativo de la correduría (cartera, cobranza, canal público).  
 3. Un Cliente EN1; no “Cliente Comercial”.  
 4. Colaborador ≠ asegurado.  
 5. System roles inmutables en semántica (GO depende de ellos).  
 6. No DELETE destructivo de memberships con historia.  
-7. PROD no se toca sin gate.  
-8. Fail-closed si no hay entitlement para subir seats.
+7. PROD no se toca sin gate / GO explícito (incluye canal público).  
+8. Fail-closed si no hay entitlement para subir seats.  
+9. Landing vende; ESB registra. Precio no se confía del browser.  
+10. Cobros de cartera / allocations: solo operador UI o evidencia real (regla de oro).  
 
 ---
 

@@ -138,6 +138,23 @@ def ensure_runtime_settings() -> None:
         session.commit()
 
 
+def ensure_public_channels() -> None:
+    """Seed public sales channels on DEV (lookup org by name — no hardcoded UUID)."""
+    import os
+
+    from corredores.db import SessionLocal
+    from corredores.services.public_channel_seed import ensure_public_channel_for_org_name
+
+    url = os.environ.get("DATABASE_URL", "")
+    if "corredores_dev" not in url:
+        return
+    with SessionLocal() as session:
+        ensure_public_channel_for_org_name(
+            session, organization_name="Grupo Arsi", slug="avioncito"
+        )
+        session.commit()
+
+
 def create_app() -> FastAPI:
     app = FastAPI(
         title="ESecureBroker",
@@ -156,10 +173,15 @@ def create_app() -> FastAPI:
         ensure_runtime_settings()
     except Exception as e:
         print(f"Warning: ensure_runtime_settings: {e}")
+    try:
+        ensure_public_channels()
+    except Exception as e:
+        print(f"Warning: ensure_public_channels: {e}")
     from corredores.web.crm_routes import router as crm_router
     from corredores.web.crm_ui_routes import router as crm_ui_router
     from corredores.web.mobile.errors import MobileAPIError, mobile_api_error_handler
     from corredores.web.mobile.router import router as mobile_router
+    from corredores.web.public_channel_routes import router as public_channel_router
 
     app.add_exception_handler(MobileAPIError, mobile_api_error_handler)
     # Last added = outermost. Request context must wrap auth so deps see request.
@@ -172,6 +194,7 @@ def create_app() -> FastAPI:
     app.include_router(crm_ui_router)
     app.include_router(crm_router)
     app.include_router(mobile_router)
+    app.include_router(public_channel_router)
     return app
 
 

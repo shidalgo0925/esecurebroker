@@ -206,6 +206,15 @@ SETTING_DEFS: list[dict[str, Any]] = [
         "default": "https://esecurebroker.etsrv.site",
     },
     {
+        "key": "public_channel.base_url",
+        "category": "canal_publico",
+        "label": "URL base canal público (cotizador)",
+        "help_text": "Ej. https://cotizadorgrupoarsi.etsrv.site — usada en checkout/returns del landing.",
+        "value_type": "string",
+        "is_secret": False,
+        "default": "https://cotizadorgrupoarsi.etsrv.site",
+    },
+    {
         "key": "saas.stripe_secret_key",
         "category": "saas",
         "label": "Stripe secret key",
